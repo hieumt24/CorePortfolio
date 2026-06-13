@@ -24,11 +24,6 @@ public class CreateTransactionHandler : IRequestHandler<CreateTransactionCommand
         if (asset == null)
             throw new Exception("Asset not found in this portfolio");
 
-        if (!string.IsNullOrEmpty(request.Currency) && asset.Currency != request.Currency)
-        {
-            asset.Currency = request.Currency;
-        }
-
         var transaction = new Transaction
         {
             Id = Guid.NewGuid(),
@@ -37,7 +32,7 @@ public class CreateTransactionHandler : IRequestHandler<CreateTransactionCommand
             Type = request.Type,
             Quantity = request.Quantity,
             Price = request.Price,
-            Date = DateTime.UtcNow
+            Date = request.Timestamp ?? DateTime.UtcNow
         };
 
         _dbContext.Transactions.Add(transaction);

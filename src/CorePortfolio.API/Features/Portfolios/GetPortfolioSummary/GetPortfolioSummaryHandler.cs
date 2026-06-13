@@ -18,6 +18,8 @@ public class GetPortfolioSummaryHandler : IRequestHandler<GetPortfolioSummaryQue
     {
         var portfolio = await _dbContext.Portfolios
             .Include(p => p.Assets)
+                .ThenInclude(a => a.MarketAsset)
+                    .ThenInclude(ma => ma.Category)
             .Include(p => p.Transactions)
             .AsNoTracking()
             .FirstOrDefaultAsync(p => p.Id == request.PortfolioId, cancellationToken);
@@ -32,6 +34,7 @@ public class GetPortfolioSummaryHandler : IRequestHandler<GetPortfolioSummaryQue
         foreach (var asset in portfolio.Assets)
         {
             var assetTransactions = portfolio.Transactions.Where(t => t.AssetId == asset.Id).ToList();
+            var marketAsset = asset.MarketAsset;
             
             decimal totalQuantity = 0;
             decimal totalCost = 0;
@@ -46,23 +49,22 @@ public class GetPortfolioSummaryHandler : IRequestHandler<GetPortfolioSummaryQue
                 else if (t.Type == TransactionType.Sell)
                 {
                     totalQuantity -= t.Quantity;
-                    // For simplicity, we just reduce cost proportionally or just calculate cost as total buys minus total sells.
-                    // This is a naive calculation. A real app might use FIFO.
                     totalCost -= t.Quantity * t.Price; 
                 }
             }
 
-            var currentValue = totalQuantity * asset.CurrentPrice;
+            var currentValue = totalQuantity * (marketAsset?.CurrentPrice ?? 0);
             totalInvested += totalCost;
             currentTotalValue += currentValue;
 
             assetSummaries.Add(new AssetSummaryDto(
                 asset.Id,
-                asset.Symbol,
-                asset.Name,
-                asset.Type,
-                asset.Currency,
-                asset.CurrentPrice,
+                asset.MarketAssetId,
+                marketAsset?.Symbol ?? "N/A",
+                marketAsset?.Name ?? "N/A",
+                marketAsset?.Category?.Name ?? "N/A",
+                marketAsset?.Category?.DefaultCurrency ?? "VND",
+                marketAsset?.CurrentPrice ?? 0,
                 totalQuantity,
                 totalCost,
                 currentValue

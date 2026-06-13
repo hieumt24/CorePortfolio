@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace CorePortfolio.API.Features.Transactions.CreateTransaction;
 
-public record CreateTransactionRequest(Guid PortfolioId, Guid AssetId, TransactionType Type, decimal Quantity, decimal Price, string? Currency);
+public record CreateTransactionRequest(Guid PortfolioId, Guid AssetId, TransactionType Type, decimal Quantity, decimal Price, string? Currency, DateTime? Timestamp);
 
 public static class CreateTransactionEndpoint
 {
@@ -12,7 +12,7 @@ public static class CreateTransactionEndpoint
     {
         app.MapPost("/api/transactions", async ([FromBody] CreateTransactionRequest request, IMediator mediator) =>
         {
-            var command = new CreateTransactionCommand(request.PortfolioId, request.AssetId, request.Type, request.Quantity, request.Price, request.Currency);
+            var command = new CreateTransactionCommand(request.PortfolioId, request.AssetId, request.Type, request.Quantity, request.Price, request.Currency, request.Timestamp);
             var id = await mediator.Send(command);
             return Results.Created($"/api/transactions/{id}", new { Id = id });
         })

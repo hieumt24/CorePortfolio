@@ -1,16 +1,21 @@
+using CorePortfolio.API.Features.Admin.Categories;
+using CorePortfolio.API.Features.Admin.MarketAssets;
+using CorePortfolio.API.Features.Admin.Settings;
 using CorePortfolio.API.Features.Assets.CreateAsset;
-using CorePortfolio.API.Features.Assets.UpdateAssetPrice;
+using CorePortfolio.API.Features.Assets.DeleteAsset;
+using CorePortfolio.API.Features.MarketAssets.UpdateMarketAssetPrice;
 using CorePortfolio.API.Features.Portfolios.CreatePortfolio;
 using CorePortfolio.API.Features.Portfolios.GetPortfolios;
 using CorePortfolio.API.Features.Portfolios.GetPortfolioSummary;
 using CorePortfolio.API.Features.Portfolios.UpdatePortfolio;
 using CorePortfolio.API.Features.Transactions.CreateTransaction;
+using CorePortfolio.API.Features.Transactions.DeleteTransaction;
+using CorePortfolio.API.Features.Transactions.GetAssetTransactions;
+using CorePortfolio.API.Features.Transactions.UpdateTransaction;
 using CorePortfolio.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
-using CorePortfolio.API.Features.Transactions.GetAssetTransactions;
 
 var builder = WebApplication.CreateBuilder(args);
-
 
 // Add services to the container.
 builder.Services.AddOpenApi();
@@ -57,13 +62,19 @@ app.MapGet("/", () => "Welcome to CorePortfolio API")
     .WithName("GetRoot");
 
 // Map Endpoints
+app.MapCategoriesEndpoints();
+app.MapMarketAssetsEndpoints();
+app.MapSettingsEndpoints();
 app.MapCreatePortfolioEndpoint();
 app.MapGetPortfoliosEndpoint();
 app.MapGetPortfolioSummaryEndpoint();
 app.MapUpdatePortfolioEndpoint();
 app.MapCreateAssetEndpoint();
-app.MapUpdateAssetPriceEndpoint();
+app.MapDeleteAssetEndpoint();
+app.MapUpdateMarketAssetPriceEndpoint();
 app.MapCreateTransactionEndpoint();
+app.MapUpdateTransactionEndpoint();
+app.MapDeleteTransactionEndpoint();
 app.MapGetAssetTransactionsEndpoint();
 
 app.Run();
