@@ -1,3 +1,9 @@
+using CorePortfolio.API.Features.Assets.CreateAsset;
+using CorePortfolio.API.Features.Assets.UpdateAssetPrice;
+using CorePortfolio.API.Features.Portfolios.CreatePortfolio;
+using CorePortfolio.API.Features.Portfolios.GetPortfolios;
+using CorePortfolio.API.Features.Portfolios.GetPortfolioSummary;
+using CorePortfolio.API.Features.Transactions.CreateTransaction;
 using CorePortfolio.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -11,6 +17,8 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
 
 builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite(connectionString));
+
+builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
 
 var app = builder.Build();
 
@@ -27,5 +35,13 @@ app.UseHttpsRedirection();
 
 app.MapGet("/", () => "Welcome to CorePortfolio API")
     .WithName("GetRoot");
+
+// Map Endpoints
+app.MapCreatePortfolioEndpoint();
+app.MapGetPortfoliosEndpoint();
+app.MapGetPortfolioSummaryEndpoint();
+app.MapCreateAssetEndpoint();
+app.MapUpdateAssetPriceEndpoint();
+app.MapCreateTransactionEndpoint();
 
 app.Run();

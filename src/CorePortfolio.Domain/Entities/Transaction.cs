@@ -9,7 +9,7 @@ public class Transaction
     public Guid AssetId { get; set; }
     public Asset? Asset { get; set; }
     
-    public string Type { get; set; } = string.Empty; // e.g., Buy, Sell
+    public TransactionType Type { get; set; }
     public decimal Quantity { get; set; }
     public decimal Price { get; set; }
     public DateTime Date { get; set; }
