@@ -1,22 +1,23 @@
 import React, { useState } from 'react';
-import { createTransaction } from '../api/transactionApi';
+import { updateTransaction } from '../api/transactionApi';
 import { TransactionType } from '../types';
+import type { TransactionDto } from '../types';
 import type { AssetSummaryDto } from '../../portfolios/types';
 import '../../portfolios/components/CreatePortfolioModal.css';
 
-interface CreateTransactionModalProps {
-  portfolioId: string;
+interface EditTransactionModalProps {
+  transaction: TransactionDto;
   asset: AssetSummaryDto;
   onClose: () => void;
   onSuccess: () => void;
 }
 
-export const CreateTransactionModal: React.FC<CreateTransactionModalProps> = ({ portfolioId, asset, onClose, onSuccess }) => {
-  const [type, setType] = useState<TransactionType>(TransactionType.Buy);
-  const [quantity, setQuantity] = useState('');
-  const [price, setPrice] = useState('');
-  const [currency, setCurrency] = useState(asset.currency || 'USD');
-  const [timestamp, setTimestamp] = useState(new Date().toISOString().slice(0, 16));
+export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({ transaction, asset, onClose, onSuccess }) => {
+  const [type, setType] = useState<TransactionType>(transaction.type);
+  const [quantity, setQuantity] = useState(transaction.quantity.toString());
+  const [price, setPrice] = useState(transaction.price.toString());
+  const [currency, setCurrency] = useState(asset.currency || 'VND');
+  const [timestamp, setTimestamp] = useState(transaction.timestamp ? new Date(transaction.timestamp).toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16));
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -30,9 +31,7 @@ export const CreateTransactionModal: React.FC<CreateTransactionModalProps> = ({ 
     try {
       setLoading(true);
       setError(null);
-      await createTransaction({
-        portfolioId,
-        assetId: asset.assetId,
+      await updateTransaction(transaction.id, {
         type: Number(type) as TransactionType,
         quantity: Number(quantity),
         price: Number(price),
@@ -41,7 +40,7 @@ export const CreateTransactionModal: React.FC<CreateTransactionModalProps> = ({ 
       });
       onSuccess();
     } catch (err: any) {
-      setError(err.message || 'Failed to add transaction');
+      setError(err.message || 'Failed to update transaction');
     } finally {
       setLoading(false);
     }
@@ -51,7 +50,7 @@ export const CreateTransactionModal: React.FC<CreateTransactionModalProps> = ({ 
     <div className="modal-overlay" onClick={onClose} style={{ zIndex: 1001 }}>
       <div className="modal-content glass-panel" onClick={e => e.stopPropagation()}>
         <div className="modal-header">
-          <h2>New Transaction: {asset.symbol}</h2>
+          <h2>Edit Transaction: {asset.symbol}</h2>
           <button className="close-btn" onClick={onClose}>&times;</button>
         </div>
         
@@ -132,7 +131,7 @@ export const CreateTransactionModal: React.FC<CreateTransactionModalProps> = ({ 
               Cancel
             </button>
             <button type="submit" className={`btn ${type === TransactionType.Buy ? 'btn-primary' : 'btn-outline'}`} disabled={loading}>
-              {loading ? 'Processing...' : 'Confirm'}
+              {loading ? 'Processing...' : 'Save Changes'}
             </button>
           </div>
         </form>

@@ -12,6 +12,19 @@ namespace CorePortfolio.Infrastructure.Migrations
         protected override void Up(MigrationBuilder migrationBuilder)
         {
             migrationBuilder.CreateTable(
+                name: "AssetCategories",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    Name = table.Column<string>(type: "TEXT", nullable: false),
+                    DefaultCurrency = table.Column<string>(type: "TEXT", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_AssetCategories", x => x.Id);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Portfolios",
                 columns: table => new
                 {
@@ -26,19 +39,44 @@ namespace CorePortfolio.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateTable(
+                name: "MarketAssets",
+                columns: table => new
+                {
+                    Id = table.Column<Guid>(type: "TEXT", nullable: false),
+                    CategoryId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    Symbol = table.Column<string>(type: "TEXT", nullable: false),
+                    Name = table.Column<string>(type: "TEXT", nullable: false),
+                    CurrentPrice = table.Column<decimal>(type: "TEXT", nullable: false),
+                    LastUpdated = table.Column<DateTime>(type: "TEXT", nullable: false)
+                },
+                constraints: table =>
+                {
+                    table.PrimaryKey("PK_MarketAssets", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_MarketAssets_AssetCategories_CategoryId",
+                        column: x => x.CategoryId,
+                        principalTable: "AssetCategories",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
+                });
+
+            migrationBuilder.CreateTable(
                 name: "Assets",
                 columns: table => new
                 {
                     Id = table.Column<Guid>(type: "TEXT", nullable: false),
-                    Symbol = table.Column<string>(type: "TEXT", nullable: false),
-                    Name = table.Column<string>(type: "TEXT", nullable: false),
-                    Type = table.Column<int>(type: "INTEGER", nullable: false),
-                    CurrentPrice = table.Column<decimal>(type: "TEXT", nullable: false),
-                    PortfolioId = table.Column<Guid>(type: "TEXT", nullable: false)
+                    PortfolioId = table.Column<Guid>(type: "TEXT", nullable: false),
+                    MarketAssetId = table.Column<Guid>(type: "TEXT", nullable: false)
                 },
                 constraints: table =>
                 {
                     table.PrimaryKey("PK_Assets", x => x.Id);
+                    table.ForeignKey(
+                        name: "FK_Assets_MarketAssets_MarketAssetId",
+                        column: x => x.MarketAssetId,
+                        principalTable: "MarketAssets",
+                        principalColumn: "Id",
+                        onDelete: ReferentialAction.Restrict);
                     table.ForeignKey(
                         name: "FK_Assets_Portfolios_PortfolioId",
                         column: x => x.PortfolioId,
@@ -77,9 +115,19 @@ namespace CorePortfolio.Infrastructure.Migrations
                 });
 
             migrationBuilder.CreateIndex(
+                name: "IX_Assets_MarketAssetId",
+                table: "Assets",
+                column: "MarketAssetId");
+
+            migrationBuilder.CreateIndex(
                 name: "IX_Assets_PortfolioId",
                 table: "Assets",
                 column: "PortfolioId");
+
+            migrationBuilder.CreateIndex(
+                name: "IX_MarketAssets_CategoryId",
+                table: "MarketAssets",
+                column: "CategoryId");
 
             migrationBuilder.CreateIndex(
                 name: "IX_Transactions_AssetId",
@@ -102,7 +150,13 @@ namespace CorePortfolio.Infrastructure.Migrations
                 name: "Assets");
 
             migrationBuilder.DropTable(
+                name: "MarketAssets");
+
+            migrationBuilder.DropTable(
                 name: "Portfolios");
+
+            migrationBuilder.DropTable(
+                name: "AssetCategories");
         }
     }
 }

@@ -22,4 +22,13 @@ export interface CreateTransactionRequest {
   quantity: number;
   price: number;
   currency?: string;
+  timestamp?: string;
+}
+
+export interface UpdateTransactionRequest {
+  type: TransactionType;
+  quantity: number;
+  price: number;
+  currency?: string;
+  timestamp?: string;
 }

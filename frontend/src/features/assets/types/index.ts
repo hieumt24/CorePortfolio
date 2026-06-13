@@ -8,9 +8,10 @@ export type AssetType = typeof AssetType[keyof typeof AssetType];
 
 export interface AssetSummaryDto {
   assetId: string;
+  marketAssetId: string;
   symbol: string;
   name: string;
-  type: number; // Enum: 0 = Crypto, 1 = Stock, 2 = MutualFund
+  categoryName: string;
   currency: string;
   currentPrice: number;
   totalQuantity: number;
@@ -20,8 +21,5 @@ export interface AssetSummaryDto {
 
 export interface CreateAssetRequest {
   portfolioId: string;
-  symbol: string;
-  name: string;
-  type: AssetType;
-  currency: string;
+  marketAssetId: string;
 }

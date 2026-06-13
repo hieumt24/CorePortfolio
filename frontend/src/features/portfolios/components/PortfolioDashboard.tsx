@@ -2,10 +2,12 @@ import React, { useState } from 'react';
 import { usePortfolios } from '../hooks/usePortfolios';
 import { PortfolioCard } from './PortfolioCard';
 import { CreatePortfolioModal } from './CreatePortfolioModal';
+import { useNotification } from '../../../context/NotificationContext';
 import './PortfolioDashboard.css';
 
 export const PortfolioDashboard: React.FC = () => {
   const { portfolios, loading, error, refetch } = usePortfolios();
+  const { showNotification } = useNotification();
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   return (
@@ -53,6 +55,7 @@ export const PortfolioDashboard: React.FC = () => {
           onClose={() => setIsModalOpen(false)} 
           onSuccess={() => {
             setIsModalOpen(false);
+            showNotification('Tạo Portfolio thành công!', 'success');
             refetch();
           }} 
         />

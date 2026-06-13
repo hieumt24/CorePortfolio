@@ -11,8 +11,8 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CorePortfolio.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    [Migration("20260613124012_AddCurrencyToAsset")]
-    partial class AddCurrencyToAsset
+    [Migration("20260613154109_AddSystemSettings")]
+    partial class AddSystemSettings
     {
         /// <inheritdoc />
         protected override void BuildTargetModel(ModelBuilder modelBuilder)
@@ -26,32 +26,68 @@ namespace CorePortfolio.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
-                    b.Property<string>("Currency")
-                        .IsRequired()
+                    b.Property<Guid>("MarketAssetId")
                         .HasColumnType("TEXT");
 
-                    b.Property<decimal>("CurrentPrice")
+                    b.Property<Guid>("PortfolioId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MarketAssetId");
+
+                    b.HasIndex("PortfolioId");
+
+                    b.ToTable("Assets");
+                });
+
+            modelBuilder.Entity("CorePortfolio.Domain.Entities.AssetCategory", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("DefaultCurrency")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<Guid>("PortfolioId")
+                    b.HasKey("Id");
+
+                    b.ToTable("AssetCategories");
+                });
+
+            modelBuilder.Entity("CorePortfolio.Domain.Entities.MarketAsset", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("CategoryId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("CurrentPrice")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("LastUpdated")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<string>("Symbol")
                         .IsRequired()
                         .HasColumnType("TEXT");
 
-                    b.Property<int>("Type")
-                        .HasColumnType("INTEGER");
-
                     b.HasKey("Id");
 
-                    b.HasIndex("PortfolioId");
+                    b.HasIndex("CategoryId");
 
-                    b.ToTable("Assets");
+                    b.ToTable("MarketAssets");
                 });
 
             modelBuilder.Entity("CorePortfolio.Domain.Entities.Portfolio", b =>
@@ -74,6 +110,36 @@ namespace CorePortfolio.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Portfolios");
+                });
+
+            modelBuilder.Entity("CorePortfolio.Domain.Entities.SystemSetting", b =>
+                {
+                    b.Property<string>("Key")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("LastUpdated")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Value")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Key");
+
+                    b.ToTable("SystemSettings");
+
+                    b.HasData(
+                        new
+                        {
+                            Key = "USD_TO_VND",
+                            Description = "Exchange rate from USD to VND",
+                            LastUpdated = new DateTime(2025, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
+                            Value = "26309"
+                        });
                 });
 
             modelBuilder.Entity("CorePortfolio.Domain.Entities.Transaction", b =>
@@ -111,13 +177,32 @@ namespace CorePortfolio.Infrastructure.Migrations
 
             modelBuilder.Entity("CorePortfolio.Domain.Entities.Asset", b =>
                 {
+                    b.HasOne("CorePortfolio.Domain.Entities.MarketAsset", "MarketAsset")
+                        .WithMany()
+                        .HasForeignKey("MarketAssetId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
                     b.HasOne("CorePortfolio.Domain.Entities.Portfolio", "Portfolio")
                         .WithMany("Assets")
                         .HasForeignKey("PortfolioId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.Navigation("MarketAsset");
+
                     b.Navigation("Portfolio");
+                });
+
+            modelBuilder.Entity("CorePortfolio.Domain.Entities.MarketAsset", b =>
+                {
+                    b.HasOne("CorePortfolio.Domain.Entities.AssetCategory", "Category")
+                        .WithMany()
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Category");
                 });
 
             modelBuilder.Entity("CorePortfolio.Domain.Entities.Transaction", b =>

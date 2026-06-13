@@ -13,6 +13,10 @@ public class AppDbContext : DbContext
     public DbSet<Asset> Assets => Set<Asset>();
     public DbSet<Transaction> Transactions => Set<Transaction>();
 
+    public DbSet<AssetCategory> AssetCategories => Set<AssetCategory>();
+    public DbSet<MarketAsset> MarketAssets => Set<MarketAsset>();
+    public DbSet<SystemSetting> SystemSettings => Set<SystemSetting>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
@@ -35,5 +39,24 @@ public class AppDbContext : DbContext
             .WithMany()
             .HasForeignKey(t => t.AssetId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<MarketAsset>()
+            .HasOne(m => m.Category)
+            .WithMany()
+            .HasForeignKey(m => m.CategoryId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<Asset>()
+            .HasOne(a => a.MarketAsset)
+            .WithMany()
+            .HasForeignKey(a => a.MarketAssetId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<SystemSetting>()
+            .HasKey(s => s.Key);
+
+        modelBuilder.Entity<SystemSetting>().HasData(
+            new SystemSetting { Key = "USD_TO_VND", Value = "26309", Description = "Exchange rate from USD to VND", LastUpdated = new DateTime(2025, 1, 1, 0, 0, 0, DateTimeKind.Utc) }
+        );
     }
 }

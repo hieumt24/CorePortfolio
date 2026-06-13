@@ -4,31 +4,60 @@ import { usePortfolioSummary } from '../hooks/usePortfolios';
 import { EditPortfolioModal } from './EditPortfolioModal';
 import { CreateAssetModal } from '../../assets/components/CreateAssetModal';
 import { AssetDetailsModal } from '../../assets/components/AssetDetailsModal';
-import { AssetType } from '../../assets/types';
-import type { AssetSummaryDto } from '../types';
+import type { AssetSummaryDto } from '../../assets/types';
+import { useNotification } from '../../../context/NotificationContext';
 import './PortfolioDetails.css';
+
+import { settingsApi } from '../../admin/api/settingsApi';
 
 export const PortfolioDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { summary, loading, error, refetch } = usePortfolioSummary(id!);
+  const { showNotification } = useNotification();
   
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isAssetModalOpen, setIsAssetModalOpen] = useState(false);
   const [selectedAsset, setSelectedAsset] = useState<AssetSummaryDto | null>(null);
+  const [usdToVndRate, setUsdToVndRate] = useState<number>(26309);
+
+  React.useEffect(() => {
+    const loadSettings = async () => {
+      const rateStr = await settingsApi.getSetting('USD_TO_VND');
+      if (rateStr) {
+        const rate = parseFloat(rateStr);
+        if (!isNaN(rate)) {
+          setUsdToVndRate(rate);
+        }
+      }
+    };
+    loadSettings();
+  }, []);
+
+  React.useEffect(() => {
+    if (selectedAsset && summary) {
+      const updatedAsset = summary.assets.find((a: any) => a.assetId === selectedAsset.assetId);
+      if (updatedAsset && JSON.stringify(updatedAsset) !== JSON.stringify(selectedAsset)) {
+        setSelectedAsset(updatedAsset);
+      }
+    }
+  }, [summary]);
 
   if (loading) return <div className="loading">Loading portfolio...</div>;
   if (error) return <div className="error">{error}</div>;
   if (!summary) return <div className="error">Portfolio not found</div>;
 
-  const formatCurrency = (value: number | undefined | null, currency: string = 'USD') => {
-    if (value === undefined || value === null) return '0.00';
-    const validCurrency = currency && currency.trim() !== '' ? currency : 'USD';
+  const formatCurrency = (value: number | undefined | null, currency: string | null | undefined) => {
+    if (value === undefined || value === null) return '0';
+    let validCurrency = currency && currency.trim() !== '' ? currency : 'VND';
+    const isVND = validCurrency === 'VND';
+    
     try {
-      return new Intl.NumberFormat('en-US', {
+      return new Intl.NumberFormat(isVND ? 'vi-VN' : 'en-US', {
         style: 'currency',
         currency: validCurrency,
-        minimumFractionDigits: 2,
+        minimumFractionDigits: isVND ? 0 : 2,
+        maximumFractionDigits: isVND ? 0 : 2,
       }).format(value);
     } catch (e) {
       return new Intl.NumberFormat('en-US', {
@@ -39,9 +68,135 @@ export const PortfolioDetails: React.FC = () => {
     }
   };
 
-  const cryptoAssets = summary.assets.filter((a: any) => a.type === AssetType.Crypto);
-  const stockAssets = summary.assets.filter((a: any) => a.type === AssetType.Stock);
-  const fundAssets = summary.assets.filter((a: any) => a.type === AssetType.MutualFund);
+  const calculateGroupTotals = (assets: AssetSummaryDto[], currency: string) => {
+    let totalInvested = 0;
+    let currentValue = 0;
+    assets.forEach(a => {
+      totalInvested += a.totalCost || 0;
+      currentValue += a.currentValue || 0;
+    });
+    
+    const profit = currentValue - totalInvested;
+    const profitPercentage = totalInvested > 0 ? (profit / totalInvested) * 100 : 0;
+    
+    return {
+      totalInvested,
+      currentValue,
+      profit,
+      profitPercentage,
+      currency
+    };
+  };
+
+  const calculateAssetPnL = (asset: AssetSummaryDto) => {
+    const cost = asset.totalCost || 0;
+    const value = asset.currentValue || 0;
+    const profit = value - cost;
+    const profitPercentage = cost > 0 ? (profit / cost) * 100 : 0;
+    return { profit, profitPercentage };
+  };
+
+  // Group assets by category
+  const groupedAssets = summary.assets.reduce((acc: any, asset: AssetSummaryDto) => {
+    const cat = asset.categoryName || 'Uncategorized';
+    if (!acc[cat]) {
+      acc[cat] = [];
+    }
+    acc[cat].push(asset);
+    return acc;
+  }, {});
+
+  // Calculate overall VND
+  let overallInvestedVND = 0;
+  let overallCurrentVND = 0;
+
+  Object.keys(groupedAssets).forEach(catName => {
+    const assets: AssetSummaryDto[] = groupedAssets[catName];
+    const groupCurrency = assets[0]?.currency || 'VND';
+    const totals = calculateGroupTotals(assets, groupCurrency);
+    
+    if (groupCurrency === 'USD') {
+      overallInvestedVND += totals.totalInvested * usdToVndRate;
+      overallCurrentVND += totals.currentValue * usdToVndRate;
+    } else {
+      overallInvestedVND += totals.totalInvested;
+      overallCurrentVND += totals.currentValue;
+    }
+  });
+
+  const overallProfitVND = overallCurrentVND - overallInvestedVND;
+
+  const renderGroup = (title: string, assets: AssetSummaryDto[]) => {
+    if (assets.length === 0) return null;
+    const groupCurrency = assets[0]?.currency || 'VND';
+    const totals = calculateGroupTotals(assets, groupCurrency);
+
+    return (
+      <div className="asset-group" key={title}>
+        <div className="group-header">
+          <h3 className="group-title">{title}</h3>
+          <div className="group-stats">
+            <div className="group-stat">
+              <span className="group-stat-label">Total Invested</span>
+              <span className="group-stat-value">{formatCurrency(totals.totalInvested, totals.currency)}</span>
+            </div>
+            <div className="group-stat">
+              <span className="group-stat-label">Current Value</span>
+              <span className="group-stat-value">{formatCurrency(totals.currentValue, totals.currency)}</span>
+            </div>
+            <div className="group-stat">
+              <span className="group-stat-label">Profit/Loss</span>
+              <span className={`group-stat-value ${totals.profit >= 0 ? 'positive' : 'negative'}`}>
+                {totals.profit > 0 ? '+' : ''}{formatCurrency(totals.profit, totals.currency)}
+                <span style={{fontSize: '0.9rem', marginLeft: '6px', fontWeight: 'normal'}}>
+                  ({totals.profit > 0 ? '+' : ''}{totals.profitPercentage.toFixed(2)}%)
+                </span>
+              </span>
+            </div>
+          </div>
+        </div>
+        <div className="assets-grid">
+          {assets.map((asset: AssetSummaryDto) => {
+            const pnl = calculateAssetPnL(asset);
+            return (
+              <div 
+                key={asset.assetId} 
+                className={`asset-card glass-panel`}
+                onClick={() => setSelectedAsset(asset)}
+              >
+                <div className="asset-header">
+                  <h3>{asset.symbol}</h3>
+                  <span className="asset-type">{title}</span>
+                </div>
+                <p className="asset-name">{asset.name}</p>
+                <div className="asset-stats">
+                  <div className="stat">
+                    <span>Quantity</span>
+                    <strong>{asset.totalQuantity?.toLocaleString() || '0'}</strong>
+                  </div>
+                  <div className="stat" style={{alignItems: 'flex-end'}}>
+                    <span>Value</span>
+                    <strong>{formatCurrency(asset.currentValue, asset.currency)}</strong>
+                  </div>
+                </div>
+                <div className="asset-pnl">
+                  <span className="asset-pnl-label">Profit / Loss</span>
+                  <div className="asset-pnl-values">
+                    <span className={`pnl-amount ${pnl.profit >= 0 ? 'positive' : 'negative'}`}>
+                      {pnl.profit > 0 ? '+' : ''}{formatCurrency(pnl.profit, asset.currency)}
+                    </span>
+                    <span className={`pnl-percent ${pnl.profit >= 0 ? 'positive' : 'negative'}`}>
+                      {pnl.profit > 0 ? '+' : ''}{pnl.profitPercentage.toFixed(2)}%
+                    </span>
+                  </div>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <div className="container">
@@ -52,6 +207,9 @@ export const PortfolioDetails: React.FC = () => {
           </button>
           <div className="title-group">
             <h1>{summary.name}</h1>
+            <div className="exchange-rate-note">
+              Exchange Rate: 1 USD = {usdToVndRate.toLocaleString()} VND
+            </div>
           </div>
         </div>
         <div className="header-right">
@@ -72,17 +230,17 @@ export const PortfolioDetails: React.FC = () => {
 
       <section className="overview-cards">
         <div className="stat-card glass-panel">
-          <span className="stat-label">Total Invested</span>
-          <span className="stat-value">{formatCurrency(summary.totalInvested)}</span>
+          <span className="stat-label">Total Invested (VND)</span>
+          <span className="stat-value">{formatCurrency(overallInvestedVND, 'VND')}</span>
         </div>
         <div className="stat-card glass-panel">
-          <span className="stat-label">Current Value</span>
-          <span className="stat-value">{formatCurrency(summary.currentTotalValue)}</span>
+          <span className="stat-label">Current Value (VND)</span>
+          <span className="stat-value">{formatCurrency(overallCurrentVND, 'VND')}</span>
         </div>
         <div className="stat-card glass-panel">
           <span className="stat-label">Total Profit/Loss</span>
-          <span className={`stat-value ${(summary.currentTotalValue || 0) >= (summary.totalInvested || 0) ? 'positive' : 'negative'}`}>
-            {formatCurrency((summary.currentTotalValue || 0) - (summary.totalInvested || 0))}
+          <span className={`stat-value ${overallProfitVND >= 0 ? 'positive' : 'negative'}`}>
+            {overallProfitVND > 0 ? '+' : ''}{formatCurrency(overallProfitVND, 'VND')}
           </span>
         </div>
       </section>
@@ -98,98 +256,7 @@ export const PortfolioDetails: React.FC = () => {
           </div>
         ) : (
           <div className="asset-groups">
-            {cryptoAssets.length > 0 && (
-              <div className="asset-group">
-                <h3 className="group-title">Crypto</h3>
-                <div className="assets-grid">
-                  {cryptoAssets.map((asset: AssetSummaryDto) => (
-                    <div 
-                      key={asset.assetId} 
-                      className="asset-card glass-panel crypto"
-                      onClick={() => setSelectedAsset(asset)}
-                    >
-                      <div className="asset-header">
-                        <h3>{asset.symbol}</h3>
-                        <span className="asset-type">Crypto</span>
-                      </div>
-                      <p className="asset-name">{asset.name}</p>
-                      <div className="asset-stats">
-                        <div className="stat">
-                          <span>Quantity</span>
-                          <strong>{asset.totalQuantity?.toLocaleString() || '0'}</strong>
-                        </div>
-                        <div className="stat">
-                          <span>Value</span>
-                          <strong>{formatCurrency(asset.currentValue, asset.currency)}</strong>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-            
-            {stockAssets.length > 0 && (
-              <div className="asset-group">
-                <h3 className="group-title">Stocks</h3>
-                <div className="assets-grid">
-                  {stockAssets.map((asset: AssetSummaryDto) => (
-                    <div 
-                      key={asset.assetId} 
-                      className="asset-card glass-panel stock"
-                      onClick={() => setSelectedAsset(asset)}
-                    >
-                      <div className="asset-header">
-                        <h3>{asset.symbol}</h3>
-                        <span className="asset-type">Stock</span>
-                      </div>
-                      <p className="asset-name">{asset.name}</p>
-                      <div className="asset-stats">
-                        <div className="stat">
-                          <span>Quantity</span>
-                          <strong>{asset.totalQuantity?.toLocaleString() || '0'}</strong>
-                        </div>
-                        <div className="stat">
-                          <span>Value</span>
-                          <strong>${asset.currentValue?.toLocaleString(undefined, { minimumFractionDigits: 2 }) || '0.00'}</strong>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {fundAssets.length > 0 && (
-              <div className="asset-group">
-                <h3 className="group-title">Mutual Funds</h3>
-                <div className="assets-grid">
-                  {fundAssets.map((asset: AssetSummaryDto) => (
-                    <div 
-                      key={asset.assetId} 
-                      className="asset-card glass-panel fund"
-                      onClick={() => setSelectedAsset(asset)}
-                    >
-                      <div className="asset-header">
-                        <h3>{asset.symbol}</h3>
-                        <span className="asset-type">Fund</span>
-                      </div>
-                      <p className="asset-name">{asset.name}</p>
-                      <div className="asset-stats">
-                        <div className="stat">
-                          <span>Quantity</span>
-                          <strong>{asset.totalQuantity?.toLocaleString() || '0'}</strong>
-                        </div>
-                        <div className="stat">
-                          <span>Value</span>
-                          <strong>${asset.currentValue?.toLocaleString(undefined, { minimumFractionDigits: 2 }) || '0.00'}</strong>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
+            {Object.keys(groupedAssets).map(catName => renderGroup(catName, groupedAssets[catName]))}
           </div>
         )}
       </section>
@@ -199,20 +266,23 @@ export const PortfolioDetails: React.FC = () => {
           portfolio={{
             portfolioId: id!,
             name: summary.name
-          }} 
-          onClose={() => setIsEditModalOpen(false)} 
+          }}
+          onClose={() => setIsEditModalOpen(false)}
           onSuccess={() => {
             setIsEditModalOpen(false);
+            showNotification('Cập nhật Portfolio thành công!', 'success');
             refetch();
-          }} 
+          }}
         />
       )}
       {isAssetModalOpen && (
         <CreateAssetModal 
           portfolioId={id!} 
+          existingAssetIds={summary.assets.map((a: any) => a.marketAssetId)}
           onClose={() => setIsAssetModalOpen(false)} 
           onSuccess={() => {
             setIsAssetModalOpen(false);
+            showNotification('Thêm Asset thành công!', 'success');
             refetch();
           }} 
         />

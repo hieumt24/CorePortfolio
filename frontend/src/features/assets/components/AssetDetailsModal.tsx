@@ -2,7 +2,13 @@ import React, { useState } from 'react';
 import type { AssetSummaryDto } from '../../portfolios/types';
 import { useTransactions } from '../../transactions/hooks/useTransactions';
 import { CreateTransactionModal } from '../../transactions/components/CreateTransactionModal';
+import { EditTransactionModal } from '../../transactions/components/EditTransactionModal';
+import { UpdatePriceModal } from './UpdatePriceModal';
 import { TransactionType } from '../../transactions/types';
+import type { TransactionDto } from '../../transactions/types';
+import { deleteTransaction } from '../../transactions/api/transactionApi';
+import { deleteAsset } from '../api/assetApi';
+import { useNotification } from '../../../context/NotificationContext';
 import './AssetDetailsModal.css';
 
 interface AssetDetailsModalProps {
@@ -13,17 +19,59 @@ interface AssetDetailsModalProps {
 }
 
 export const AssetDetailsModal: React.FC<AssetDetailsModalProps> = ({ asset, portfolioId, onClose, onDataChanged }) => {
+  const { showNotification } = useNotification();
   const { transactions, loading, error, refetch } = useTransactions(asset.assetId);
   const [isTxModalOpen, setIsTxModalOpen] = useState(false);
+  const [editingTx, setEditingTx] = useState<TransactionDto | null>(null);
+  const [deletingTxId, setDeletingTxId] = useState<string | null>(null);
+  const [isDeletingAsset, setIsDeletingAsset] = useState(false);
+  const [isUpdatePriceModalOpen, setIsUpdatePriceModalOpen] = useState(false);
 
-  const formatCurrency = (value: number | undefined | null, currency: string = 'USD') => {
-    if (value === undefined || value === null) return '0.00';
-    const validCurrency = currency && currency.trim() !== '' ? currency : 'USD';
+  const handleDelete = async (id: string) => {
+    if (window.confirm('Are you sure you want to delete this transaction?')) {
+      try {
+        setDeletingTxId(id);
+        await deleteTransaction(id);
+        refetch();
+        onDataChanged();
+        showNotification('Transaction deleted successfully', 'success');
+      } catch (err) {
+        console.error('Failed to delete transaction', err);
+        showNotification('Failed to delete transaction.', 'error');
+      } finally {
+        setDeletingTxId(null);
+      }
+    }
+  };
+
+  const handleDeleteAsset = async () => {
+    if (window.confirm('CẢNH BÁO: Hành động này sẽ xóa vĩnh viễn Asset này khỏi danh mục cùng TOÀN BỘ lịch sử giao dịch. Bạn có chắc chắn?')) {
+      try {
+        setIsDeletingAsset(true);
+        await deleteAsset(portfolioId, asset.assetId);
+        onDataChanged();
+        onClose();
+        showNotification('Asset and its transactions deleted successfully', 'success');
+      } catch (err) {
+        console.error('Failed to delete asset', err);
+        showNotification('Failed to delete asset.', 'error');
+      } finally {
+        setIsDeletingAsset(false);
+      }
+    }
+  };
+
+  const formatCurrency = (value: number | undefined | null, currency: string | null | undefined) => {
+    if (value === undefined || value === null) return '0';
+    let validCurrency = currency && currency.trim() !== '' ? currency : 'VND';
+    const isVND = validCurrency === 'VND';
+    
     try {
-      return new Intl.NumberFormat('en-US', {
+      return new Intl.NumberFormat(isVND ? 'vi-VN' : 'en-US', {
         style: 'currency',
         currency: validCurrency,
-        minimumFractionDigits: 2,
+        minimumFractionDigits: isVND ? 0 : 2,
+        maximumFractionDigits: isVND ? 0 : 2,
       }).format(value);
     } catch (e) {
       return new Intl.NumberFormat('en-US', {
@@ -41,16 +89,31 @@ export const AssetDetailsModal: React.FC<AssetDetailsModalProps> = ({ asset, por
           <div className="header-info">
             <h2>{asset.name} ({asset.symbol})</h2>
             <div className="asset-badges">
-              <span className="badge">{asset.type === 0 ? 'Crypto' : asset.type === 1 ? 'Stock' : 'Fund'}</span>
+              <span className="badge">{asset.categoryName}</span>
               <span className="badge value-badge">Total Value: {formatCurrency(asset.currentValue, asset.currency)}</span>
+              <button 
+                className="btn btn-sm btn-outline" 
+                style={{ marginLeft: '10px', padding: '2px 8px', fontSize: '12px' }}
+                onClick={() => setIsUpdatePriceModalOpen(true)}
+              >
+                ✎ Update Price
+              </button>
             </div>
           </div>
           <button className="close-btn" onClick={onClose}>&times;</button>
         </div>
 
-        <div className="actions-bar">
+        <div className="actions-bar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <button className="btn btn-primary glass-panel" onClick={() => setIsTxModalOpen(true)}>
             + Add Transaction
+          </button>
+          <button 
+            className="btn glass-panel" 
+            style={{ backgroundColor: 'var(--sell-color)' }}
+            disabled={isDeletingAsset}
+            onClick={handleDeleteAsset}
+          >
+            {isDeletingAsset ? 'Deleting...' : 'Delete Asset'}
           </button>
         </div>
 
@@ -71,6 +134,7 @@ export const AssetDetailsModal: React.FC<AssetDetailsModalProps> = ({ asset, por
                   <th>Quantity</th>
                   <th>Price</th>
                   <th>Total</th>
+                  <th>Actions</th>
                 </tr>
               </thead>
               <tbody>
@@ -85,6 +149,12 @@ export const AssetDetailsModal: React.FC<AssetDetailsModalProps> = ({ asset, por
                     <td>{tx.quantity.toLocaleString()}</td>
                     <td>{formatCurrency(tx.price, asset.currency)}</td>
                     <td>{formatCurrency(tx.quantity * tx.price, asset.currency)}</td>
+                    <td>
+                      <button className="btn btn-sm btn-outline" style={{marginRight: '8px', padding: '4px 8px'}} onClick={() => setEditingTx(tx)}>Edit</button>
+                      <button className="btn btn-sm" style={{padding: '4px 8px', backgroundColor: 'var(--sell-color)'}} disabled={deletingTxId === tx.id} onClick={() => handleDelete(tx.id)}>
+                        {deletingTxId === tx.id ? '...' : 'Del'}
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -101,6 +171,30 @@ export const AssetDetailsModal: React.FC<AssetDetailsModalProps> = ({ asset, por
           onSuccess={() => {
             setIsTxModalOpen(false);
             refetch();
+            onDataChanged();
+          }}
+        />
+      )}
+
+      {editingTx && (
+        <EditTransactionModal
+          transaction={editingTx}
+          asset={asset}
+          onClose={() => setEditingTx(null)}
+          onSuccess={() => {
+            setEditingTx(null);
+            refetch();
+            onDataChanged();
+          }}
+        />
+      )}
+
+      {isUpdatePriceModalOpen && (
+        <UpdatePriceModal
+          asset={asset}
+          onClose={() => setIsUpdatePriceModalOpen(false)}
+          onSuccess={() => {
+            setIsUpdatePriceModalOpen(false);
             onDataChanged();
           }}
         />

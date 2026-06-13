@@ -15,9 +15,10 @@ export interface PortfolioSummaryDto {
 
 export interface AssetSummaryDto {
   assetId: string;
+  marketAssetId: string;
   symbol: string;
   name: string;
-  type: number; // Enum: 0 = Crypto, 1 = Stock, 2 = MutualFund
+  categoryName: string;
   currency: string;
   currentPrice: number;
   totalQuantity: number;
