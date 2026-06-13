@@ -3,4 +3,4 @@ using MediatR;
 
 namespace CorePortfolio.API.Features.Assets.CreateAsset;
 
-public record CreateAssetCommand(Guid PortfolioId, string Symbol, string Name, AssetType Type) : IRequest<Guid>;
+public record CreateAssetCommand(Guid PortfolioId, string Symbol, string Name, AssetType Type, string Currency) : IRequest<Guid>;

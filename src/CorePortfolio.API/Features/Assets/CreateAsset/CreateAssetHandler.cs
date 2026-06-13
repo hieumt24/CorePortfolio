@@ -27,6 +27,7 @@ public class CreateAssetHandler : IRequestHandler<CreateAssetCommand, Guid>
             Symbol = request.Symbol,
             Name = request.Name,
             Type = request.Type,
+            Currency = request.Currency,
             CurrentPrice = 0 // Initial price is 0 until updated or first transaction
         };
 

@@ -20,9 +20,14 @@ public class CreateTransactionHandler : IRequestHandler<CreateTransactionCommand
         if (!portfolioExists)
             throw new Exception("Portfolio not found");
 
-        var assetExists = await _dbContext.Assets.AnyAsync(a => a.Id == request.AssetId && a.PortfolioId == request.PortfolioId, cancellationToken);
-        if (!assetExists)
+        var asset = await _dbContext.Assets.FirstOrDefaultAsync(a => a.Id == request.AssetId && a.PortfolioId == request.PortfolioId, cancellationToken);
+        if (asset == null)
             throw new Exception("Asset not found in this portfolio");
+
+        if (!string.IsNullOrEmpty(request.Currency) && asset.Currency != request.Currency)
+        {
+            asset.Currency = request.Currency;
+        }
 
         var transaction = new Transaction
         {

@@ -61,6 +61,7 @@ public class GetPortfolioSummaryHandler : IRequestHandler<GetPortfolioSummaryQue
                 asset.Symbol,
                 asset.Name,
                 asset.Type,
+                asset.Currency,
                 asset.CurrentPrice,
                 totalQuantity,
                 totalCost,
