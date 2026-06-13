@@ -1,6 +1,6 @@
 ---
-name: code-review
-description: "Review C# source code against the CorePortfolio coding standards and OWASP Top 10 security guidelines."
+name: coreportfolio-code-review
+description: "Reviews C# code changes before raising a PR against team coding standards, OWASP security requirements, and best practices. Use when: reviewing PRs, checking new feature slices, or validating domain/infrastructure code."
 ---
 
 # Code Review

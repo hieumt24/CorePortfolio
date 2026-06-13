@@ -14,7 +14,7 @@ The source code solution will be structured with the following key components:
 - **Backend**: ASP.NET Core Web API (C# - .NET 8.0)
 - **Frontend**: React
 - **Database**: SQLite
-- **Testing**: xUnit/NUnit for Backend unit tests (Functional tests are NOT required for this project)
+- **Testing**: xUnit/NUnit for Backend unit tests (Unit test and Functional tests are NOT required for this project)
 
 ---
 
@@ -54,7 +54,7 @@ Before submitting changes, ensure code passes review against:
 4. **Testing**: Appropriate unit test coverage for new functionality
 5. **Architecture**: Adherence to Vertical Slice Architecture (Features contain their own Request, Handler, Response, and Repository logic where appropriate)
 
-Use the [@code-reviewer](.github/agents/code-reviewer.agent.md) agent for comprehensive pre-PR reviews.
+Use the [@coreportfolio-code-reviewer](.github/agents/coreportfolio-code-reviewer.agent.md) agent for comprehensive pre-PR reviews.
 
 ---
 

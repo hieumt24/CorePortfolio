@@ -1,5 +1,5 @@
 ---
-name: write-code
+name: coreportfolio-write-code
 description: "Write or update C# code for the CorePortfolio Service following Clean Architecture and Vertical Slice patterns. Use when: creating a new API endpoint, implementing domain logic, setting up EF Core entities with SQLite, or scaffolding a new feature slice."
 ---
 

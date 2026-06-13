@@ -1,8 +1,8 @@
 ---
-name: code-reviewer
+name: coreportfolio-code-reviewer
 description: Reviews code changes before raising a PR against team coding standards, security requirements, and best practices
 skills:
-  - ../skills/code-review
+  - ../skills/coreportfolio-code-review
 ---
 
 # Code Reviewer Agent

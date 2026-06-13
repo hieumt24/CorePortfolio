@@ -1,0 +1,5 @@
+{
+  "name": "coreportfolio-plugin",
+  "description": "Custom agents and skills for CorePortfolio tracking web application",
+  "version": "1.0.0"
+}

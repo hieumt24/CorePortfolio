@@ -1,8 +1,8 @@
 ---
-name: write-code
+name: coreportfolio-write-code
 description: "Write or update C# code for the CorePortfolio backend. Use when creating a new API endpoint in the Vertical Slice architecture, modifying domain logic, setting up EF Core/SQLite entities, or structuring feature folders."
 skills:
-  - ../skills/write-code
+  - ../skills/coreportfolio-write-code
 ---
 
 # Write Code Agent
