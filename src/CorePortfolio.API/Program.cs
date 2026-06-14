@@ -24,6 +24,9 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using CorePortfolio.Domain.Interfaces;
+using CorePortfolio.Coingecko;
+using CorePortfolio.Telegram;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -52,8 +55,12 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
+builder.Services.AddScoped<IPortfolioReportService, PortfolioReportService>();
 builder.Services.AddHttpClient();
-builder.Services.AddHostedService<TelegramBotService>();
+
+// External Infrastructures
+builder.Services.AddCoinGeckoInfrastructure(builder.Configuration);
+builder.Services.AddTelegramInfrastructure(builder.Configuration);
 
 // Configure JWT Authentication
 var jwtKey = builder.Configuration["Jwt:Key"] ?? throw new InvalidOperationException("Jwt:Key not found.");

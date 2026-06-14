@@ -14,6 +14,7 @@ Implement or modify C# code for the CorePortfolio Service. This skill orchestrat
 - Writing or updating request/response mapping logic
 - Scaffolding feature folder structure for a new slice
 - Updating existing endpoint logic (validation, error handling, mapping)
+- **Infrastructure & Clean Architecture**: Tách biệt các third-party providers (Telegram SDK, HTTP details của CoinGecko) thành các Infrastructure projects riêng biệt để giúp API độc lập và dễ thay thế provider.
 
 ## References
 

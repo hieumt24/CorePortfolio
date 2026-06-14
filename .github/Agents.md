@@ -64,6 +64,9 @@ Use the [@coreportfolio-code-reviewer](.github/agents/coreportfolio-code-reviewe
 - Group files by Feature (e.g., `GetPortfolioDetails`, `CreateTransaction`).
 - Each Feature folder contains its Endpoint, Command/Query, Handler, and Validation logic.
 
+### Infrastructure & Clean Architecture
+- Việc chia tách các provider bên thứ 3 (như Telegram SDK, HTTP details của CoinGecko) thành các Infrastructure projects riêng biệt giúp tuân thủ nguyên tắc Clean Architecture. Điều này giúp cho API độc lập với các thư viện bên ngoài và dễ dàng thay thế provider trong tương lai nếu muốn.
+
 ### Dependency Injection
 - Register services in `Program.cs` or specific `DependencyInjection.cs` modules.
 - Use constructor injection for dependencies.

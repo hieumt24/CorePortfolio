@@ -3,12 +3,13 @@ using Telegram.Bot;
 using Telegram.Bot.Polling;
 using Telegram.Bot.Types;
 using Telegram.Bot.Types.Enums;
-using MediatR;
-using CorePortfolio.API.Features.Reports.GetGlobalReport;
-using CorePortfolio.Infrastructure.Data;
-using Microsoft.EntityFrameworkCore;
+using CorePortfolio.Domain.Interfaces;
+using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Configuration;
+using Microsoft.Extensions.Logging;
+using Microsoft.Extensions.DependencyInjection;
 
-namespace CorePortfolio.API.Services;
+namespace CorePortfolio.Telegram;
 
 public class TelegramBotService : BackgroundService
 {
@@ -79,35 +80,34 @@ public class TelegramBotService : BackgroundService
 
         if (messageText == "/report")
         {
-            await HandleReportCommand(botClient, senderChatId, cancellationToken);
+            await HandleCommand(botClient, senderChatId, reportService => reportService.GetGlobalReportMarkdownAsync(cancellationToken), cancellationToken);
+        }
+        else if (messageText == "/portfolio")
+        {
+            await HandleCommand(botClient, senderChatId, reportService => reportService.GetPortfoliosListMarkdownAsync(cancellationToken), cancellationToken);
+        }
+        else if (messageText == "/balance")
+        {
+            await HandleCommand(botClient, senderChatId, reportService => reportService.GetBalanceMarkdownAsync(cancellationToken), cancellationToken);
         }
         else if (messageText == "/start")
         {
             await botClient.SendMessage(
                 chatId: senderChatId,
-                text: "Chào mừng! Gõ `/report` để xem báo cáo CorePortfolio.",
+                text: "Chào mừng! Các lệnh hỗ trợ:\n- `/report`: Báo cáo chi tiết\n- `/portfolio`: Danh sách danh mục\n- `/balance`: Tổng số dư",
                 parseMode: ParseMode.Markdown,
                 cancellationToken: cancellationToken);
         }
     }
 
-    private async Task HandleReportCommand(ITelegramBotClient botClient, string chatId, CancellationToken cancellationToken)
+    private async Task HandleCommand(ITelegramBotClient botClient, string chatId, Func<IPortfolioReportService, Task<string>> action, CancellationToken cancellationToken)
     {
         try
         {
             using var scope = _serviceProvider.CreateScope();
-            var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            var mediator = scope.ServiceProvider.GetRequiredService<IMediator>();
+            var reportService = scope.ServiceProvider.GetRequiredService<IPortfolioReportService>();
 
-            var adminUser = await dbContext.Users.FirstOrDefaultAsync(u => u.Role == "Admin", cancellationToken);
-            if (adminUser == null)
-            {
-                await botClient.SendMessage(chatId, "Lỗi: Không tìm thấy người dùng Admin trong hệ thống.", cancellationToken: cancellationToken);
-                return;
-            }
-
-            var report = await mediator.Send(new GetGlobalReportQuery(adminUser.Id), cancellationToken);
-            var text = FormatReport(report);
+            var text = await action(reportService);
 
             await botClient.SendMessage(
                 chatId: chatId,
@@ -117,49 +117,9 @@ public class TelegramBotService : BackgroundService
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Error handling /report command.");
-            await botClient.SendMessage(chatId, "Đã xảy ra lỗi khi tạo báo cáo.", cancellationToken: cancellationToken);
+            _logger.LogError(ex, "Error handling command in Telegram Bot.");
+            await botClient.SendMessage(chatId, "Đã xảy ra lỗi khi thực thi lệnh.", cancellationToken: cancellationToken);
         }
-    }
-
-    private string FormatReport(GlobalReportDto report)
-    {
-        var sb = new StringBuilder();
-        sb.AppendLine("📊 *BÁO CÁO COREPORTFOLIO*");
-        sb.AppendLine();
-
-        if (report.AllocationsByPortfolio.Count == 0)
-        {
-            return "Chưa có dữ liệu danh mục.";
-        }
-
-        foreach (var portfolio in report.AllocationsByPortfolio)
-        {
-            sb.AppendLine($"💼 *Danh mục: {portfolio.PortfolioName}*");
-            foreach (var curr in portfolio.Currencies)
-            {
-                var profit = curr.CurrentValue - curr.TotalInvested;
-                var profitPercent = curr.TotalInvested > 0 ? (profit / curr.TotalInvested) * 100 : 0;
-                var emoji = profit >= 0 ? "🟢" : "🔴";
-                
-                sb.AppendLine($"  - Tiền tệ: {curr.Currency}");
-                sb.AppendLine($"  - Vốn: {curr.TotalInvested:N0}");
-                sb.AppendLine($"  - Hiện tại: {curr.CurrentValue:N0}");
-                sb.AppendLine($"  - Lợi nhuận: {emoji} {profit:N0} ({profitPercent:N2}%)");
-            }
-            sb.AppendLine();
-        }
-
-        sb.AppendLine("📈 *Phân bổ theo danh mục tài sản*");
-        foreach (var cat in report.AllocationsByCategory)
-        {
-            var profit = cat.CurrentValue - cat.TotalInvested;
-            var profitPercent = cat.TotalInvested > 0 ? (profit / cat.TotalInvested) * 100 : 0;
-            var emoji = profit >= 0 ? "🟢" : "🔴";
-            sb.AppendLine($"- *{cat.CategoryName}*: Vốn {cat.TotalInvested:N0} {cat.Currency} | Hiện tại {cat.CurrentValue:N0} | {emoji} {profitPercent:N2}%");
-        }
-
-        return sb.ToString();
     }
 
     private Task HandleErrorAsync(ITelegramBotClient botClient, Exception exception, CancellationToken cancellationToken)
