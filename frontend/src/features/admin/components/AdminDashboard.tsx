@@ -27,6 +27,7 @@ export function AdminDashboard() {
   const [newAssetName, setNewAssetName] = useState('');
   const [newAssetPrice, setNewAssetPrice] = useState('');
   const [newAssetCategoryId, setNewAssetCategoryId] = useState('');
+  const [isFetchingPrice, setIsFetchingPrice] = useState(false);
 
   useEffect(() => {
     loadCategories();
@@ -141,6 +142,32 @@ export function AdminDashboard() {
     } catch (error) {
       console.error('Failed to save market asset', error);
       showNotification('Đã xảy ra lỗi khi lưu Market Asset', 'error');
+    }
+  };
+
+  const fetchCoinGeckoPrice = async () => {
+    if (!newAssetName) {
+      showNotification('Please enter the Asset Full Name first (e.g. bitcoin, ethereum)', 'info');
+      return;
+    }
+    
+    try {
+      setIsFetchingPrice(true);
+      const coinId = newAssetName.trim().toLowerCase().replace(/\s+/g, '-');
+      
+      const data = await marketAssetsApi.fetchCoinGeckoPrice(coinId);
+      
+      if (data && data.price) {
+        setNewAssetPrice(data.price.toString());
+        showNotification(`Đã lấy giá CoinGecko: $${data.price}`, 'success');
+      } else {
+        showNotification(`Không tìm thấy giá cho ID "${coinId}". Hãy đảm bảo Full Name khớp với CoinGecko ID.`, 'error');
+      }
+    } catch (error) {
+      console.error('CoinGecko API error', error);
+      showNotification('Lỗi kết nối tới Backend để lấy giá CoinGecko', 'error');
+    } finally {
+      setIsFetchingPrice(false);
     }
   };
 
@@ -326,7 +353,27 @@ export function AdminDashboard() {
                     />
                   </div>
                   <div className="admin-form-group">
-                    <label>Current Price</label>
+                    <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                      <span>Current Price</span>
+                      <button 
+                        type="button" 
+                        onClick={fetchCoinGeckoPrice}
+                        disabled={isFetchingPrice}
+                        style={{ 
+                          background: 'rgba(16, 185, 129, 0.1)', 
+                          border: '1px solid rgba(16, 185, 129, 0.3)', 
+                          color: '#10b981', 
+                          cursor: isFetchingPrice ? 'wait' : 'pointer', 
+                          fontSize: '0.75rem', 
+                          padding: '0.15rem 0.5rem',
+                          borderRadius: '6px',
+                          fontWeight: 600,
+                          opacity: isFetchingPrice ? 0.6 : 1
+                        }}
+                      >
+                        {isFetchingPrice ? 'Fetching...' : '⚡ Fetch CoinGecko'}
+                      </button>
+                    </label>
                     <input
                       type="number"
                       required

@@ -28,7 +28,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         const decoded: any = jwtDecode(token);
         setUser({
           id: decoded['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'] || decoded.sub,
-          email: decoded['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/emailaddress'] || decoded.email,
+          email: decoded['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name'] || decoded.name || decoded.unique_name || 'Admin',
           role: decoded['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] || decoded.role,
         });
       } catch (e) {

@@ -15,4 +15,7 @@ export const marketAssetsApi = {
 
   deleteMarketAsset: (id: string) =>
     apiClient<void>(`/admin/market-assets/${id}`, { method: 'DELETE' }),
+
+  fetchCoinGeckoPrice: (coinId: string) =>
+    apiClient<{ price: number }>(`/admin/market-assets/coingecko-price/${coinId}`, { method: 'GET' }),
 };
