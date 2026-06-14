@@ -1,0 +1,169 @@
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.6);
+  backdrop-filter: blur(4px);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 1000;
+  animation: fadeIn 0.2s ease;
+}
+
+.modal-content {
+  width: 100%;
+  max-width: 500px;
+  padding: 2rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  animation: slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.modal-header h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  background: linear-gradient(135deg, #fff 0%, #a5b4fc 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.close-btn {
+  background: none;
+  border: none;
+  color: var(--text-secondary);
+  font-size: 2rem;
+  cursor: pointer;
+  line-height: 1;
+  transition: color 0.2s;
+}
+
+.close-btn:hover {
+  color: var(--danger);
+}
+
+.modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.form-group label {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: var(--text-secondary);
+}
+
+.glass-input {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  color: white;
+  font-family: inherit;
+  font-size: 1rem;
+  transition: all 0.2s;
+  outline: none;
+  width: 100%;
+}
+
+.glass-input:focus {
+  border-color: var(--accent-primary);
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+}
+
+.glass-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+select.glass-input option {
+  background: var(--bg-primary);
+  color: var(--text-primary);
+}
+
+/* Fix for date input icon color in webkit */
+input[type="datetime-local"].glass-input::-webkit-calendar-picker-indicator {
+  filter: invert(1);
+  opacity: 0.5;
+  cursor: pointer;
+}
+input[type="datetime-local"].glass-input::-webkit-calendar-picker-indicator:hover {
+  opacity: 0.8;
+}
+
+.modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.btn {
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  border: none;
+  transition: all 0.2s ease;
+  font-family: inherit;
+}
+
+.btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.btn-primary {
+  background: var(--accent-primary, #6366f1);
+  color: white;
+  box-shadow: 0 4px 14px rgba(99, 102, 241, 0.4);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: var(--accent-secondary, #8b5cf6);
+  transform: translateY(-1px);
+}
+
+.btn-secondary {
+  background: rgba(255, 255, 255, 0.1);
+  color: white;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: rgba(255, 255, 255, 0.15);
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes slideUp {
+  from { 
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to { 
+    opacity: 1;
+    transform: translateY(0);
+  }
+}

@@ -17,6 +17,7 @@ export interface AssetSummaryDto {
   totalQuantity: number;
   totalCost: number;
   currentValue: number;
+  totalBought: number;
 }
 
 export interface CreateAssetRequest {

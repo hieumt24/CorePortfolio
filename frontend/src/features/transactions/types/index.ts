@@ -32,3 +32,25 @@ export interface UpdateTransactionRequest {
   currency?: string;
   timestamp?: string;
 }
+
+export interface GlobalTransactionDto {
+  id: string;
+  portfolioId: string;
+  portfolioName: string;
+  assetId: string;
+  symbol: string;
+  assetName: string;
+  categoryName: string;
+  currency: string;
+  type: TransactionType;
+  quantity: number;
+  price: number;
+  date: string;
+}
+
+export interface PaginatedResult<T> {
+  items: T[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+}

@@ -104,9 +104,39 @@ namespace CorePortfolio.Infrastructure.Migrations
                         .IsRequired()
                         .HasColumnType("TEXT");
 
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("TEXT");
+
                     b.HasKey("Id");
 
+                    b.HasIndex("UserId");
+
                     b.ToTable("Portfolios");
+                });
+
+            modelBuilder.Entity("CorePortfolio.Domain.Entities.PortfolioSnapshot", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("Date")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("PortfolioId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("TotalInvested")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("TotalValue")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PortfolioId");
+
+                    b.ToTable("PortfolioSnapshots");
                 });
 
             modelBuilder.Entity("CorePortfolio.Domain.Entities.SystemSetting", b =>
@@ -172,6 +202,32 @@ namespace CorePortfolio.Infrastructure.Migrations
                     b.ToTable("Transactions");
                 });
 
+            modelBuilder.Entity("CorePortfolio.Domain.Entities.User", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("PasswordHash")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Username")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Users");
+                });
+
             modelBuilder.Entity("CorePortfolio.Domain.Entities.Asset", b =>
                 {
                     b.HasOne("CorePortfolio.Domain.Entities.MarketAsset", "MarketAsset")
@@ -202,6 +258,28 @@ namespace CorePortfolio.Infrastructure.Migrations
                     b.Navigation("Category");
                 });
 
+            modelBuilder.Entity("CorePortfolio.Domain.Entities.Portfolio", b =>
+                {
+                    b.HasOne("CorePortfolio.Domain.Entities.User", "User")
+                        .WithMany("Portfolios")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("CorePortfolio.Domain.Entities.PortfolioSnapshot", b =>
+                {
+                    b.HasOne("CorePortfolio.Domain.Entities.Portfolio", "Portfolio")
+                        .WithMany()
+                        .HasForeignKey("PortfolioId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Portfolio");
+                });
+
             modelBuilder.Entity("CorePortfolio.Domain.Entities.Transaction", b =>
                 {
                     b.HasOne("CorePortfolio.Domain.Entities.Asset", "Asset")
@@ -226,6 +304,11 @@ namespace CorePortfolio.Infrastructure.Migrations
                     b.Navigation("Assets");
 
                     b.Navigation("Transactions");
+                });
+
+            modelBuilder.Entity("CorePortfolio.Domain.Entities.User", b =>
+                {
+                    b.Navigation("Portfolios");
                 });
 #pragma warning restore 612, 618
         }

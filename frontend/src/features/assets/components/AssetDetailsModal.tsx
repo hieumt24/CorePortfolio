@@ -9,6 +9,7 @@ import type { TransactionDto } from '../../transactions/types';
 import { deleteTransaction } from '../../transactions/api/transactionApi';
 import { deleteAsset } from '../api/assetApi';
 import { useNotification } from '../../../context/NotificationContext';
+import { useAuth } from '../../../context/AuthContext';
 import './AssetDetailsModal.css';
 
 interface AssetDetailsModalProps {
@@ -20,6 +21,7 @@ interface AssetDetailsModalProps {
 
 export const AssetDetailsModal: React.FC<AssetDetailsModalProps> = ({ asset, portfolioId, onClose, onDataChanged }) => {
   const { showNotification } = useNotification();
+  const { isAdmin } = useAuth();
   const { transactions, loading, error, refetch } = useTransactions(asset.assetId);
   const [isTxModalOpen, setIsTxModalOpen] = useState(false);
   const [editingTx, setEditingTx] = useState<TransactionDto | null>(null);
@@ -91,13 +93,15 @@ export const AssetDetailsModal: React.FC<AssetDetailsModalProps> = ({ asset, por
             <div className="asset-badges">
               <span className="badge">{asset.categoryName}</span>
               <span className="badge value-badge">Total Value: {formatCurrency(asset.currentValue, asset.currency)}</span>
-              <button 
-                className="btn btn-sm btn-outline" 
-                style={{ marginLeft: '10px', padding: '2px 8px', fontSize: '12px' }}
-                onClick={() => setIsUpdatePriceModalOpen(true)}
-              >
-                ✎ Update Price
-              </button>
+              {isAdmin && (
+                <button 
+                  className="btn btn-sm btn-outline" 
+                  style={{ marginLeft: '10px', padding: '2px 8px', fontSize: '12px' }}
+                  onClick={() => setIsUpdatePriceModalOpen(true)}
+                >
+                  ✎ Update Price
+                </button>
+              )}
             </div>
           </div>
           <button className="close-btn" onClick={onClose}>&times;</button>

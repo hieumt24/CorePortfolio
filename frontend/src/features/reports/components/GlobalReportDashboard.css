@@ -1,0 +1,114 @@
+.report-dashboard {
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+  animation: fadeIn 0.4s ease;
+}
+
+.report-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+  margin-bottom: 2rem;
+}
+
+.report-header h1 {
+  margin: 0;
+  font-size: 2.5rem;
+  font-weight: 700;
+  background: linear-gradient(to right, #e0e7ff, #a5b4fc);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.report-header p {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 0.95rem;
+}
+
+.report-summary-cards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2.5rem;
+}
+
+.summary-card {
+  padding: 1.5rem 2rem;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+}
+
+.summary-card h3 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.1rem;
+  color: rgba(255, 255, 255, 0.7);
+  font-weight: 500;
+}
+
+.summary-value {
+  margin: 0;
+  font-size: 2rem;
+  font-weight: 700;
+  color: white;
+}
+
+.summary-value.positive {
+  color: #10b981;
+}
+
+.summary-value.negative {
+  color: #ef4444;
+}
+
+.charts-container {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(450px, 1fr));
+  gap: 2rem;
+}
+
+.chart-wrapper {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.chart-wrapper h2 {
+  margin: 0 0 1.5rem 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.9);
+  text-align: center;
+}
+
+.no-data {
+  height: 100%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: rgba(255, 255, 255, 0.4);
+  font-style: italic;
+}
+
+/* Glassmorphism Recharts Tooltip Override */
+.recharts-tooltip-wrapper .custom-tooltip {
+  background: rgba(30, 41, 59, 0.8) !important;
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+@media (max-width: 768px) {
+  .report-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  
+  .charts-container {
+    grid-template-columns: 1fr;
+  }
+}

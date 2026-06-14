@@ -1,0 +1,144 @@
+.transactions-dashboard {
+  padding: 2rem;
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.transactions-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 2rem;
+}
+
+.transactions-header h1 {
+  margin: 0;
+  font-size: 2rem;
+  background: linear-gradient(135deg, #fff 0%, #a5b4fc 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.filters-container {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.filter-select,
+.filter-input {
+  background: rgba(30, 41, 59, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #fff;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  outline: none;
+  transition: all 0.3s ease;
+}
+
+.filter-select:focus,
+.filter-input:focus {
+  border-color: #3b82f6;
+  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+}
+
+.transactions-table-container {
+  overflow-x: auto;
+  border-radius: 12px;
+}
+
+.transactions-table {
+  width: 100%;
+  border-collapse: collapse;
+  text-align: left;
+}
+
+.transactions-table th {
+  background: rgba(15, 23, 42, 0.6);
+  padding: 1rem;
+  font-weight: 600;
+  color: #94a3b8;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.transactions-table td {
+  padding: 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  color: #e2e8f0;
+}
+
+.transactions-table tr:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.type-badge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.type-badge.buy {
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981;
+}
+
+.type-badge.sell {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+
+.type-badge.deposit {
+  background: rgba(59, 130, 246, 0.1);
+  color: #3b82f6;
+}
+
+.type-badge.withdrawal {
+  background: rgba(245, 158, 11, 0.1);
+  color: #f59e0b;
+}
+
+.type-badge.dividend {
+  background: rgba(139, 92, 246, 0.1);
+  color: #8b5cf6;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.btn-icon {
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.btn-icon:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.btn-icon.delete:hover {
+  background: rgba(239, 68, 68, 0.1);
+  color: #ef4444;
+}
+
+.pagination {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.page-info {
+  color: #94a3b8;
+  font-size: 0.9rem;
+}

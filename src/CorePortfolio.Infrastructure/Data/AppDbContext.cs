@@ -10,18 +10,26 @@ public class AppDbContext : DbContext
     }
 
     public DbSet<Portfolio> Portfolios => Set<Portfolio>();
+    public DbSet<User> Users => Set<User>();
     public DbSet<Asset> Assets => Set<Asset>();
     public DbSet<Transaction> Transactions => Set<Transaction>();
 
     public DbSet<AssetCategory> AssetCategories => Set<AssetCategory>();
     public DbSet<MarketAsset> MarketAssets => Set<MarketAsset>();
     public DbSet<SystemSetting> SystemSettings => Set<SystemSetting>();
+    public DbSet<PortfolioSnapshot> PortfolioSnapshots => Set<PortfolioSnapshot>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
         
         // Configuration for relationships and constraints
+        modelBuilder.Entity<User>()
+            .HasMany(u => u.Portfolios)
+            .WithOne(p => p.User)
+            .HasForeignKey(p => p.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
         modelBuilder.Entity<Portfolio>()
             .HasMany(p => p.Assets)
             .WithOne(a => a.Portfolio)
@@ -32,6 +40,12 @@ public class AppDbContext : DbContext
             .HasMany(p => p.Transactions)
             .WithOne(t => t.Portfolio)
             .HasForeignKey(t => t.PortfolioId)
+            .OnDelete(DeleteBehavior.Cascade);
+            
+        modelBuilder.Entity<Portfolio>()
+            .HasMany<PortfolioSnapshot>()
+            .WithOne(s => s.Portfolio)
+            .HasForeignKey(s => s.PortfolioId)
             .OnDelete(DeleteBehavior.Cascade);
             
         modelBuilder.Entity<Transaction>()

@@ -1,22 +1,26 @@
 using CorePortfolio.Domain.Entities;
 using CorePortfolio.Infrastructure.Data;
 using MediatR;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
+using CorePortfolio.API.Services;
 
 namespace CorePortfolio.API.Features.Assets.CreateAsset;
 
 public class CreateAssetHandler : IRequestHandler<CreateAssetCommand, Guid>
 {
     private readonly AppDbContext _dbContext;
+    private readonly ICurrentUserService _currentUserService;
 
-    public CreateAssetHandler(AppDbContext dbContext)
+    public CreateAssetHandler(AppDbContext dbContext, ICurrentUserService currentUserService)
     {
         _dbContext = dbContext;
+        _currentUserService = currentUserService;
     }
 
     public async Task<Guid> Handle(CreateAssetCommand request, CancellationToken cancellationToken)
     {
-        var portfolioExists = await _dbContext.Portfolios.AnyAsync(p => p.Id == request.PortfolioId, cancellationToken);
+        var portfolioExists = await _dbContext.Portfolios.AnyAsync(p => p.Id == request.PortfolioId && p.UserId == _currentUserService.UserId, cancellationToken);
         if (!portfolioExists)
             throw new Exception("Portfolio not found"); // In a real app, use proper exception or Result pattern
 

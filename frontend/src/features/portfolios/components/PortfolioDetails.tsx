@@ -6,9 +6,12 @@ import { CreateAssetModal } from '../../assets/components/CreateAssetModal';
 import { AssetDetailsModal } from '../../assets/components/AssetDetailsModal';
 import type { AssetSummaryDto } from '../../assets/types';
 import { useNotification } from '../../../context/NotificationContext';
+import { PieChart, Pie, Cell, Tooltip as RechartsTooltip, ResponsiveContainer } from 'recharts';
 import './PortfolioDetails.css';
 
 import { settingsApi } from '../../admin/api/settingsApi';
+
+const COLORS = ['#8b5cf6', '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#6366f1', '#14b8a6'];
 
 export const PortfolioDetails: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -70,17 +73,20 @@ export const PortfolioDetails: React.FC = () => {
 
   const calculateGroupTotals = (assets: AssetSummaryDto[], currency: string) => {
     let totalInvested = 0;
+    let totalBought = 0;
     let currentValue = 0;
     assets.forEach(a => {
       totalInvested += a.totalCost || 0;
+      totalBought += a.totalBought || 0;
       currentValue += a.currentValue || 0;
     });
     
     const profit = currentValue - totalInvested;
-    const profitPercentage = totalInvested > 0 ? (profit / totalInvested) * 100 : 0;
+    const profitPercentage = totalBought > 0 ? (profit / totalBought) * 100 : 0;
     
     return {
       totalInvested,
+      totalBought,
       currentValue,
       profit,
       profitPercentage,
@@ -91,8 +97,9 @@ export const PortfolioDetails: React.FC = () => {
   const calculateAssetPnL = (asset: AssetSummaryDto) => {
     const cost = asset.totalCost || 0;
     const value = asset.currentValue || 0;
+    const bought = asset.totalBought || 0;
     const profit = value - cost;
-    const profitPercentage = cost > 0 ? (profit / cost) * 100 : 0;
+    const profitPercentage = bought > 0 ? (profit / bought) * 100 : 0;
     return { profit, profitPercentage };
   };
 
@@ -244,6 +251,47 @@ export const PortfolioDetails: React.FC = () => {
           </span>
         </div>
       </section>
+
+      {summary.assets && summary.assets.length > 0 && (
+        <section className="portfolio-report-section">
+          <div className="glass-panel" style={{ padding: '1.5rem', marginBottom: '2rem', display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+            <h3 style={{ margin: '0 0 1rem 0', color: 'rgba(255,255,255,0.9)' }}>Asset Allocation</h3>
+            <div style={{ width: '100%', height: 250 }}>
+              <ResponsiveContainer>
+                <PieChart>
+                  <Pie
+                    data={Object.keys(groupedAssets).map(catName => {
+                      const assets = groupedAssets[catName];
+                      const groupCurrency = assets[0]?.currency || 'VND';
+                      const totals = calculateGroupTotals(assets, groupCurrency);
+                      let valueVND = totals.currentValue;
+                      if (groupCurrency === 'USD') valueVND *= usdToVndRate;
+                      return { name: catName, value: valueVND };
+                    }).filter(d => d.value > 0)}
+                    cx="50%"
+                    cy="50%"
+                    innerRadius={50}
+                    outerRadius={80}
+                    paddingAngle={5}
+                    dataKey="value"
+                    label={({name, percent}) => `${name} ${((percent || 0) * 100).toFixed(1)}%`}
+                    stroke="none"
+                  >
+                    {Object.keys(groupedAssets).map((_, index) => (
+                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    ))}
+                  </Pie>
+                  <RechartsTooltip 
+                    formatter={(value: any) => formatCurrency(Number(value) || 0, 'VND')}
+                    contentStyle={{ backgroundColor: 'rgba(30, 41, 59, 0.8)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', backdropFilter: 'blur(8px)' }}
+                    itemStyle={{ color: '#fff' }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
+        </section>
+      )}
 
       <section className="assets-section">
         <h2>Assets</h2>

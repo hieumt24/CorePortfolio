@@ -1,22 +1,26 @@
 using CorePortfolio.Domain.Entities;
 using CorePortfolio.Infrastructure.Data;
 using MediatR;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
+using CorePortfolio.API.Services;
 
 namespace CorePortfolio.API.Features.Transactions.CreateTransaction;
 
 public class CreateTransactionHandler : IRequestHandler<CreateTransactionCommand, Guid>
 {
     private readonly AppDbContext _dbContext;
+    private readonly ICurrentUserService _currentUserService;
 
-    public CreateTransactionHandler(AppDbContext dbContext)
+    public CreateTransactionHandler(AppDbContext dbContext, ICurrentUserService currentUserService)
     {
         _dbContext = dbContext;
+        _currentUserService = currentUserService;
     }
 
     public async Task<Guid> Handle(CreateTransactionCommand request, CancellationToken cancellationToken)
     {
-        var portfolioExists = await _dbContext.Portfolios.AnyAsync(p => p.Id == request.PortfolioId, cancellationToken);
+        var portfolioExists = await _dbContext.Portfolios.AnyAsync(p => p.Id == request.PortfolioId && p.UserId == _currentUserService.UserId, cancellationToken);
         if (!portfolioExists)
             throw new Exception("Portfolio not found");
 

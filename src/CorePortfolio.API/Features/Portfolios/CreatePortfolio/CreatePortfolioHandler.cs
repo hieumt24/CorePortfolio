@@ -1,16 +1,19 @@
 using CorePortfolio.Domain.Entities;
 using CorePortfolio.Infrastructure.Data;
 using MediatR;
+using CorePortfolio.API.Services;
 
 namespace CorePortfolio.API.Features.Portfolios.CreatePortfolio;
 
 public class CreatePortfolioHandler : IRequestHandler<CreatePortfolioCommand, Guid>
 {
     private readonly AppDbContext _dbContext;
+    private readonly ICurrentUserService _currentUserService;
 
-    public CreatePortfolioHandler(AppDbContext dbContext)
+    public CreatePortfolioHandler(AppDbContext dbContext, ICurrentUserService currentUserService)
     {
         _dbContext = dbContext;
+        _currentUserService = currentUserService;
     }
 
     public async Task<Guid> Handle(CreatePortfolioCommand request, CancellationToken cancellationToken)
@@ -20,7 +23,8 @@ public class CreatePortfolioHandler : IRequestHandler<CreatePortfolioCommand, Gu
             Id = Guid.NewGuid(),
             Name = request.Name,
             Description = request.Description,
-            CreatedAt = DateTime.UtcNow
+            CreatedAt = DateTime.UtcNow,
+            UserId = _currentUserService.UserId ?? Guid.Empty
         };
 
         _dbContext.Portfolios.Add(portfolio);

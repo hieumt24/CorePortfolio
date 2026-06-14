@@ -7,6 +7,10 @@ public class Portfolio
     public string Description { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; }
     
+    public Guid UserId { get; set; }
+    public User User { get; set; } = null!;
+
+    
     public ICollection<Asset> Assets { get; set; } = new List<Asset>();
     public ICollection<Transaction> Transactions { get; set; } = new List<Transaction>();
 }

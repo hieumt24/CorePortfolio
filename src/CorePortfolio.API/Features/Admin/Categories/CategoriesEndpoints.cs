@@ -11,7 +11,9 @@ public static class CategoriesEndpoints
 {
     public static void MapCategoriesEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/api/admin/categories").WithTags("Admin Categories");
+        var group = app.MapGroup("/api/admin/categories")
+            .WithTags("Admin Categories")
+            .RequireAuthorization("Admin");
 
         group.MapPost("/", async ([FromBody] CreateCategoryRequest request, IMediator mediator) =>
         {

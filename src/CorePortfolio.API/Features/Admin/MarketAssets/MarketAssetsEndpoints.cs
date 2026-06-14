@@ -11,7 +11,9 @@ public static class MarketAssetsEndpoints
 {
     public static void MapMarketAssetsEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/api/admin/market-assets").WithTags("Admin Market Assets");
+        var group = app.MapGroup("/api/admin/market-assets")
+            .WithTags("Admin Market Assets")
+            .RequireAuthorization("Admin");
 
         group.MapPost("/", async ([FromBody] CreateMarketAssetRequest request, IMediator mediator) =>
         {

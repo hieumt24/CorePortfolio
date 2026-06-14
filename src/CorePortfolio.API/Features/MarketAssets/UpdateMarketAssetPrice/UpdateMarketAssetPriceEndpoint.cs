@@ -16,6 +16,7 @@ public static class UpdateMarketAssetPriceEndpoint
             return Results.NoContent();
         })
         .WithName("UpdateMarketAssetPrice")
-        .WithTags("Assets");
+        .WithTags("Assets")
+        .RequireAuthorization("Admin");
     }
 }

@@ -1,17 +1,21 @@
 using CorePortfolio.Domain.Entities;
 using CorePortfolio.Infrastructure.Data;
 using MediatR;
+using MediatR;
 using Microsoft.EntityFrameworkCore;
+using CorePortfolio.API.Services;
 
 namespace CorePortfolio.API.Features.Portfolios.GetPortfolioSummary;
 
 public class GetPortfolioSummaryHandler : IRequestHandler<GetPortfolioSummaryQuery, PortfolioSummaryDto?>
 {
     private readonly AppDbContext _dbContext;
+    private readonly ICurrentUserService _currentUserService;
 
-    public GetPortfolioSummaryHandler(AppDbContext dbContext)
+    public GetPortfolioSummaryHandler(AppDbContext dbContext, ICurrentUserService currentUserService)
     {
         _dbContext = dbContext;
+        _currentUserService = currentUserService;
     }
 
     public async Task<PortfolioSummaryDto?> Handle(GetPortfolioSummaryQuery request, CancellationToken cancellationToken)
@@ -22,7 +26,7 @@ public class GetPortfolioSummaryHandler : IRequestHandler<GetPortfolioSummaryQue
                     .ThenInclude(ma => ma.Category)
             .Include(p => p.Transactions)
             .AsNoTracking()
-            .FirstOrDefaultAsync(p => p.Id == request.PortfolioId, cancellationToken);
+            .FirstOrDefaultAsync(p => p.Id == request.PortfolioId && p.UserId == _currentUserService.UserId, cancellationToken);
 
         if (portfolio == null)
             return null;
@@ -38,6 +42,7 @@ public class GetPortfolioSummaryHandler : IRequestHandler<GetPortfolioSummaryQue
             
             decimal totalQuantity = 0;
             decimal totalCost = 0;
+            decimal totalBought = 0;
 
             foreach (var t in assetTransactions)
             {
@@ -45,6 +50,7 @@ public class GetPortfolioSummaryHandler : IRequestHandler<GetPortfolioSummaryQue
                 {
                     totalQuantity += t.Quantity;
                     totalCost += t.Quantity * t.Price;
+                    totalBought += t.Quantity * t.Price;
                 }
                 else if (t.Type == TransactionType.Sell)
                 {
@@ -67,7 +73,8 @@ public class GetPortfolioSummaryHandler : IRequestHandler<GetPortfolioSummaryQue
                 marketAsset?.CurrentPrice ?? 0,
                 totalQuantity,
                 totalCost,
-                currentValue
+                currentValue,
+                totalBought
             ));
         }
 
