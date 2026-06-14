@@ -1,9 +1,9 @@
-const API_BASE_URL = 'http://localhost:5211/api';
+const API_BASE_URL = '/api/admin/settings';
 
 export const settingsApi = {
   getSetting: async (key: string): Promise<string | null> => {
     try {
-      const response = await fetch(`${API_BASE_URL}/settings/${key}`);
+      const response = await fetch(`${API_BASE_URL}/${key}`);
       if (!response.ok) {
         return null;
       }
@@ -17,7 +17,7 @@ export const settingsApi = {
 
   updateSetting: async (key: string, value: string): Promise<boolean> => {
     try {
-      const response = await fetch(`${API_BASE_URL}/settings/${key}`, {
+      const response = await fetch(`${API_BASE_URL}/${key}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',

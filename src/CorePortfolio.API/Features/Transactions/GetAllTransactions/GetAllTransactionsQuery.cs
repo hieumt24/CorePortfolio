@@ -1,5 +1,6 @@
 using CorePortfolio.Domain.Entities;
 using MediatR;
+using CorePortfolio.API.Common.Models;
 
 namespace CorePortfolio.API.Features.Transactions.GetAllTransactions;
 
@@ -17,8 +18,6 @@ public record GlobalTransactionDto(
     decimal Price,
     DateTime Date
 );
-
-public record PaginatedResult<T>(List<T> Items, int TotalCount, int Page, int PageSize);
 
 public record GetAllTransactionsQuery(
     Guid? PortfolioId,

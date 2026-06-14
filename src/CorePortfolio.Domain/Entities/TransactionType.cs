@@ -2,6 +2,9 @@ namespace CorePortfolio.Domain.Entities;
 
 public enum TransactionType
 {
-    Buy,
-    Sell
+    Buy = 0,
+    Sell = 1,
+    Deposit = 2,
+    Withdrawal = 3,
+    Dividend = 4
 }

@@ -27,6 +27,7 @@ using System.Text;
 using CorePortfolio.Domain.Interfaces;
 using CorePortfolio.Coingecko;
 using CorePortfolio.Telegram;
+using CorePortfolio.DNSE;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -61,6 +62,7 @@ builder.Services.AddHttpClient();
 // External Infrastructures
 builder.Services.AddCoinGeckoInfrastructure(builder.Configuration);
 builder.Services.AddTelegramInfrastructure(builder.Configuration);
+builder.Services.AddDnseInfrastructure(builder.Configuration);
 
 // Configure JWT Authentication
 var jwtKey = builder.Configuration["Jwt:Key"] ?? throw new InvalidOperationException("Jwt:Key not found.");
@@ -103,6 +105,10 @@ if (app.Environment.IsDevelopment())
 
 app.UseCors("AllowFrontend");
 
+// Serve frontend SPA files
+app.UseDefaultFiles();
+app.UseStaticFiles();
+
 app.UseHttpsRedirection();
 
 app.UseAuthentication();
@@ -111,7 +117,7 @@ app.UseAuthorization();
 // Global exception handling can be added here
 // app.UseMiddleware<GlobalExceptionMiddleware>();
 
-app.MapGet("/", () => "Welcome to CorePortfolio API")
+app.MapGet("/api", () => "Welcome to CorePortfolio API")
     .WithName("GetRoot");
 
 // Map Endpoints
@@ -136,5 +142,8 @@ app.MapTakeDailySnapshotEndpoint();
 app.MapMockSnapshotsEndpoint();
 app.MapGetGlobalHistoryEndpoint();
 app.MapGetPortfolioHistoryEndpoint();
+
+// Map fallback to index.html for SPA routing
+app.MapFallbackToFile("index.html");
 
 app.Run();

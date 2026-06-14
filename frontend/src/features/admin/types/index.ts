@@ -25,3 +25,20 @@ export interface CreateMarketAssetRequest {
   name: string;
   currentPrice: number;
 }
+
+export interface DnseInstrument {
+  symbol: string;
+  marketId: string;
+  securityGroupId: string;
+  shortName: string;
+  name: string;
+  indexName: string[];
+}
+
+export interface PaginatedResult<T> {
+  items: T[];
+  totalCount: number;
+  page: number;
+  pageSize: number;
+}
+

@@ -47,9 +47,9 @@ export const CreateAssetModal: React.FC<CreateAssetModalProps> = ({ portfolioId,
 
   const loadMarketAssets = async (categoryId: string) => {
     try {
-      const res = await marketAssetsApi.getMarketAssets(categoryId);
-      if (res) {
-        const filtered = res.filter(m => !existingAssetIds.includes(m.id));
+      const res = await marketAssetsApi.getMarketAssets(categoryId, 1, 1000);
+      if (res && res.items) {
+        const filtered = res.items.filter(m => !existingAssetIds.includes(m.id));
         setMarketAssets(filtered);
       } else {
         setMarketAssets([]);

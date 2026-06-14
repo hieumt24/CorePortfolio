@@ -146,8 +146,16 @@ export const AssetDetailsModal: React.FC<AssetDetailsModalProps> = ({ asset, por
                   <tr key={tx.id}>
                     <td>{new Date(tx.timestamp).toLocaleString()}</td>
                     <td>
-                      <span className={`tx-type ${tx.type === TransactionType.Buy ? 'buy' : 'sell'}`}>
-                        {tx.type === TransactionType.Buy ? 'Buy' : 'Sell'}
+                      <span className={`tx-type ${
+                        tx.type === TransactionType.Buy ? 'buy' : 
+                        tx.type === TransactionType.Sell ? 'sell' :
+                        tx.type === TransactionType.Dividend ? 'dividend' : ''
+                      }`}>
+                        {tx.type === TransactionType.Buy ? 'Buy' : 
+                         tx.type === TransactionType.Sell ? 'Sell' : 
+                         tx.type === TransactionType.Dividend ? 'Dividend' :
+                         tx.type === TransactionType.Deposit ? 'Deposit' :
+                         tx.type === TransactionType.Withdrawal ? 'Withdrawal' : 'Unknown'}
                       </span>
                     </td>
                     <td>{tx.quantity.toLocaleString()}</td>

@@ -88,7 +88,9 @@ export const CreateTransactionModal: React.FC<CreateTransactionModalProps> = ({ 
           </div>
 
           <div className="form-group">
-            <label htmlFor="price">Price Per Unit</label>
+            <label htmlFor="price">
+              {type === TransactionType.Dividend ? 'Dividend per Unit/Share' : 'Price Per Unit'}
+            </label>
             <div style={{ display: 'flex', gap: '10px' }}>
               <input
                 id="price"

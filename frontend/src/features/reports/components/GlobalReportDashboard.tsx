@@ -4,6 +4,7 @@ import { getGlobalReport, getGlobalHistory } from '../api/reportsApi';
 import { settingsApi } from '../../admin/api/settingsApi';
 import type { GlobalReportDto, SnapshotDto } from '../types';
 import { HistoricalPerformanceChart } from './HistoricalPerformanceChart';
+import { InvestedCapitalChart } from './InvestedCapitalChart';
 import './GlobalReportDashboard.css';
 
 const COLORS = ['#8b5cf6', '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#6366f1', '#14b8a6'];
@@ -164,6 +165,10 @@ export const GlobalReportDashboard: React.FC = () => {
           <h3>Current Value</h3>
           <p className="summary-value" style={{ fontSize: '2rem' }}>{formatterVnd.format(totalValueVND)}</p>
         </div>
+      </div>
+      
+      <div style={{ marginBottom: '2rem' }}>
+        <InvestedCapitalChart totalInvested={totalInvestedVND} currentValue={totalValueVND} />
       </div>
       
       <div className="report-summary-cards" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>

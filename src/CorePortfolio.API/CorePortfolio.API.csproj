@@ -1,9 +1,10 @@
-<Project Sdk="Microsoft.NET.Sdk.Web">
+﻿<Project Sdk="Microsoft.NET.Sdk.Web">
 
   <PropertyGroup>
     <TargetFramework>net10.0</TargetFramework>
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
+    <UserSecretsId>2e1c9d18-60c7-417c-9916-9d67ebfceb24</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
@@ -24,6 +25,7 @@
     <ProjectReference Include="..\CorePortfolio.Infrastructure\CorePortfolio.Infrastructure.csproj" />
     <ProjectReference Include="..\CorePortfolio.Coingecko\CorePortfolio.Coingecko.csproj" />
     <ProjectReference Include="..\CorePortfolio.Telegram\CorePortfolio.Telegram.csproj" />
+    <ProjectReference Include="..\CorePortfolio.DNSE\CorePortfolio.DNSE.csproj" />
   </ItemGroup>
 
 </Project>

@@ -1,6 +1,7 @@
 using CorePortfolio.Infrastructure.Data;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using CorePortfolio.API.Common.Models;
 using CorePortfolio.API.Services;
 
 namespace CorePortfolio.API.Features.Transactions.GetAllTransactions;

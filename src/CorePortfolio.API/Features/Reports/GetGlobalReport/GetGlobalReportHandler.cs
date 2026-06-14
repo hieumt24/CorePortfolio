@@ -56,6 +56,10 @@ public class GetGlobalReportHandler : IRequestHandler<GetGlobalReportQuery, Glob
                         totalQuantity -= t.Quantity;
                         totalCost -= t.Quantity * t.Price;
                     }
+                    else if (t.Type == TransactionType.Dividend)
+                    {
+                        totalCost -= t.Quantity * t.Price;
+                    }
                 }
 
                 var currentValue = totalQuantity * (marketAsset?.CurrentPrice ?? 0);

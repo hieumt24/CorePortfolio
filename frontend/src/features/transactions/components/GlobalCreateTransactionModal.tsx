@@ -178,7 +178,7 @@ export const GlobalCreateTransactionModal: React.FC<GlobalCreateTransactionModal
               />
             </div>
             <div className="form-group" style={{ flex: 1 }}>
-              <label>Price</label>
+              <label>{type === TransactionType.Dividend ? 'Dividend per unit' : 'Price'}</label>
               <input 
                 type="number" 
                 step="any" 

@@ -47,12 +47,14 @@ export const Navbar: React.FC = () => {
             <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
               <span className="user-greeting">Hi, {user?.email}</span>
               {isAdmin && (
-                <NavLink 
-                  to="/admin" 
-                  className={({ isActive }) => isActive ? "nav-link admin-link active" : "nav-link admin-link"}
-                >
-                  Admin
-                </NavLink>
+                <div className="navbar-dropdown">
+                  <span className="nav-link admin-link dropdown-toggle">Manage ▼</span>
+                  <div className="dropdown-menu">
+                    <NavLink to="/admin/settings" className={({ isActive }) => isActive ? "dropdown-item active" : "dropdown-item"}>System Settings</NavLink>
+                    <NavLink to="/admin/categories" className={({ isActive }) => isActive ? "dropdown-item active" : "dropdown-item"}>Category Management</NavLink>
+                    <NavLink to="/admin/market-assets" className={({ isActive }) => isActive ? "dropdown-item active" : "dropdown-item"}>Market Asset Management</NavLink>
+                  </div>
+                </div>
               )}
               <button onClick={handleLogout} className="btn-outline logout-btn">Logout</button>
             </div>

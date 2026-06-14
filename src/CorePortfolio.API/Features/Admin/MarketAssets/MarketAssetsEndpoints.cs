@@ -40,9 +40,9 @@ public static class MarketAssetsEndpoints
             }
         });
 
-        group.MapGet("/", async ([FromQuery] Guid? categoryId, IMediator mediator) =>
+        group.MapGet("/", async (IMediator mediator, [FromQuery] Guid? categoryId, [FromQuery] int page = 1, [FromQuery] int pageSize = 10) =>
         {
-            var result = await mediator.Send(new GetMarketAssetsQuery(categoryId));
+            var result = await mediator.Send(new GetMarketAssetsQuery(categoryId, page, pageSize));
             return Results.Ok(result);
         });
 
@@ -50,6 +50,18 @@ public static class MarketAssetsEndpoints
         {
             var price = await mediator.Send(new GetCoinGeckoPriceQuery(coinId));
             return price.HasValue ? Results.Ok(new { Price = price.Value }) : Results.NotFound();
+        });
+
+        group.MapGet("/dnse-price/{symbol}", async (string symbol, IMediator mediator) =>
+        {
+            var price = await mediator.Send(new GetDnseStockPriceQuery(symbol));
+            return price.HasValue ? Results.Ok(new { Price = price.Value }) : Results.NotFound();
+        });
+
+        group.MapGet("/dnse-instruments", async ([FromQuery] string? query, IMediator mediator) =>
+        {
+            var result = await mediator.Send(new SearchDnseInstrumentsQuery { Query = query ?? string.Empty });
+            return Results.Ok(result);
         });
     }
 }

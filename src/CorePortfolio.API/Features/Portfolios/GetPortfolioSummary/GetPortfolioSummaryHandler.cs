@@ -57,6 +57,11 @@ public class GetPortfolioSummaryHandler : IRequestHandler<GetPortfolioSummaryQue
                     totalQuantity -= t.Quantity;
                     totalCost -= t.Quantity * t.Price; 
                 }
+                else if (t.Type == TransactionType.Dividend)
+                {
+                    // Dividends reduce the cost basis (totalCost) without changing quantity
+                    totalCost -= t.Quantity * t.Price;
+                }
             }
 
             var currentValue = totalQuantity * (marketAsset?.CurrentPrice ?? 0);

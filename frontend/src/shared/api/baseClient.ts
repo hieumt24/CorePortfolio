@@ -1,4 +1,4 @@
-export const API_URL = 'http://localhost:5211/api';
+export const API_URL = import.meta.env.VITE_API_URL || '/api';
 
 export const apiClient = async <T>(endpoint: string, options?: RequestInit): Promise<T> => {
   const token = localStorage.getItem('token');
