@@ -26,4 +26,4 @@ public record PortfolioAllocationDto(
     List<PortfolioCurrencyAllocationDto> Currencies
 );
 
-public record GetGlobalReportQuery() : IRequest<GlobalReportDto>;
+public record GetGlobalReportQuery(Guid UserId) : IRequest<GlobalReportDto>;

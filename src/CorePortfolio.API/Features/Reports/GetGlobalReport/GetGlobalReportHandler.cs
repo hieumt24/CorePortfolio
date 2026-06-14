@@ -10,12 +10,9 @@ namespace CorePortfolio.API.Features.Reports.GetGlobalReport;
 public class GetGlobalReportHandler : IRequestHandler<GetGlobalReportQuery, GlobalReportDto>
 {
     private readonly AppDbContext _dbContext;
-    private readonly ICurrentUserService _currentUserService;
-
-    public GetGlobalReportHandler(AppDbContext dbContext, ICurrentUserService currentUserService)
+    public GetGlobalReportHandler(AppDbContext dbContext)
     {
         _dbContext = dbContext;
-        _currentUserService = currentUserService;
     }
 
     public async Task<GlobalReportDto> Handle(GetGlobalReportQuery request, CancellationToken cancellationToken)
@@ -26,7 +23,7 @@ public class GetGlobalReportHandler : IRequestHandler<GetGlobalReportQuery, Glob
                     .ThenInclude(ma => ma.Category)
             .Include(p => p.Transactions)
             .AsNoTracking()
-            .Where(p => p.UserId == _currentUserService.UserId)
+            .Where(p => p.UserId == request.UserId)
             .ToListAsync(cancellationToken);
 
         var categoryAllocationsDict = new Dictionary<string, CategoryAllocationDto>();

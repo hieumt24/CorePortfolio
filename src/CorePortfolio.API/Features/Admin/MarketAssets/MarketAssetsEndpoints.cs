@@ -45,5 +45,11 @@ public static class MarketAssetsEndpoints
             var result = await mediator.Send(new GetMarketAssetsQuery(categoryId));
             return Results.Ok(result);
         });
+
+        group.MapGet("/coingecko-price/{coinId}", async (string coinId, IMediator mediator) =>
+        {
+            var price = await mediator.Send(new GetCoinGeckoPriceQuery(coinId));
+            return price.HasValue ? Results.Ok(new { Price = price.Value }) : Results.NotFound();
+        });
     }
 }
