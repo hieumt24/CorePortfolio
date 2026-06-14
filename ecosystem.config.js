@@ -7,7 +7,8 @@ module.exports = {
       cwd: "/home/hieu-mai-trong/Project/CorePortfolio/backend",
       env: {
         ASPNETCORE_ENVIRONMENT: "Production",
-        ASPNETCORE_URLS: "http://0.0.0.0:5211"
+        ASPNETCORE_URLS: "http://0.0.0.0:5211",
+        VERSION: "1.0.0"
       }
     },
     {
