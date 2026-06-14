@@ -13,7 +13,7 @@ jobs:
       run: |
         cd /home/hieu-mai-trong/Project/CorePortfolio
         git reset --hard
-        git pull origin main
+        git pull https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/hieumt24/CorePortfolio.git main
         
         cd frontend
         npm ci
