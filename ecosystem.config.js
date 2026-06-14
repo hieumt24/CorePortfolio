@@ -4,7 +4,7 @@ module.exports = {
       name: "backend",
       script: "dotnet",
       args: "run --project src/CorePortfolio.API/CorePortfolio.API.csproj -c Release",
-      cwd: "./backend",
+      cwd: "/home/hieu-mai-trong/Project/CorePortfolio/backend",
       env: {
         ASPNETCORE_ENVIRONMENT: "Production",
         ASPNETCORE_URLS: "http://0.0.0.0:5211"
@@ -13,8 +13,8 @@ module.exports = {
     {
       name: "frontend",
       script: "npm",
-      args: "run preview -- --host --port 5173",
-      cwd: "./frontend",
+      args: "run preview -- --host --port 5173 --strictPort",
+      cwd: "/home/hieu-mai-trong/Project/CorePortfolio/frontend",
       env: {
         NODE_ENV: "production"
       }

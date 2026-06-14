@@ -9,32 +9,18 @@ jobs:
     runs-on: self-hosted
 
     steps:
-    - name: Checkout Code
-      uses: actions/checkout@v4
-
-    - name: Setup Node.js
-      uses: actions/setup-node@v4
-      with:
-        node-version: '22'
-        cache: 'npm'
-        cache-dependency-path: frontend/package-lock.json
-
-    - name: Install Frontend Dependencies
-      working-directory: ./frontend
-      run: npm ci
-
-    - name: Build Frontend
-      working-directory: ./frontend
-      run: npm run build
-
-    - name: Restore Backend Dependencies
-      working-directory: ./backend
-      run: dotnet restore CorePortfolio.slnx
-
-    - name: Build Backend
-      working-directory: ./backend
-      run: dotnet build CorePortfolio.slnx --no-restore -c Release
-
-    - name: Restart PM2 Services
+    - name: Deploy
       run: |
-        pm2 reload ecosystem.config.js || pm2 restart ecosystem.config.js || pm2 restart all
+        cd /home/hieu-mai-trong/Project/CorePortfolio
+        git reset --hard
+        git pull origin main
+        
+        cd frontend
+        npm ci
+        npm run build
+        
+        cd ../backend
+        dotnet restore CorePortfolio.slnx
+        dotnet build CorePortfolio.slnx -c Release
+        
+        pm2 restart ecosystem.config.js
