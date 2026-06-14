@@ -23,4 +23,5 @@ jobs:
         dotnet restore CorePortfolio.slnx
         dotnet build CorePortfolio.slnx -c Release
         
+        cd ..
         pm2 restart ecosystem.config.js
