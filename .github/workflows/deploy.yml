@@ -1,0 +1,45 @@
+name: CD - Auto Deploy to Local Server
+
+on:
+  push:
+    branches: [ "main", "master" ]
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+
+    steps:
+    - name: Checkout Code
+      uses: actions/checkout@v4
+
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '22'
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+
+    - name: Install Frontend Dependencies
+      working-directory: ./frontend
+      run: npm ci
+
+    - name: Build Frontend
+      working-directory: ./frontend
+      run: npm run build
+
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.0.x'
+
+    - name: Restore Backend Dependencies
+      working-directory: ./backend
+      run: dotnet restore CorePortfolio.slnx
+
+    - name: Build Backend
+      working-directory: ./backend
+      run: dotnet build CorePortfolio.slnx --no-restore -c Release
+
+    - name: Restart PM2 Services
+      run: |
+        pm2 reload ecosystem.config.js || pm2 restart ecosystem.config.js || pm2 restart all
