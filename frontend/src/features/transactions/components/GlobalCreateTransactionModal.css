@@ -167,3 +167,21 @@ input[type="datetime-local"].glass-input::-webkit-calendar-picker-indicator:hove
     transform: translateY(0);
   }
 }
+
+@media (max-width: 768px) {
+  .modal-content {
+    width: 95%;
+    padding: 1.5rem;
+    gap: 1rem;
+  }
+  
+  .modal-actions {
+    flex-direction: column;
+    gap: 0.8rem;
+  }
+  
+  .modal-actions .btn {
+    width: 100%;
+  }
+}
+

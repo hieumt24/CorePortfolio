@@ -125,44 +125,46 @@ export const TransactionsDashboard: React.FC = () => {
         ) : !data || data.items.length === 0 ? (
           <div style={{ padding: '2rem', textAlign: 'center' }}>No transactions found.</div>
         ) : (
-          <table className="transactions-table">
-            <thead>
-              <tr>
-                <th>Date</th>
-                <th>Portfolio</th>
-                <th>Asset</th>
-                <th>Type</th>
-                <th>Quantity</th>
-                <th>Price</th>
-                <th>Total</th>
-                <th>Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {data.items.map(t => (
-                <tr key={t.id}>
-                  <td>{new Date(t.date).toLocaleString()}</td>
-                  <td>{t.portfolioName}</td>
-                  <td>{t.assetName} ({t.symbol})</td>
-                  <td>
-                    <span className={`type-badge ${getTypeName(t.type).toLowerCase()}`}>
-                      {getTypeName(t.type)}
-                    </span>
-                  </td>
-                  <td>{t.quantity.toLocaleString()}</td>
-                  <td>{formatCurrency(t.price, t.currency)}</td>
-                  <td>{formatCurrency(t.quantity * t.price, t.currency)}</td>
-                  <td>
-                    <div className="action-buttons">
-                      <button className="btn-icon delete" onClick={() => handleDelete(t.id)}>
-                        Del
-                      </button>
-                    </div>
-                  </td>
+          <div className="table-responsive">
+            <table className="transactions-table">
+              <thead>
+                <tr>
+                  <th>Date</th>
+                  <th>Portfolio</th>
+                  <th>Asset</th>
+                  <th>Type</th>
+                  <th>Quantity</th>
+                  <th>Price</th>
+                  <th>Total</th>
+                  <th>Actions</th>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              </thead>
+              <tbody>
+                {data.items.map(t => (
+                  <tr key={t.id}>
+                    <td>{new Date(t.date).toLocaleString()}</td>
+                    <td>{t.portfolioName}</td>
+                    <td>{t.assetName} ({t.symbol})</td>
+                    <td>
+                      <span className={`type-badge ${getTypeName(t.type).toLowerCase()}`}>
+                        {getTypeName(t.type)}
+                      </span>
+                    </td>
+                    <td>{t.quantity.toLocaleString()}</td>
+                    <td>{formatCurrency(t.price, t.currency)}</td>
+                    <td>{formatCurrency(t.quantity * t.price, t.currency)}</td>
+                    <td>
+                      <div className="action-buttons">
+                        <button className="btn-icon delete" onClick={() => handleDelete(t.id)}>
+                          Del
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
         )}
       </div>
 

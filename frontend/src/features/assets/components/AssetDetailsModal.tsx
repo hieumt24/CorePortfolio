@@ -130,47 +130,49 @@ export const AssetDetailsModal: React.FC<AssetDetailsModalProps> = ({ asset, por
           ) : transactions.length === 0 ? (
             <p className="empty">No transactions found for this asset.</p>
           ) : (
-            <table className="glass-table">
-              <thead>
-                <tr>
-                  <th>Date</th>
-                  <th>Type</th>
-                  <th>Quantity</th>
-                  <th>Price</th>
-                  <th>Total</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {transactions.map(tx => (
-                  <tr key={tx.id}>
-                    <td>{new Date(tx.timestamp).toLocaleString()}</td>
-                    <td>
-                      <span className={`tx-type ${
-                        tx.type === TransactionType.Buy ? 'buy' : 
-                        tx.type === TransactionType.Sell ? 'sell' :
-                        tx.type === TransactionType.Dividend ? 'dividend' : ''
-                      }`}>
-                        {tx.type === TransactionType.Buy ? 'Buy' : 
-                         tx.type === TransactionType.Sell ? 'Sell' : 
-                         tx.type === TransactionType.Dividend ? 'Dividend' :
-                         tx.type === TransactionType.Deposit ? 'Deposit' :
-                         tx.type === TransactionType.Withdrawal ? 'Withdrawal' : 'Unknown'}
-                      </span>
-                    </td>
-                    <td>{tx.quantity.toLocaleString()}</td>
-                    <td>{formatCurrency(tx.price, asset.currency)}</td>
-                    <td>{formatCurrency(tx.quantity * tx.price, asset.currency)}</td>
-                    <td>
-                      <button className="btn btn-sm btn-outline" style={{marginRight: '8px', padding: '4px 8px'}} onClick={() => setEditingTx(tx)}>Edit</button>
-                      <button className="btn btn-sm" style={{padding: '4px 8px', backgroundColor: 'var(--sell-color)'}} disabled={deletingTxId === tx.id} onClick={() => handleDelete(tx.id)}>
-                        {deletingTxId === tx.id ? '...' : 'Del'}
-                      </button>
-                    </td>
+            <div className="table-responsive">
+              <table className="glass-table">
+                <thead>
+                  <tr>
+                    <th>Date</th>
+                    <th>Type</th>
+                    <th>Quantity</th>
+                    <th>Price</th>
+                    <th>Total</th>
+                    <th>Actions</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
+                </thead>
+                <tbody>
+                  {transactions.map(tx => (
+                    <tr key={tx.id}>
+                      <td>{new Date(tx.timestamp).toLocaleString()}</td>
+                      <td>
+                        <span className={`tx-type ${
+                          tx.type === TransactionType.Buy ? 'buy' : 
+                          tx.type === TransactionType.Sell ? 'sell' :
+                          tx.type === TransactionType.Dividend ? 'dividend' : ''
+                        }`}>
+                          {tx.type === TransactionType.Buy ? 'Buy' : 
+                           tx.type === TransactionType.Sell ? 'Sell' : 
+                           tx.type === TransactionType.Dividend ? 'Dividend' :
+                           tx.type === TransactionType.Deposit ? 'Deposit' :
+                           tx.type === TransactionType.Withdrawal ? 'Withdrawal' : 'Unknown'}
+                        </span>
+                      </td>
+                      <td>{tx.quantity.toLocaleString()}</td>
+                      <td>{formatCurrency(tx.price, asset.currency)}</td>
+                      <td>{formatCurrency(tx.quantity * tx.price, asset.currency)}</td>
+                      <td>
+                        <button className="btn btn-sm btn-outline" style={{marginRight: '8px', padding: '4px 8px'}} onClick={() => setEditingTx(tx)}>Edit</button>
+                        <button className="btn btn-sm" style={{padding: '4px 8px', backgroundColor: 'var(--sell-color)'}} disabled={deletingTxId === tx.id} onClick={() => handleDelete(tx.id)}>
+                          {deletingTxId === tx.id ? '...' : 'Del'}
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
       </div>
