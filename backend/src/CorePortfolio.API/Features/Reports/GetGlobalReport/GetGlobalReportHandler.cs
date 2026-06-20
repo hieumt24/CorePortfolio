@@ -42,7 +42,9 @@ public class GetGlobalReportHandler : IRequestHandler<GetGlobalReportQuery, Glob
                 var currency = category?.DefaultCurrency ?? "VND";
 
                 decimal totalQuantity = 0;
-                decimal totalCost = 0;
+                decimal totalCost = 0; // Giá trị đầu tư ban đầu (tổng chi phí mua)
+                decimal realizedProfitLoss = 0; // Lợi nhuận/lỗ đã thực hiện từ các giao dịch bán
+                decimal cashBalance = 0; // Dòng tiền mặt (Tiền nạp/rút, thu từ bán, tốn khi mua, nhận cổ tức)
 
                 foreach (var t in assetTransactions)
                 {
@@ -50,11 +52,25 @@ public class GetGlobalReportHandler : IRequestHandler<GetGlobalReportQuery, Glob
                     {
                         totalQuantity += t.Quantity;
                         totalCost += t.Quantity * t.Price;
+                        cashBalance -= t.Quantity * t.Price; // Giảm dòng tiền mặt khi mua
                     }
                     else if (t.Type == TransactionType.Sell)
                     {
+                        if (totalQuantity > 0)
+                        {
+                            // 1. Tính giá trị vốn trung bình của 1 đơn vị tài sản
+                            decimal averageCost = totalCost / totalQuantity;
+
+                            // 2. Trừ đi phần giá vốn của số lượng đem bán
+                            totalCost -= averageCost * t.Quantity;
+
+                            // 3. Tính lợi nhuận/lỗ từ giao dịch bán
+                            decimal profitLoss = (t.Price - averageCost) * t.Quantity;
+                        }
+
                         totalQuantity -= t.Quantity;
-                        totalCost -= t.Quantity * t.Price;
+                        cashBalance += t.Quantity * t.Price; // Tăng dòng tiền mặt khi bán
+
                     }
                     else if (t.Type == TransactionType.Dividend)
                     {
@@ -62,7 +78,11 @@ public class GetGlobalReportHandler : IRequestHandler<GetGlobalReportQuery, Glob
                     }
                 }
 
-                var currentValue = totalQuantity * (marketAsset?.CurrentPrice ?? 0);
+                // Tính giá trị hiện tại của tài sản
+                var assetCurrentPrice = totalQuantity * (marketAsset?.CurrentPrice ?? 0);
+
+                // Tổng tài sản = Giá trị hiện tại của tài sản + Dòng tiền mặt
+                var totalCurrentValue = assetCurrentPrice + cashBalance;
 
                 // Global Category Aggregation
                 if (!categoryAllocationsDict.ContainsKey(categoryName))
@@ -74,7 +94,7 @@ public class GetGlobalReportHandler : IRequestHandler<GetGlobalReportQuery, Glob
                 categoryAllocationsDict[categoryName] = existingCat with
                 {
                     TotalInvested = existingCat.TotalInvested + totalCost,
-                    CurrentValue = existingCat.CurrentValue + currentValue
+                    CurrentValue = existingCat.CurrentValue + totalCurrentValue
                 };
 
                 // Portfolio Currency Aggregation
@@ -87,7 +107,7 @@ public class GetGlobalReportHandler : IRequestHandler<GetGlobalReportQuery, Glob
                 portfolioCurrenciesDict[currency] = existingPortCurr with
                 {
                     TotalInvested = existingPortCurr.TotalInvested + totalCost,
-                    CurrentValue = existingPortCurr.CurrentValue + currentValue
+                    CurrentValue = existingPortCurr.CurrentValue + totalCurrentValue
                 };
             }
 
