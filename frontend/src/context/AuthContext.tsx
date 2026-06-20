@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { jwtDecode } from 'jwt-decode';
 
 interface User {
@@ -22,10 +22,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
   const [user, setUser] = useState<User | null>(null);
 
+  const logout = useCallback(() => {
+    localStorage.removeItem('token');
+    setToken(null);
+    setUser(null);
+  }, []);
+
+  const login = useCallback((newToken: string) => {
+    localStorage.setItem('token', newToken);
+    setToken(newToken);
+  }, []);
+
   useEffect(() => {
     if (token) {
       try {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const decoded: any = jwtDecode(token);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
         setUser({
           id: decoded['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'] || decoded.sub,
           email: decoded['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name'] || decoded.name || decoded.unique_name || 'Admin',
@@ -36,20 +49,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         logout();
       }
     } else {
+      // eslint-disable-next-line react-hooks/exhaustive-deps
       setUser(null);
     }
-  }, [token]);
-
-  const login = (newToken: string) => {
-    localStorage.setItem('token', newToken);
-    setToken(newToken);
-  };
-
-  const logout = () => {
-    localStorage.removeItem('token');
-    setToken(null);
-    setUser(null);
-  };
+  }, [token, logout]);
 
   return (
     <AuthContext.Provider
