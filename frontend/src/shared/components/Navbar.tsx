@@ -60,6 +60,13 @@ export const Navbar: React.FC = () => {
               >
                 Global Report
               </NavLink>
+              <NavLink 
+                to="/cashflow" 
+                className={location.pathname.startsWith('/cashflow') ? "nav-link active" : "nav-link"}
+                onClick={closeMenu}
+              >
+                Cashflow
+              </NavLink>
             </div>
           )}
           
@@ -73,6 +80,7 @@ export const Navbar: React.FC = () => {
                     <div className="dropdown-menu">
                       <NavLink to="/admin/settings" className={({ isActive }) => isActive ? "dropdown-item active" : "dropdown-item"} onClick={closeMenu}>System Settings</NavLink>
                       <NavLink to="/admin/categories" className={({ isActive }) => isActive ? "dropdown-item active" : "dropdown-item"} onClick={closeMenu}>Category Management</NavLink>
+                      <NavLink to="/admin/cashflow-categories" className={({ isActive }) => isActive ? "dropdown-item active" : "dropdown-item"} onClick={closeMenu}>Cashflow Categories</NavLink>
                       <NavLink to="/admin/market-assets" className={({ isActive }) => isActive ? "dropdown-item active" : "dropdown-item"} onClick={closeMenu}>Market Asset Management</NavLink>
                     </div>
                   </div>

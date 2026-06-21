@@ -103,13 +103,15 @@ export const PortfolioDetails: React.FC = () => {
     return { profit, profitPercentage };
   };
 
-  // Group assets by category
+  // Group assets by category AND currency
   const groupedAssets = summary.assets.reduce((acc: any, asset: AssetSummaryDto) => {
     const cat = asset.categoryName || 'Uncategorized';
-    if (!acc[cat]) {
-      acc[cat] = [];
+    const currency = asset.currency || 'VND';
+    const key = `${cat} - ${currency}`;
+    if (!acc[key]) {
+      acc[key] = [];
     }
-    acc[cat].push(asset);
+    acc[key].push(asset);
     return acc;
   }, {});
 
@@ -179,7 +181,7 @@ export const PortfolioDetails: React.FC = () => {
                 <div className="asset-stats">
                   <div className="stat">
                     <span>Quantity</span>
-                    <strong>{asset.totalQuantity?.toLocaleString() || '0'}</strong>
+                    <strong>{asset.totalQuantity?.toLocaleString(undefined, { maximumFractionDigits: 8 }) || '0'}</strong>
                   </div>
                   <div className="stat" style={{alignItems: 'flex-end'}}>
                     <span>Value</span>

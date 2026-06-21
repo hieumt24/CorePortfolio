@@ -32,7 +32,35 @@ public class GetGlobalReportHandler : IRequestHandler<GetGlobalReportQuery, Glob
         foreach (var portfolio in portfolios)
         {
             var portfolioCurrenciesDict = new Dictionary<string, PortfolioCurrencyAllocationDto>();
+            var netCashFlowByCurrency = new Dictionary<string, decimal>();
+            var hasFiatAssetByCurrency = new Dictionary<string, bool>();
 
+            // Pass 1: Calculate Net Cash Flows from Non-Fiat assets
+            foreach (var asset in portfolio.Assets)
+            {
+                var categoryName = asset.MarketAsset?.Category?.Name ?? "Unknown";
+                var currency = asset.MarketAsset?.Category?.DefaultCurrency ?? "VND";
+
+                if (!netCashFlowByCurrency.ContainsKey(currency))
+                    netCashFlowByCurrency[currency] = 0;
+
+                if (categoryName == "Fiat")
+                {
+                    hasFiatAssetByCurrency[currency] = true;
+                    continue;
+                }
+
+                var assetTransactions = portfolio.Transactions.Where(t => t.AssetId == asset.Id).ToList();
+                foreach (var t in assetTransactions)
+                {
+                    if (t.Type == TransactionType.Buy)
+                        netCashFlowByCurrency[currency] -= t.Quantity * t.Price;
+                    else if (t.Type == TransactionType.Sell || t.Type == TransactionType.Dividend)
+                        netCashFlowByCurrency[currency] += t.Quantity * t.Price;
+                }
+            }
+
+            // Pass 2: Calculate Allocations
             foreach (var asset in portfolio.Assets)
             {
                 var assetTransactions = portfolio.Transactions.Where(t => t.AssetId == asset.Id).ToList();
@@ -42,56 +70,58 @@ public class GetGlobalReportHandler : IRequestHandler<GetGlobalReportQuery, Glob
                 var currency = category?.DefaultCurrency ?? "VND";
 
                 decimal totalQuantity = 0;
-                decimal totalCost = 0; // Giá trị đầu tư ban đầu (tổng chi phí mua)
-                decimal realizedProfitLoss = 0; // Lợi nhuận/lỗ đã thực hiện từ các giao dịch bán
-                decimal cashBalance = 0; // Dòng tiền mặt (Tiền nạp/rút, thu từ bán, tốn khi mua, nhận cổ tức)
+                decimal totalCost = 0;
+                decimal totalCurrentValue = 0;
 
-                foreach (var t in assetTransactions)
+                if (categoryName == "Fiat")
                 {
-                    if (t.Type == TransactionType.Buy)
+                    decimal fiatDeposits = 0;
+                    decimal fiatWithdrawals = 0;
+
+                    foreach (var t in assetTransactions)
                     {
-                        totalQuantity += t.Quantity;
-                        totalCost += t.Quantity * t.Price;
-                        cashBalance -= t.Quantity * t.Price; // Giảm dòng tiền mặt khi mua
+                        if (t.Type == TransactionType.Buy || t.Type == TransactionType.Deposit)
+                            fiatDeposits += t.Quantity * t.Price;
+                        else if (t.Type == TransactionType.Sell || t.Type == TransactionType.Withdrawal)
+                            fiatWithdrawals += t.Quantity * t.Price;
                     }
-                    else if (t.Type == TransactionType.Sell)
+
+                    totalCost = fiatDeposits - fiatWithdrawals; // Net Fiat Deposited
+                    totalQuantity = totalCost + netCashFlowByCurrency[currency]; // Adjust cash balance with stock trades
+                    totalCurrentValue = totalQuantity * (marketAsset?.CurrentPrice ?? 1);
+                }
+                else
+                {
+                    foreach (var t in assetTransactions)
                     {
-                        if (totalQuantity > 0)
+                        if (t.Type == TransactionType.Buy)
                         {
-                            // 1. Tính giá trị vốn trung bình của 1 đơn vị tài sản
-                            decimal averageCost = totalCost / totalQuantity;
-
-                            // 2. Trừ đi phần giá vốn của số lượng đem bán
-                            totalCost -= averageCost * t.Quantity;
-
-                            // 3. Tính lợi nhuận/lỗ từ giao dịch bán
-                            decimal profitLoss = (t.Price - averageCost) * t.Quantity;
+                            totalQuantity += t.Quantity;
+                            totalCost += t.Quantity * t.Price;
                         }
-
-                        totalQuantity -= t.Quantity;
-                        cashBalance += t.Quantity * t.Price; // Tăng dòng tiền mặt khi bán
-
+                        else if (t.Type == TransactionType.Sell)
+                        {
+                            totalQuantity -= t.Quantity;
+                            totalCost -= t.Quantity * t.Price;
+                        }
+                        else if (t.Type == TransactionType.Dividend)
+                        {
+                            totalCost -= t.Quantity * t.Price;
+                        }
                     }
-                    else if (t.Type == TransactionType.Dividend)
-                    {
-                        totalCost -= t.Quantity * t.Price;
-                    }
+
+                    totalCurrentValue = totalQuantity * (marketAsset?.CurrentPrice ?? 0);
                 }
 
-                // Tính giá trị hiện tại của tài sản
-                var assetCurrentPrice = totalQuantity * (marketAsset?.CurrentPrice ?? 0);
-
-                // Tổng tài sản = Giá trị hiện tại của tài sản + Dòng tiền mặt
-                var totalCurrentValue = assetCurrentPrice + cashBalance;
-
-                // Global Category Aggregation
-                if (!categoryAllocationsDict.ContainsKey(categoryName))
+                // Global Category Aggregation by Currency
+                var catKey = $"{categoryName}_{currency}";
+                if (!categoryAllocationsDict.ContainsKey(catKey))
                 {
-                    categoryAllocationsDict[categoryName] = new CategoryAllocationDto(categoryName, currency, 0, 0);
+                    categoryAllocationsDict[catKey] = new CategoryAllocationDto(categoryName, currency, 0, 0);
                 }
 
-                var existingCat = categoryAllocationsDict[categoryName];
-                categoryAllocationsDict[categoryName] = existingCat with
+                var existingCat = categoryAllocationsDict[catKey];
+                categoryAllocationsDict[catKey] = existingCat with
                 {
                     TotalInvested = existingCat.TotalInvested + totalCost,
                     CurrentValue = existingCat.CurrentValue + totalCurrentValue
@@ -104,12 +134,25 @@ public class GetGlobalReportHandler : IRequestHandler<GetGlobalReportQuery, Glob
                 }
 
                 var existingPortCurr = portfolioCurrenciesDict[currency];
+                
+                // For Portfolio Currency, if there's no Fiat asset, we fallback to legacy totalCost of non-fiat.
+                // If there IS a Fiat asset, the Fiat asset's totalCost (Net Deposits) represents the portfolio's TotalInvested.
+                // To avoid double-counting TotalInvested when Fiat exists, we only add totalCost to Portfolio if:
+                // a) it's a Fiat asset, OR b) no Fiat asset exists for this currency.
+                decimal portfolioAddedCost = 0;
+                if (categoryName == "Fiat" || (!hasFiatAssetByCurrency.ContainsKey(currency) || !hasFiatAssetByCurrency[currency]))
+                {
+                    portfolioAddedCost = totalCost;
+                }
+
                 portfolioCurrenciesDict[currency] = existingPortCurr with
                 {
-                    TotalInvested = existingPortCurr.TotalInvested + totalCost,
+                    TotalInvested = existingPortCurr.TotalInvested + portfolioAddedCost,
                     CurrentValue = existingPortCurr.CurrentValue + totalCurrentValue
                 };
             }
+
+
 
             portfolioAllocations.Add(new PortfolioAllocationDto(
                 portfolio.Id,

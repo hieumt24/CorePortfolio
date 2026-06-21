@@ -13,4 +13,6 @@ public class Portfolio
     
     public ICollection<Asset> Assets { get; set; } = new List<Asset>();
     public ICollection<Transaction> Transactions { get; set; } = new List<Transaction>();
+    public ICollection<PortfolioSnapshot> Snapshots { get; set; } = new List<PortfolioSnapshot>();
+    public ICollection<CashflowRecord> CashflowRecords { get; set; } = new List<CashflowRecord>();
 }

@@ -159,7 +159,7 @@ export const AssetDetailsModal: React.FC<AssetDetailsModalProps> = ({ asset, por
                            tx.type === TransactionType.Withdrawal ? 'Withdrawal' : 'Unknown'}
                         </span>
                       </td>
-                      <td>{tx.quantity.toLocaleString()}</td>
+                      <td>{tx.quantity.toLocaleString(undefined, { maximumFractionDigits: 8 })}</td>
                       <td>{formatCurrency(tx.price, asset.currency)}</td>
                       <td>{formatCurrency(tx.quantity * tx.price, asset.currency)}</td>
                       <td>

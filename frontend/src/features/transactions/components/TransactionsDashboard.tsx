@@ -150,7 +150,7 @@ export const TransactionsDashboard: React.FC = () => {
                         {getTypeName(t.type)}
                       </span>
                     </td>
-                    <td>{t.quantity.toLocaleString()}</td>
+                    <td>{t.quantity.toLocaleString(undefined, { maximumFractionDigits: 8 })}</td>
                     <td>{formatCurrency(t.price, t.currency)}</td>
                     <td>{formatCurrency(t.quantity * t.price, t.currency)}</td>
                     <td>

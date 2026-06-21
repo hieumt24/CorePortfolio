@@ -70,11 +70,11 @@
 }
 
 .glass-input {
-  background: rgba(255, 255, 255, 0.05);
+  background: #ffffff;
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
   padding: 0.75rem 1rem;
-  color: white;
+  color: #0f172a;
   font-family: inherit;
   font-size: 1rem;
   transition: all 0.2s;
@@ -84,8 +84,8 @@
 
 .glass-input:focus {
   border-color: var(--accent-primary);
-  background: rgba(255, 255, 255, 0.08);
-  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+  background: #f8fafc;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.4);
 }
 
 .glass-input:disabled {
@@ -94,13 +94,11 @@
 }
 
 select.glass-input option {
-  background: var(--bg-primary);
-  color: var(--text-primary);
+  background: #ffffff;
+  color: #0f172a;
 }
 
-/* Fix for date input icon color in webkit */
 input[type="datetime-local"].glass-input::-webkit-calendar-picker-indicator {
-  filter: invert(1);
   opacity: 0.5;
   cursor: pointer;
 }

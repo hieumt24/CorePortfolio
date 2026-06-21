@@ -56,16 +56,21 @@ export const GlobalReportDashboard: React.FC = () => {
   let totalInvestedVND = 0;
   let totalValueVND = 0;
 
-  const categoryChartData = reportData.allocationsByCategory.map(cat => {
+  const catGrouped = reportData.allocationsByCategory.reduce((acc: any, cat) => {
     const valueVnd = convertToVnd(cat.currentValue, cat.currency);
     const investedVnd = convertToVnd(cat.totalInvested, cat.currency);
     totalInvestedVND += investedVnd;
     totalValueVND += valueVnd;
-    return {
-      name: cat.categoryName,
-      value: valueVnd
-    };
-  }).filter(d => d.value > 0);
+    
+    if (!acc[cat.categoryName]) acc[cat.categoryName] = 0;
+    acc[cat.categoryName] += valueVnd;
+    return acc;
+  }, {});
+
+  const categoryChartData = Object.keys(catGrouped).map(catName => ({
+    name: catName,
+    value: catGrouped[catName]
+  })).filter(d => d.value > 0);
 
   const portfolioChartData = reportData.allocationsByPortfolio.map(port => {
     let portTotalValueVnd = 0;

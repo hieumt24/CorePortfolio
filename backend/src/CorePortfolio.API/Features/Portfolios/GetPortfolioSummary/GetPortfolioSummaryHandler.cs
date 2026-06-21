@@ -35,53 +35,120 @@ public class GetPortfolioSummaryHandler : IRequestHandler<GetPortfolioSummaryQue
         decimal totalInvested = 0;
         decimal currentTotalValue = 0;
 
+        var netCashFlowByCurrency = new Dictionary<string, decimal>();
+        var hasFiatAssetByCurrency = new Dictionary<string, bool>();
+
+        // Pass 1: Calculate Net Cash Flows from Non-Fiat assets
+        foreach (var asset in portfolio.Assets)
+        {
+            var marketAsset = asset.MarketAsset;
+            var categoryName = marketAsset?.Category?.Name ?? "Unknown";
+            var currency = marketAsset?.Category?.DefaultCurrency ?? "VND";
+
+            if (!netCashFlowByCurrency.ContainsKey(currency))
+                netCashFlowByCurrency[currency] = 0;
+
+            if (categoryName == "Fiat")
+            {
+                hasFiatAssetByCurrency[currency] = true;
+                continue;
+            }
+
+            var assetTransactions = portfolio.Transactions.Where(t => t.AssetId == asset.Id).ToList();
+            foreach (var t in assetTransactions)
+            {
+                if (t.Type == TransactionType.Buy)
+                    netCashFlowByCurrency[currency] -= t.Quantity * t.Price;
+                else if (t.Type == TransactionType.Sell || t.Type == TransactionType.Dividend)
+                    netCashFlowByCurrency[currency] += t.Quantity * t.Price;
+            }
+        }
+
+        // Pass 2: Build Asset Summaries
         foreach (var asset in portfolio.Assets)
         {
             var assetTransactions = portfolio.Transactions.Where(t => t.AssetId == asset.Id).ToList();
             var marketAsset = asset.MarketAsset;
+            var categoryName = marketAsset?.Category?.Name ?? "Unknown";
+            var currency = marketAsset?.Category?.DefaultCurrency ?? "VND";
             
             decimal totalQuantity = 0;
             decimal totalCost = 0;
             decimal totalBought = 0;
 
-            foreach (var t in assetTransactions)
+            if (categoryName == "Fiat")
             {
-                if (t.Type == TransactionType.Buy)
+                // Fiat Asset logic (Cash)
+                decimal fiatDeposits = 0;
+                decimal fiatWithdrawals = 0;
+
+                foreach (var t in assetTransactions)
                 {
-                    totalQuantity += t.Quantity;
-                    totalCost += t.Quantity * t.Price;
-                    totalBought += t.Quantity * t.Price;
+                    if (t.Type == TransactionType.Buy || t.Type == TransactionType.Deposit)
+                    {
+                        fiatDeposits += t.Quantity * t.Price;
+                        totalBought += t.Quantity * t.Price;
+                    }
+                    else if (t.Type == TransactionType.Sell || t.Type == TransactionType.Withdrawal)
+                    {
+                        fiatWithdrawals += t.Quantity * t.Price;
+                    }
                 }
-                else if (t.Type == TransactionType.Sell)
-                {
-                    totalQuantity -= t.Quantity;
-                    totalCost -= t.Quantity * t.Price; 
-                }
-                else if (t.Type == TransactionType.Dividend)
-                {
-                    // Dividends reduce the cost basis (totalCost) without changing quantity
-                    totalCost -= t.Quantity * t.Price;
-                }
+
+                totalCost = fiatDeposits - fiatWithdrawals; // Net Fiat Deposited
+                totalQuantity = totalCost + netCashFlowByCurrency[currency]; // Adjust cash balance with stock trades
+                
+                var currentValue = totalQuantity * (marketAsset?.CurrentPrice ?? 1);
+                totalInvested += totalCost;
+                currentTotalValue += currentValue;
+
+                assetSummaries.Add(new AssetSummaryDto(
+                    asset.Id, asset.MarketAssetId, marketAsset?.Symbol ?? "N/A", marketAsset?.Name ?? "N/A",
+                    categoryName, currency, marketAsset?.CurrentPrice ?? 1, totalQuantity, totalCost, currentValue, totalBought
+                ));
             }
+            else
+            {
+                // Non-Fiat Asset logic (Stocks, Crypto, etc.) using Net Cash Flow
+                foreach (var t in assetTransactions)
+                {
+                    if (t.Type == TransactionType.Buy)
+                    {
+                        totalQuantity += t.Quantity;
+                        totalCost += t.Quantity * t.Price;
+                        totalBought += t.Quantity * t.Price;
+                    }
+                    else if (t.Type == TransactionType.Sell)
+                    {
+                        totalQuantity -= t.Quantity;
+                        totalCost -= t.Quantity * t.Price;
+                    }
+                    else if (t.Type == TransactionType.Dividend)
+                    {
+                        totalCost -= t.Quantity * t.Price;
+                    }
+                }
 
-            var currentValue = totalQuantity * (marketAsset?.CurrentPrice ?? 0);
-            totalInvested += totalCost;
-            currentTotalValue += currentValue;
+                var currentValue = totalQuantity * (marketAsset?.CurrentPrice ?? 0);
+                
+                // If there is NO Fiat asset for this currency, we add this asset's totalCost to Portfolio's totalInvested 
+                // to maintain backwards compatibility for users who haven't added Fiat assets yet.
+                if (!hasFiatAssetByCurrency.ContainsKey(currency) || !hasFiatAssetByCurrency[currency])
+                {
+                    // Fallback to legacy calculation for Portfolio Totals
+                    totalInvested += totalCost;
+                }
 
-            assetSummaries.Add(new AssetSummaryDto(
-                asset.Id,
-                asset.MarketAssetId,
-                marketAsset?.Symbol ?? "N/A",
-                marketAsset?.Name ?? "N/A",
-                marketAsset?.Category?.Name ?? "N/A",
-                marketAsset?.Category?.DefaultCurrency ?? "VND",
-                marketAsset?.CurrentPrice ?? 0,
-                totalQuantity,
-                totalCost,
-                currentValue,
-                totalBought
-            ));
+                currentTotalValue += currentValue;
+
+                assetSummaries.Add(new AssetSummaryDto(
+                    asset.Id, asset.MarketAssetId, marketAsset?.Symbol ?? "N/A", marketAsset?.Name ?? "N/A",
+                    categoryName, currency, marketAsset?.CurrentPrice ?? 0, totalQuantity, totalCost, currentValue, totalBought
+                ));
+            }
         }
+
+
 
         return new PortfolioSummaryDto(portfolio.Id, portfolio.Name, totalInvested, currentTotalValue, assetSummaries);
     }

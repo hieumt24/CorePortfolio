@@ -124,7 +124,7 @@ export function MarketAssetManagement() {
                   <span className="item-title">{m.symbol}</span>
                   <span className="admin-badge admin-badge-gray">{m.categoryName}</span>
                 </div>
-                <span className="item-price">{m.currentPrice.toLocaleString()}</span>
+                <span className="item-price">{m.currentPrice.toLocaleString(undefined, { maximumFractionDigits: 8 })}</span>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
                 <span className="item-subtitle">{m.name}</span>

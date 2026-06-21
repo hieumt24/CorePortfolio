@@ -9,4 +9,6 @@ public class User
     public DateTime CreatedAt { get; set; }
     
     public ICollection<Portfolio> Portfolios { get; set; } = new List<Portfolio>();
+    public ICollection<CashflowRecord> CashflowRecords { get; set; } = new List<CashflowRecord>();
+    public ICollection<CashflowCategory> CustomCategories { get; set; } = new List<CashflowCategory>();
 }

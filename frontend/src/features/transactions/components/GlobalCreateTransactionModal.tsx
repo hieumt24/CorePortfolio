@@ -157,11 +157,18 @@ export const GlobalCreateTransactionModal: React.FC<GlobalCreateTransactionModal
           <div className="form-group">
             <label>Type</label>
             <select value={type} onChange={e => setType(Number(e.target.value))} className="glass-input">
-              <option value={TransactionType.Buy}>Buy</option>
-              <option value={TransactionType.Sell}>Sell</option>
-              <option value={TransactionType.Deposit}>Deposit</option>
-              <option value={TransactionType.Withdrawal}>Withdrawal</option>
-              <option value={TransactionType.Dividend}>Dividend</option>
+              {selectedCategoryName === 'Fiat' ? (
+                <>
+                  <option value={TransactionType.Deposit}>Deposit</option>
+                  <option value={TransactionType.Withdrawal}>Withdrawal</option>
+                </>
+              ) : (
+                <>
+                  <option value={TransactionType.Buy}>Buy</option>
+                  <option value={TransactionType.Sell}>Sell</option>
+                  <option value={TransactionType.Dividend}>Dividend</option>
+                </>
+              )}
             </select>
           </div>
 

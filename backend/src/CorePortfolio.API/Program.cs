@@ -17,6 +17,7 @@ using CorePortfolio.API.Features.Reports.GetGlobalHistory;
 using CorePortfolio.API.Features.Reports.GetGlobalReport;
 using CorePortfolio.API.Features.Reports.TakeDailySnapshot;
 using CorePortfolio.API.Features.Portfolios.GetPortfolioHistory;
+using CorePortfolio.API.Features.Cashflows;
 using CorePortfolio.API.Services;
 using CorePortfolio.API.Features.Auth;
 using CorePortfolio.Infrastructure.Data;
@@ -142,6 +143,7 @@ app.MapTakeDailySnapshotEndpoint();
 app.MapMockSnapshotsEndpoint();
 app.MapGetGlobalHistoryEndpoint();
 app.MapGetPortfolioHistoryEndpoint();
+app.MapCashflowsEndpoints();
 
 // Map fallback to index.html for SPA routing
 app.MapFallbackToFile("index.html");
