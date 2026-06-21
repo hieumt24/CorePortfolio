@@ -25,21 +25,21 @@ export const useCashflowCategories = () => {
   return { categories, loading };
 };
 
-export const useCashflowSummary = (currency = 'VND') => {
+export const useCashflowSummary = (currency = 'VND', startDate?: string, endDate?: string) => {
   const [summary, setSummary] = useState<CashflowSummary | null>(null);
   const [loading, setLoading] = useState(true);
 
   const fetchSummary = useCallback(async () => {
     try {
       setLoading(true);
-      const data = await cashflowsApi.getSummary(currency);
+      const data = await cashflowsApi.getSummary(currency, startDate, endDate);
       setSummary(data);
     } catch (error) {
       console.error('Failed to fetch summary', error);
     } finally {
       setLoading(false);
     }
-  }, [currency]);
+  }, [currency, startDate, endDate]);
 
   useEffect(() => {
     fetchSummary();
@@ -48,21 +48,21 @@ export const useCashflowSummary = (currency = 'VND') => {
   return { summary, loading, refetch: fetchSummary };
 };
 
-export const useCashflowsList = (page = 1, pageSize = 50, currency = 'VND') => {
+export const useCashflowsList = (page = 1, pageSize = 50, currency = 'VND', startDate?: string, endDate?: string) => {
   const [records, setRecords] = useState<CashflowRecord[]>([]);
   const [loading, setLoading] = useState(true);
 
   const fetchRecords = useCallback(async () => {
     try {
       setLoading(true);
-      const data = await cashflowsApi.getCashflows(page, pageSize, currency);
+      const data = await cashflowsApi.getCashflows(page, pageSize, currency, undefined, startDate, endDate);
       setRecords(data);
     } catch (error) {
       console.error('Failed to fetch cashflows', error);
     } finally {
       setLoading(false);
     }
-  }, [page, pageSize, currency]);
+  }, [page, pageSize, currency, startDate, endDate]);
 
   useEffect(() => {
     fetchRecords();

@@ -8,7 +8,7 @@ namespace CorePortfolio.API.Features.Cashflows.GetCashflows;
 
 public record CashflowRecordDto(Guid Id, Guid PortfolioId, string PortfolioName, Guid CategoryId, string CategoryName, string CategoryIcon, string CategoryColor, int Type, decimal Amount, string Currency, DateTime Date, string Description);
 
-public record GetCashflowsQuery(int Page = 1, int PageSize = 50, string? Currency = null, int? Type = null) : IRequest<List<CashflowRecordDto>>;
+public record GetCashflowsQuery(int Page = 1, int PageSize = 50, string? Currency = null, int? Type = null, DateTime? StartDate = null, DateTime? EndDate = null) : IRequest<List<CashflowRecordDto>>;
 
 public class GetCashflowsHandler : IRequestHandler<GetCashflowsQuery, List<CashflowRecordDto>>
 {
@@ -38,6 +38,16 @@ public class GetCashflowsHandler : IRequestHandler<GetCashflowsQuery, List<Cashf
         if (request.Type.HasValue)
         {
             query = query.Where(c => (int)c.Category.Type == request.Type.Value);
+        }
+
+        if (request.StartDate.HasValue)
+        {
+            query = query.Where(c => c.Date >= request.StartDate.Value);
+        }
+
+        if (request.EndDate.HasValue)
+        {
+            query = query.Where(c => c.Date <= request.EndDate.Value);
         }
 
         var cashflows = await query

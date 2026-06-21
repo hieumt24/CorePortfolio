@@ -36,7 +36,9 @@ export const cashflowsApi = {
     page = 1,
     pageSize = 50,
     currency?: string,
-    type?: number
+    type?: number,
+    startDate?: string,
+    endDate?: string
   ): Promise<CashflowRecord[]> => {
     const params = new URLSearchParams({
       page: page.toString(),
@@ -44,6 +46,8 @@ export const cashflowsApi = {
     });
     if (currency) params.append('currency', currency);
     if (type) params.append('type', type.toString());
+    if (startDate) params.append('startDate', startDate);
+    if (endDate) params.append('endDate', endDate);
 
     return apiClient<CashflowRecord[]>(`/cashflows?${params.toString()}`);
   },

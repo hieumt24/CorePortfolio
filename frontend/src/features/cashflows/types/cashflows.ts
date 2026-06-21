@@ -1,7 +1,9 @@
-export enum CashflowType {
-  Income = 1,
-  Expense = 2,
-}
+export const CashflowType = {
+  Income: 1,
+  Expense: 2,
+} as const;
+
+export type CashflowType = typeof CashflowType[keyof typeof CashflowType];
 
 export interface CashflowCategory {
   id: string;
