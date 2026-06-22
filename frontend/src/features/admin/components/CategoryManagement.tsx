@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { categoriesApi } from '../api/categories';
 import { useNotification } from '../../../context/NotificationContext';
 import type { AssetCategory } from '../types';
+import './CategoryManagement.css';
 
 export function CategoryManagement() {
   const { showNotification } = useNotification();
@@ -33,10 +34,10 @@ export function CategoryManagement() {
       }
       resetCategoryForm();
       loadCategories();
-      showNotification('Đã lưu Category', 'success');
+      showNotification('Category saved successfully', 'success');
     } catch (error) {
       console.error('Failed to save category', error);
-      showNotification('Đã xảy ra lỗi khi lưu Category', 'error');
+      showNotification('Failed to save Category', 'error');
     }
   };
 
@@ -47,14 +48,14 @@ export function CategoryManagement() {
   };
 
   const handleDeleteCategory = async (id: string) => {
-    if (!window.confirm('Bạn có chắc chắn muốn xóa Category này?')) return;
+    if (!window.confirm('Are you sure you want to delete this Category?')) return;
     try {
       await categoriesApi.deleteCategory(id);
-      showNotification('Xóa Category thành công', 'success');
+      showNotification('Category deleted successfully', 'success');
       loadCategories();
     } catch (error: any) {
       console.error('Failed to delete category', error);
-      showNotification('Không thể xóa Category này vì nó đang chứa dữ liệu Market Asset!', 'error');
+      showNotification('Cannot delete this Category because it contains Market Asset data!', 'error');
     }
   };
 
@@ -65,61 +66,76 @@ export function CategoryManagement() {
   };
 
   return (
-    <div className="admin-card">
-      <div className="admin-card-header">
-        <h2>Category Management</h2>
+    <div className="admin-page-container">
+      <div className="admin-page-header">
+        <h2>General Category Management</h2>
+        <p className="admin-page-subtitle">Manage high-level asset categories</p>
       </div>
       
-      <div className="admin-card-body">
-        <form onSubmit={handleSaveCategory} className="admin-form">
-          <div className="admin-form-group">
-            <label>Category Name (e.g. Crypto, Stock)</label>
-            <input
-              type="text"
-              required
-              value={newCatName}
-              onChange={e => setNewCatName(e.target.value)}
-              className="admin-input"
-              placeholder="Enter category name"
-            />
+      <div className="admin-card glass-panel">
+        <div className="glass-panel-header">
+          <h3>{editingCategoryId ? 'Edit Category' : 'Create New Category'}</h3>
+        </div>
+        
+        <form onSubmit={handleSaveCategory} className="glass-form">
+          <div className="form-row">
+            <div className="form-group">
+              <label>Category Name</label>
+              <input
+                type="text"
+                required
+                value={newCatName}
+                onChange={e => setNewCatName(e.target.value)}
+                className="modern-input"
+                placeholder="e.g. Crypto, Stock"
+              />
+            </div>
+            <div className="form-group">
+              <label>Default Currency</label>
+              <select
+                value={newCatCurrency}
+                onChange={e => setNewCatCurrency(e.target.value)}
+                className="modern-select"
+              >
+                <option value="VND">VND</option>
+                <option value="USD">USD</option>
+              </select>
+            </div>
           </div>
-          <div className="admin-form-group">
-            <label>Default Currency (e.g. USD, VND)</label>
-            <input
-              type="text"
-              required
-              value={newCatCurrency}
-              onChange={e => setNewCatCurrency(e.target.value)}
-              className="admin-input"
-              placeholder="Enter default currency"
-            />
-          </div>
-          <div style={{ display: 'flex', gap: '0.5rem' }}>
-            <button type="submit" className="admin-btn" style={{ flex: 1 }}>
-              {editingCategoryId ? 'Save Changes' : '+ Add Category'}
+          
+          <div className="form-actions">
+            <button type="submit" className="btn-primary glow-effect">
+              {editingCategoryId ? '💾 Save Changes' : '➕ Add Category'}
             </button>
             {editingCategoryId && (
-              <button type="button" onClick={resetCategoryForm} className="admin-btn" style={{ background: '#94a3b8' }}>
+              <button type="button" onClick={resetCategoryForm} className="btn-secondary">
                 Cancel
               </button>
             )}
           </div>
         </form>
+      </div>
 
-        <div className="admin-list-container" style={{ marginTop: '2rem' }}>
-          {categories.map(c => (
-            <div key={c.id} className="admin-list-item" style={{ display: 'flex', flexDirection: 'column', gap: '0.5rem', alignItems: 'flex-start' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
+      <div className="admin-list-container">
+        {categories.map(c => (
+          <div key={c.id} className="category-card glass-item">
+            <div className="category-card-content">
+              <div className="category-icon">📁</div>
+              <div className="category-details">
                 <span className="item-title">{c.name}</span>
-                <span className="admin-badge">{c.defaultCurrency}</span>
-              </div>
-              <div style={{ display: 'flex', gap: '0.5rem', alignSelf: 'flex-end' }}>
-                <button onClick={() => handleEditCategory(c)} className="action-btn edit-btn">Edit</button>
-                <button onClick={() => handleDeleteCategory(c.id)} className="action-btn delete-btn">Delete</button>
+                <span className="badge currency-badge">{c.defaultCurrency}</span>
               </div>
             </div>
-          ))}
-        </div>
+            <div className="category-actions">
+              <button onClick={() => handleEditCategory(c)} className="icon-btn edit-btn" title="Edit">
+                ✏️
+              </button>
+              <button onClick={() => handleDeleteCategory(c.id)} className="icon-btn delete-btn" title="Delete">
+                🗑️
+              </button>
+            </div>
+          </div>
+        ))}
       </div>
     </div>
   );

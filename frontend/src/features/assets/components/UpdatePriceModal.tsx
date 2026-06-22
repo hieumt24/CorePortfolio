@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { updateAssetPrice } from '../api/assetApi';
 import type { AssetSummaryDto } from '../../portfolios/types';
+import { NumericFormat } from 'react-number-format';
 import '../../portfolios/components/CreatePortfolioModal.css'; // Reuse styles
 
 interface UpdatePriceModalProps {
@@ -46,15 +47,16 @@ export const UpdatePriceModal: React.FC<UpdatePriceModalProps> = ({ asset, onClo
         <form onSubmit={handleSubmit} className="modal-form">
           <div className="form-group">
             <label htmlFor="price">Current Market Price ({asset.currency || 'USD'})</label>
-            <input
+            <NumericFormat
               id="price"
-              type="number"
-              step="any"
               value={price}
-              onChange={e => setPrice(e.target.value)}
+              onValueChange={(values) => setPrice(values.value)}
               placeholder="e.g. 150.00"
               className="glass-input"
               disabled={loading}
+              thousandSeparator="."
+              decimalSeparator=","
+              allowNegative={false}
               autoFocus
             />
           </div>

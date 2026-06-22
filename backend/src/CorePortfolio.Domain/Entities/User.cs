@@ -11,4 +11,6 @@ public class User
     public ICollection<Portfolio> Portfolios { get; set; } = new List<Portfolio>();
     public ICollection<CashflowRecord> CashflowRecords { get; set; } = new List<CashflowRecord>();
     public ICollection<CashflowCategory> CustomCategories { get; set; } = new List<CashflowCategory>();
+    public ICollection<WatchlistItem> WatchlistItems { get; set; } = new List<WatchlistItem>();
+    public ICollection<TargetAllocation> TargetAllocations { get; set; } = new List<TargetAllocation>();
 }

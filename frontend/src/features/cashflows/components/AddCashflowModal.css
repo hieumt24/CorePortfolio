@@ -112,11 +112,11 @@
 }
 
 .glass-input-light {
-  background: #ffffff;
+  background: rgba(15, 23, 42, 0.6);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 8px;
   padding: 0.75rem 1rem;
-  color: #0f172a;
+  color: #ffffff;
   font-family: inherit;
   font-size: 1rem;
   transition: all 0.2s;
@@ -127,6 +127,8 @@
 .glass-input-light:focus {
   border-color: #3b82f6;
   box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+  background: rgba(15, 23, 42, 0.8);
+  color: #ffffff;
 }
 
 .amount-input-group {

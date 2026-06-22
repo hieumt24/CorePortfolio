@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNotification } from '../../../context/NotificationContext';
 import { marketAssetsApi } from '../api/marketAssets';
 import type { AssetCategory, MarketAsset, DnseInstrument } from '../types';
+import { NumericFormat } from 'react-number-format';
 
 interface MarketAssetModalProps {
   isOpen: boolean;
@@ -230,15 +231,15 @@ export function MarketAssetModal({ isOpen, onClose, onSaved, assetToEdit, catego
               <label style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <span>Current Price</span>
               </label>
-              <input
-                type="number"
+              <NumericFormat
                 required
-                min="0"
-                step="any"
                 value={price}
-                onChange={e => setPrice(e.target.value)}
+                onValueChange={(values) => setPrice(values.value)}
                 className="admin-input"
                 placeholder="e.g. 150.00"
+                thousandSeparator="."
+                decimalSeparator=","
+                allowNegative={false}
               />
             </div>
           </div>
@@ -286,10 +287,10 @@ export function MarketAssetModal({ isOpen, onClose, onSaved, assetToEdit, catego
             />
           </div>
           
-          <div className="modal-actions" style={{ marginTop: '1.5rem' }}>
-            <button type="button" onClick={onClose} className="admin-btn" style={{ background: '#475569' }}>Cancel</button>
-            <button type="submit" className="admin-btn" style={{ background: 'var(--primary)' }}>
-              {assetToEdit ? 'Save Changes' : 'Add Market Asset'}
+          <div className="modal-actions" style={{ marginTop: '1.5rem', display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+            <button type="button" onClick={onClose} className="btn btn-outline">Cancel</button>
+            <button type="submit" className="btn btn-primary glow-effect">
+              {assetToEdit ? '💾 Save Changes' : '✨ Add Market Asset'}
             </button>
           </div>
         </form>

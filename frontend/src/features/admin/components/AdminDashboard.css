@@ -1,31 +1,34 @@
 /* Premium Admin Layout - CorePortfolio */
 .admin-layout {
   display: flex;
-  min-height: calc(100vh - 80px); /* Assuming 80px Navbar */
-  background-color: #0f172a;
-  color: #f8fafc;
+  min-height: calc(100vh - 100px); /* Account for navbar + margin */
+  padding: 0 1rem 1rem 1rem;
+  gap: 1.5rem;
+  max-width: 1400px;
+  margin: 0 auto;
   position: relative;
-  overflow: hidden;
   font-family: 'Inter', -apple-system, sans-serif;
 }
 
 /* Sidebar Styles */
 .admin-sidebar {
   width: 280px;
-  background: rgba(15, 23, 42, 0.6);
-  border-right: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(15, 23, 42, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 24px;
   display: flex;
   flex-direction: column;
-  transition: width 0.3s cubic-bezier(0.2, 0.8, 0.2, 1);
-  box-shadow: 5px 0 25px rgba(0, 0, 0, 0.2);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  transition: width 0.4s cubic-bezier(0.16, 1, 0.3, 1);
+  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   z-index: 100;
   flex-shrink: 0;
+  overflow: hidden;
 }
 
 .admin-sidebar.collapsed {
-  width: 80px;
+  width: 88px;
 }
 
 .sidebar-header {
@@ -35,6 +38,7 @@
   justify-content: space-between;
   padding: 0 1.5rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.02);
 }
 
 .admin-sidebar.collapsed .sidebar-header {
@@ -55,34 +59,38 @@
   display: flex;
   align-items: center;
   justify-content: center;
+  background: linear-gradient(135deg, rgba(167, 139, 250, 0.2), rgba(167, 139, 250, 0));
+  border-radius: 12px;
+  width: 40px;
+  height: 40px;
+  box-shadow: inset 0 0 0 1px rgba(167, 139, 250, 0.2);
 }
 
 .brand-text {
-  font-size: 1.2rem;
-  font-weight: 800;
-  background: linear-gradient(135deg, #fff, #a78bfa);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #f8fafc;
+  letter-spacing: -0.02em;
 }
 
 .sidebar-toggle-btn {
-  background: rgba(255, 255, 255, 0.05);
+  background: transparent;
   border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #fff;
+  color: #94a3b8;
   width: 32px;
   height: 32px;
-  border-radius: 8px;
+  border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   transition: all 0.2s ease;
-  font-weight: bold;
 }
 
 .sidebar-toggle-btn:hover {
   background: rgba(255, 255, 255, 0.1);
-  color: #a78bfa;
+  color: #fff;
+  transform: scale(1.05);
 }
 
 /* Sidebar Navigation */
@@ -104,13 +112,14 @@
   align-items: center;
   gap: 1rem;
   padding: 0.8rem 1rem;
-  color: rgba(255, 255, 255, 0.6);
+  color: #94a3b8;
   text-decoration: none;
-  border-radius: 12px;
-  transition: all 0.3s ease;
+  border-radius: 16px;
+  transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   white-space: nowrap;
   position: relative;
-  overflow: hidden;
+  font-weight: 500;
+  border: 1px solid transparent;
 }
 
 .admin-sidebar.collapsed .nav-item {
@@ -119,37 +128,41 @@
 }
 
 .nav-icon {
-  font-size: 1.2rem;
+  font-size: 1.25rem;
   display: flex;
   align-items: center;
   justify-content: center;
   width: 24px;
-  transition: transform 0.3s ease;
+  transition: all 0.3s ease;
+  filter: grayscale(100%) opacity(0.7);
 }
 
 .nav-label {
-  font-weight: 500;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   transition: opacity 0.3s ease;
 }
 
 .nav-item:hover {
-  background: rgba(255, 255, 255, 0.05);
-  color: #fff;
+  background: rgba(255, 255, 255, 0.03);
+  color: #e2e8f0;
+  border-color: rgba(255, 255, 255, 0.05);
 }
 
 .nav-item:hover .nav-icon {
+  filter: grayscale(0%) opacity(1);
   transform: scale(1.1);
 }
 
 .nav-item.active {
-  background: linear-gradient(90deg, rgba(167, 139, 250, 0.15), rgba(96, 165, 250, 0.05));
+  background: rgba(167, 139, 250, 0.1);
   color: #fff;
-  box-shadow: inset 3px 0 0 #a78bfa;
+  border-color: rgba(167, 139, 250, 0.2);
+  box-shadow: 0 4px 20px -5px rgba(167, 139, 250, 0.2);
 }
 
 .nav-item.active .nav-icon {
-  filter: drop-shadow(0 0 5px rgba(167, 139, 250, 0.8));
+  filter: grayscale(0%) opacity(1);
+  text-shadow: 0 0 10px rgba(167, 139, 250, 0.5);
 }
 
 /* Main Content Area */
@@ -157,21 +170,38 @@
   flex: 1;
   display: flex;
   flex-direction: column;
-  overflow: hidden; /* Scroll handled in container */
-  background: radial-gradient(circle at top right, rgba(96, 165, 250, 0.05), transparent 40%),
-              radial-gradient(circle at bottom left, rgba(167, 139, 250, 0.05), transparent 40%);
+  background: rgba(15, 23, 42, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 24px;
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  overflow: hidden;
+  position: relative;
+}
+
+.admin-main::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 200px;
+  background: radial-gradient(ellipse at top, rgba(167, 139, 250, 0.15), transparent 70%);
+  pointer-events: none;
+  z-index: 0;
 }
 
 .admin-container {
   flex: 1;
   padding: 2.5rem;
   overflow-y: auto;
-  scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+  z-index: 1;
+  position: relative;
 }
 
 .admin-container::-webkit-scrollbar {
-  width: 8px;
+  width: 6px;
 }
 .admin-container::-webkit-scrollbar-track {
   background: transparent;
@@ -186,8 +216,55 @@
   display: none;
 }
 
+/* Page Headers Global */
+.admin-page-container {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.admin-page-header {
+  margin-bottom: 0.5rem;
+}
+
+.admin-page-header h2 {
+  font-size: 1.75rem;
+  font-weight: 800;
+  margin: 0 0 0.5rem 0;
+  background: linear-gradient(135deg, #fff, #94a3b8);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  letter-spacing: -0.03em;
+}
+
+.admin-page-subtitle {
+  color: #94a3b8;
+  margin: 0;
+  font-size: 0.95rem;
+}
+
+/* Common Admin Cards */
+.admin-card {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 20px;
+  padding: 1.5rem;
+  transition: all 0.3s ease;
+}
+
+.admin-card:hover {
+  border-color: rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.03);
+}
+
 /* Mobile Responsive */
-@media (max-width: 768px) {
+@media (max-width: 992px) {
+  .admin-layout {
+    flex-direction: column;
+    padding: 0.5rem;
+    gap: 1rem;
+  }
+
   .desktop-only {
     display: none;
   }
@@ -199,17 +276,17 @@
   /* Off-canvas sidebar */
   .admin-sidebar {
     position: fixed;
-    top: 0;
-    left: -280px;
-    height: 100vh;
-    width: 280px !important; /* Ignore collapsed state on mobile */
+    top: 1rem;
+    bottom: 1rem;
+    left: -320px;
+    height: auto;
+    width: 280px !important;
     z-index: 1000;
-    transition: left 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    background: rgba(15, 23, 42, 0.95);
+    transition: left 0.4s cubic-bezier(0.16, 1, 0.3, 1);
   }
 
   .admin-sidebar.mobile-open {
-    left: 0;
+    left: 1rem;
   }
 
   .sidebar-backdrop {
@@ -218,9 +295,9 @@
     left: 0;
     right: 0;
     bottom: 0;
-    background: rgba(0, 0, 0, 0.5);
-    backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px);
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     z-index: 999;
     animation: fadeInBg 0.3s ease;
   }
@@ -231,14 +308,14 @@
   }
 
   .mobile-header {
-    height: 60px;
-    background: rgba(15, 23, 42, 0.8);
+    height: 70px;
+    background: rgba(255, 255, 255, 0.02);
     border-bottom: 1px solid rgba(255, 255, 255, 0.05);
     display: flex;
     align-items: center;
     padding: 0 1.5rem;
     gap: 1rem;
-    backdrop-filter: blur(10px);
+    z-index: 10;
   }
 
   .mobile-header h2 {
@@ -248,18 +325,25 @@
   }
 
   .mobile-menu-btn {
-    background: transparent;
-    border: none;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
     color: #fff;
-    font-size: 1.5rem;
+    width: 40px;
+    height: 40px;
+    border-radius: 12px;
     cursor: pointer;
-    padding: 0;
     display: flex;
     align-items: center;
     justify-content: center;
+    font-size: 1.2rem;
+  }
+
+  .admin-main {
+    min-height: calc(100vh - 120px);
   }
 
   .admin-container {
     padding: 1.5rem;
   }
 }
+

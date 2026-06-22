@@ -350,6 +350,30 @@ namespace CorePortfolio.Infrastructure.Migrations
                         });
                 });
 
+            modelBuilder.Entity("CorePortfolio.Domain.Entities.TargetAllocation", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("CategoryId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("TargetPercentage")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CategoryId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("TargetAllocations");
+                });
+
             modelBuilder.Entity("CorePortfolio.Domain.Entities.Transaction", b =>
                 {
                     b.Property<Guid>("Id")
@@ -407,6 +431,33 @@ namespace CorePortfolio.Infrastructure.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Users");
+                });
+
+            modelBuilder.Entity("CorePortfolio.Domain.Entities.WatchlistItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("AddedAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("MarketAssetId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal?>("TargetPrice")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("MarketAssetId");
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("WatchlistItems");
                 });
 
             modelBuilder.Entity("CorePortfolio.Domain.Entities.Asset", b =>
@@ -505,6 +556,25 @@ namespace CorePortfolio.Infrastructure.Migrations
                     b.Navigation("Portfolio");
                 });
 
+            modelBuilder.Entity("CorePortfolio.Domain.Entities.TargetAllocation", b =>
+                {
+                    b.HasOne("CorePortfolio.Domain.Entities.AssetCategory", "Category")
+                        .WithMany()
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("CorePortfolio.Domain.Entities.User", "User")
+                        .WithMany("TargetAllocations")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Category");
+
+                    b.Navigation("User");
+                });
+
             modelBuilder.Entity("CorePortfolio.Domain.Entities.Transaction", b =>
                 {
                     b.HasOne("CorePortfolio.Domain.Entities.Asset", "Asset")
@@ -522,6 +592,25 @@ namespace CorePortfolio.Infrastructure.Migrations
                     b.Navigation("Asset");
 
                     b.Navigation("Portfolio");
+                });
+
+            modelBuilder.Entity("CorePortfolio.Domain.Entities.WatchlistItem", b =>
+                {
+                    b.HasOne("CorePortfolio.Domain.Entities.MarketAsset", "MarketAsset")
+                        .WithMany()
+                        .HasForeignKey("MarketAssetId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("CorePortfolio.Domain.Entities.User", "User")
+                        .WithMany("WatchlistItems")
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("MarketAsset");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("CorePortfolio.Domain.Entities.Portfolio", b =>
@@ -542,6 +631,10 @@ namespace CorePortfolio.Infrastructure.Migrations
                     b.Navigation("CustomCategories");
 
                     b.Navigation("Portfolios");
+
+                    b.Navigation("TargetAllocations");
+
+                    b.Navigation("WatchlistItems");
                 });
 #pragma warning restore 612, 618
         }

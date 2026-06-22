@@ -18,6 +18,8 @@ using CorePortfolio.API.Features.Reports.GetGlobalReport;
 using CorePortfolio.API.Features.Reports.TakeDailySnapshot;
 using CorePortfolio.API.Features.Portfolios.GetPortfolioHistory;
 using CorePortfolio.API.Features.Cashflows;
+using CorePortfolio.API.Features.Watchlist;
+using CorePortfolio.API.Features.Analytics;
 using CorePortfolio.API.Services;
 using CorePortfolio.API.Features.Auth;
 using CorePortfolio.Infrastructure.Data;
@@ -59,6 +61,7 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 builder.Services.AddScoped<IPortfolioReportService, PortfolioReportService>();
 builder.Services.AddHttpClient();
+builder.Services.AddHostedService<TelegramCronService>();
 
 // External Infrastructures
 builder.Services.AddCoinGeckoInfrastructure(builder.Configuration);
@@ -144,6 +147,8 @@ app.MapMockSnapshotsEndpoint();
 app.MapGetGlobalHistoryEndpoint();
 app.MapGetPortfolioHistoryEndpoint();
 app.MapCashflowsEndpoints();
+app.MapWatchlistEndpoints();
+app.MapAnalyticsEndpoints();
 
 // Map fallback to index.html for SPA routing
 app.MapFallbackToFile("index.html");

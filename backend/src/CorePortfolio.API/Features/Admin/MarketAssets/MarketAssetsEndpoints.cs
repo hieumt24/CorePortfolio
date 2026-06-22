@@ -12,20 +12,19 @@ public static class MarketAssetsEndpoints
     public static void MapMarketAssetsEndpoints(this IEndpointRouteBuilder app)
     {
         var group = app.MapGroup("/api/admin/market-assets")
-            .WithTags("Admin Market Assets")
-            .RequireAuthorization("Admin");
+            .WithTags("Admin Market Assets");
 
         group.MapPost("/", async ([FromBody] CreateMarketAssetRequest request, IMediator mediator) =>
         {
             var id = await mediator.Send(new CreateMarketAssetCommand(request.CategoryId, request.Symbol, request.Name, request.CurrentPrice));
             return Results.Created($"/api/admin/market-assets/{id}", new { Id = id });
-        });
+        }).RequireAuthorization("Admin");
 
         group.MapPut("/{id}", async (Guid id, [FromBody] UpdateMarketAssetRequest request, IMediator mediator) =>
         {
             var success = await mediator.Send(new UpdateMarketAssetCommand(id, request.CategoryId, request.Symbol, request.Name, request.CurrentPrice));
             return success ? Results.NoContent() : Results.NotFound();
-        });
+        }).RequireAuthorization("Admin");
 
         group.MapDelete("/{id}", async (Guid id, IMediator mediator) =>
         {
@@ -38,7 +37,7 @@ public static class MarketAssetsEndpoints
             {
                 return Results.BadRequest(new { message = ex.Message });
             }
-        });
+        }).RequireAuthorization("Admin");
 
         group.MapGet("/", async (IMediator mediator, [FromQuery] Guid? categoryId, [FromQuery] int page = 1, [FromQuery] int pageSize = 10) =>
         {

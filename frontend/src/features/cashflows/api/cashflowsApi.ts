@@ -59,6 +59,19 @@ export const cashflowsApi = {
     });
   },
 
+  updateCashflow: (id: string, command: CreateCashflowRecordCommand): Promise<void> => {
+    return apiClient<void>(`/cashflows/${id}`, {
+      method: 'PUT',
+      body: JSON.stringify({ ...command, id })
+    });
+  },
+
+  deleteCashflow: (id: string): Promise<void> => {
+    return apiClient<void>(`/cashflows/${id}`, {
+      method: 'DELETE'
+    });
+  },
+
   getSummary: (currency = 'VND', startDate?: string, endDate?: string): Promise<CashflowSummary> => {
     const params = new URLSearchParams({ currency });
     if (startDate) params.append('startDate', startDate);

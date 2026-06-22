@@ -4,6 +4,7 @@ import { getPortfolios, getPortfolioSummary } from '../../portfolios/api/portfol
 import type { PortfolioDto, AssetSummaryDto } from '../../portfolios/types';
 import { TransactionType } from '../types';
 import { useNotification } from '../../../context/NotificationContext';
+import { NumericFormat } from 'react-number-format';
 import './GlobalCreateTransactionModal.css';
 
 interface GlobalCreateTransactionModalProps {
@@ -175,24 +176,26 @@ export const GlobalCreateTransactionModal: React.FC<GlobalCreateTransactionModal
           <div className="form-row" style={{ display: 'flex', gap: '1rem' }}>
             <div className="form-group" style={{ flex: 1 }}>
               <label>Quantity</label>
-              <input 
-                type="number" 
-                step="any" 
+              <NumericFormat
                 value={quantity} 
-                onChange={e => setQuantity(e.target.value)}
+                onValueChange={(values) => setQuantity(values.value)}
                 required
                 className="glass-input"
+                thousandSeparator="."
+                decimalSeparator=","
+                allowNegative={false}
               />
             </div>
             <div className="form-group" style={{ flex: 1 }}>
               <label>{type === TransactionType.Dividend ? 'Dividend per unit' : 'Price'}</label>
-              <input 
-                type="number" 
-                step="any" 
+              <NumericFormat
                 value={price} 
-                onChange={e => setPrice(e.target.value)}
+                onValueChange={(values) => setPrice(values.value)}
                 required
                 className="glass-input"
+                thousandSeparator="."
+                decimalSeparator=","
+                allowNegative={false}
               />
             </div>
           </div>

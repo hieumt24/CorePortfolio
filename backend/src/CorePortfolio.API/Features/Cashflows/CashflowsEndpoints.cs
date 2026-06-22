@@ -5,6 +5,8 @@ using CorePortfolio.API.Features.Cashflows.GetCashflows;
 using CorePortfolio.API.Features.Cashflows.GetCashflowSummary;
 using CorePortfolio.API.Features.Cashflows.UpdateCashflowCategory;
 using CorePortfolio.API.Features.Cashflows.DeleteCashflowCategory;
+using CorePortfolio.API.Features.Cashflows.UpdateCashflowRecord;
+using CorePortfolio.API.Features.Cashflows.DeleteCashflowRecord;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -57,6 +59,21 @@ public static class CashflowsEndpoints
         {
             var result = await mediator.Send(command);
             return Results.Ok(result);
+        });
+
+        group.MapPut("/{id}", async (Guid id, [FromBody] UpdateCashflowRecordCommand command, IMediator mediator) =>
+        {
+            if (id != command.Id)
+                return Results.BadRequest("ID mismatch");
+                
+            await mediator.Send(command);
+            return Results.NoContent();
+        });
+
+        group.MapDelete("/{id}", async (Guid id, IMediator mediator) =>
+        {
+            await mediator.Send(new DeleteCashflowRecordCommand(id));
+            return Results.NoContent();
         });
 
         group.MapGet("/summary", async ([AsParameters] GetCashflowSummaryQuery query, IMediator mediator) =>

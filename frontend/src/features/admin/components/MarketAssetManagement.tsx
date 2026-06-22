@@ -4,6 +4,7 @@ import { marketAssetsApi } from '../api/marketAssets';
 import { useNotification } from '../../../context/NotificationContext';
 import type { AssetCategory, MarketAsset } from '../types';
 import { MarketAssetModal } from './MarketAssetModal';
+import './MarketAssetManagement.css';
 
 export function MarketAssetManagement() {
   const { showNotification } = useNotification();
@@ -71,34 +72,34 @@ export function MarketAssetManagement() {
   };
 
   const handleDeleteMarketAsset = async (id: string) => {
-    if (!window.confirm('Bạn có chắc chắn muốn xóa Asset này?')) return;
+    if (!window.confirm('Are you sure you want to delete this Asset?')) return;
     try {
       await marketAssetsApi.deleteMarketAsset(id);
-      showNotification('Xóa Asset thành công', 'success');
+      showNotification('Asset deleted', 'success');
       loadMarketAssets(selectedCategoryId || undefined, currentPage, pageSize);
     } catch (error: any) {
       console.error('Failed to delete asset', error);
-      showNotification('Không thể xóa Asset này vì nó đã được sử dụng trong Portfolio của người dùng!', 'error');
+      showNotification('Cannot delete this Asset because it is currently used in a Portfolio!', 'error');
     }
   };
 
   const totalPages = Math.ceil(totalCount / pageSize);
 
   return (
-    <div className="admin-card" style={{ gridColumn: '1 / -1' }}>
-      <div className="admin-card-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+    <div className="admin-page-container">
+      <div className="admin-page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <div>
-          <h2>Market Asset Management</h2>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginTop: '0.25rem' }}>View, add, edit, and delete market assets.</p>
+          <h2>Market Assets</h2>
+          <p className="admin-page-subtitle">View, add, edit, and delete global market assets.</p>
         </div>
-        <button className="admin-btn" style={{ background: 'var(--primary)' }} onClick={handleOpenAddModal}>
-          + Add Market Asset
+        <button className="btn-primary glow-effect" onClick={handleOpenAddModal}>
+          ✨ Add Market Asset
         </button>
       </div>
 
-      <div className="admin-tabs">
+      <div className="modern-tabs">
         <button
-          className={`admin-tab-btn ${!selectedCategoryId ? 'active' : ''}`}
+          className={`tab-btn ${!selectedCategoryId ? 'active' : ''}`}
           onClick={() => handleFilterChange('')}
         >
           All Assets
@@ -106,7 +107,7 @@ export function MarketAssetManagement() {
         {categories.map(c => (
           <button
             key={c.id}
-            className={`admin-tab-btn ${selectedCategoryId === c.id ? 'active' : ''}`}
+            className={`tab-btn ${selectedCategoryId === c.id ? 'active' : ''}`}
             onClick={() => handleFilterChange(c.id)}
           >
             {c.name}
@@ -114,76 +115,96 @@ export function MarketAssetManagement() {
         ))}
       </div>
 
-      <div className="admin-card-body" style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
-        {/* List Section */}
-        <div className="admin-list-container">
-          {marketAssets.map(m => (
-            <div key={m.id} className="admin-list-item" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: '0.5rem' }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                  <span className="item-title">{m.symbol}</span>
-                  <span className="admin-badge admin-badge-gray">{m.categoryName}</span>
-                </div>
-                <span className="item-price">{m.currentPrice.toLocaleString(undefined, { maximumFractionDigits: 8 })}</span>
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', alignItems: 'center' }}>
-                <span className="item-subtitle">{m.name}</span>
-                <div style={{ display: 'flex', gap: '0.5rem' }}>
-                  <button onClick={() => handleEditMarketAsset(m)} className="action-btn edit-btn">Edit</button>
-                  <button onClick={() => handleDeleteMarketAsset(m.id)} className="action-btn delete-btn">Delete</button>
-                </div>
-              </div>
-            </div>
-          ))}
-          
-          {marketAssets.length === 0 && (
-            <div className="admin-empty-state">
-              No market assets found.
-            </div>
-          )}
+      <div className="glass-panel" style={{ padding: 0, overflow: 'hidden' }}>
+        <div className="table-responsive">
+          <table className="modern-data-table">
+            <thead>
+              <tr>
+                <th>Symbol</th>
+                <th>Asset Name</th>
+                <th>Category</th>
+                <th className="text-right">Price</th>
+                <th className="text-center">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {marketAssets.map(m => (
+                <tr key={m.id}>
+                  <td className="symbol-cell">
+                    <span className="symbol-text">{m.symbol}</span>
+                  </td>
+                  <td className="name-cell">{m.name}</td>
+                  <td>
+                    <span className="badge category-badge">{m.categoryName}</span>
+                  </td>
+                  <td className="text-right price-cell">
+                    {m.currentPrice.toLocaleString(undefined, { maximumFractionDigits: 8 })}
+                  </td>
+                  <td className="text-center actions-cell">
+                    <div className="row-actions">
+                      <button onClick={() => handleEditMarketAsset(m)} className="icon-btn edit-btn" title="Edit">
+                        ✏️
+                      </button>
+                      <button onClick={() => handleDeleteMarketAsset(m.id)} className="icon-btn delete-btn" title="Delete">
+                        🗑️
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+              
+              {marketAssets.length === 0 && (
+                <tr>
+                  <td colSpan={5}>
+                    <div className="empty-state" style={{ padding: '3rem 0', border: 'none' }}>
+                      <div className="empty-icon">📈</div>
+                      <p>No market assets found for this filter.</p>
+                    </div>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
         </div>
 
         {/* Pagination Controls */}
         {totalCount > 0 && (
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem', padding: '1rem', background: 'rgba(0,0,0,0.1)', borderRadius: '8px' }}>
-            <div style={{ fontSize: '0.9rem', color: 'var(--text-secondary)' }}>
+          <div className="pagination-bar">
+            <div className="pagination-info">
               Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, totalCount)} of {totalCount} entries
             </div>
             
-            <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+            <div className="pagination-controls">
               <select 
                 value={pageSize} 
                 onChange={(e) => {
                   setPageSize(Number(e.target.value));
                   setCurrentPage(1);
                 }}
-                className="admin-input admin-select"
-                style={{ padding: '0.25rem 0.5rem', minWidth: '80px' }}
+                className="modern-select pagination-select"
               >
                 <option value={10}>10 / page</option>
                 <option value={20}>20 / page</option>
                 <option value={50}>50 / page</option>
               </select>
 
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
+              <div className="pagination-buttons">
                 <button 
-                  className="admin-btn" 
-                  style={{ background: 'var(--surface)', border: '1px solid var(--border)', padding: '0.25rem 0.75rem' }}
+                  className="page-btn nav-btn" 
                   disabled={currentPage === 1}
                   onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                 >
-                  Prev
+                  « Prev
                 </button>
-                <span style={{ padding: '0.25rem 0.5rem', background: 'var(--primary)', color: 'white', borderRadius: '4px', minWidth: '32px', textAlign: 'center' }}>
+                <span className="page-current">
                   {currentPage}
                 </span>
                 <button 
-                  className="admin-btn" 
-                  style={{ background: 'var(--surface)', border: '1px solid var(--border)', padding: '0.25rem 0.75rem' }}
+                  className="page-btn nav-btn" 
                   disabled={currentPage >= totalPages}
                   onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                 >
-                  Next
+                  Next »
                 </button>
               </div>
             </div>

@@ -20,6 +20,15 @@ public class DeleteTransactionHandler : IRequestHandler<DeleteTransactionCommand
 
         if (transaction != null)
         {
+            // If there's an associated CashflowRecord, delete it too to avoid orphaned cashflows
+            var cashflow = await _dbContext.CashflowRecords
+                .FirstOrDefaultAsync(c => c.TransactionId == request.TransactionId, cancellationToken);
+            
+            if (cashflow != null)
+            {
+                _dbContext.CashflowRecords.Remove(cashflow);
+            }
+
             _dbContext.Transactions.Remove(transaction);
             await _dbContext.SaveChangesAsync(cancellationToken);
         }

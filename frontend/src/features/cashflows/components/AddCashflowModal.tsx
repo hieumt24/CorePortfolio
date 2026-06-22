@@ -2,47 +2,78 @@ import React, { useState } from 'react';
 import { useCreateCashflow, useCashflowCategories } from '../hooks/useCashflows';
 import { usePortfolios } from '../../portfolios/hooks/usePortfolios';
 import { CashflowType } from '../types/cashflows';
+import type { CashflowRecord } from '../types/cashflows';
+import { cashflowsApi } from '../api/cashflowsApi';
+import { useNotification } from '../../../context/NotificationContext';
+import { NumericFormat } from 'react-number-format';
 import './AddCashflowModal.css';
 
 interface AddCashflowModalProps {
   onClose: () => void;
   defaultType?: CashflowType;
+  cashflowToEdit?: CashflowRecord;
 }
 
-export const AddCashflowModal: React.FC<AddCashflowModalProps> = ({ onClose, defaultType = CashflowType.Income }) => {
-  const [type, setType] = useState<CashflowType>(defaultType);
-  const [amount, setAmount] = useState<string>('');
-  const [portfolioId, setPortfolioId] = useState<string>('');
-  const [categoryId, setCategoryId] = useState<string>('');
-  const [currency, setCurrency] = useState<string>('VND');
-  const [date, setDate] = useState<string>(new Date().toISOString().slice(0, 16));
-  const [description, setDescription] = useState<string>('');
+export const AddCashflowModal: React.FC<AddCashflowModalProps> = ({ onClose, defaultType = CashflowType.Income, cashflowToEdit }) => {
+  const [type, setType] = useState<CashflowType>(cashflowToEdit?.type ?? defaultType);
+  const [amount, setAmount] = useState<string>(cashflowToEdit?.amount?.toString() ?? '');
+  const [portfolioId, setPortfolioId] = useState<string>(cashflowToEdit?.portfolioId ?? '');
+  const [categoryId, setCategoryId] = useState<string>(cashflowToEdit?.categoryId ?? '');
+  const [currency, setCurrency] = useState<string>(cashflowToEdit?.currency ?? 'VND');
+  
+  const [date, setDate] = useState<string>(
+    cashflowToEdit ? new Date(cashflowToEdit.date).toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16)
+  );
+  const [description, setDescription] = useState<string>(cashflowToEdit?.description ?? '');
 
   const { categories } = useCashflowCategories();
   const { portfolios } = usePortfolios();
   const createCashflow = useCreateCashflow();
+  const { showNotification } = useNotification();
+  const [isUpdating, setIsUpdating] = useState(false);
 
   const filteredCategories = categories?.filter((c) => c.type === type) || [];
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!amount || !portfolioId || !categoryId) return;
 
-    createCashflow.mutate(
-      {
-        portfolioId,
-        categoryId,
-        amount: parseFloat(amount),
-        currency,
-        date: new Date(date).toISOString(),
-        description,
-      },
-      {
-        onSuccess: () => {
-          onClose();
-        },
+    if (cashflowToEdit) {
+      setIsUpdating(true);
+      try {
+        await cashflowsApi.updateCashflow(cashflowToEdit.id, {
+          portfolioId,
+          categoryId,
+          amount: parseFloat(amount),
+          currency,
+          date: new Date(date).toISOString(),
+          description,
+        });
+        showNotification('Cập nhật giao dịch thành công!', 'success');
+        onClose();
+      } catch (error) {
+        showNotification('Có lỗi xảy ra khi cập nhật.', 'error');
+        console.error(error);
+      } finally {
+        setIsUpdating(false);
       }
-    );
+    } else {
+      createCashflow.mutate(
+        {
+          portfolioId,
+          categoryId,
+          amount: parseFloat(amount),
+          currency,
+          date: new Date(date).toISOString(),
+          description,
+        },
+        {
+          onSuccess: () => {
+            onClose();
+          },
+        }
+      );
+    }
   };
 
   return (
@@ -72,15 +103,17 @@ export const AddCashflowModal: React.FC<AddCashflowModalProps> = ({ onClose, def
             <div className="form-group">
               <label>Số tiền</label>
               <div className="amount-input-group">
-                <input
-                  type="number"
+                <NumericFormat
                   className="glass-input-light"
                   value={amount}
-                  onChange={(e) => setAmount(e.target.value)}
-                  placeholder="0.00"
+                  onValueChange={(values) => {
+                    setAmount(values.value);
+                  }}
+                  thousandSeparator="."
+                  decimalSeparator=","
+                  allowNegative={false}
+                  placeholder="0"
                   required
-                  min="0"
-                  step="any"
                 />
                 <select
                   className="glass-input-light currency-select"
@@ -112,6 +145,7 @@ export const AddCashflowModal: React.FC<AddCashflowModalProps> = ({ onClose, def
                 {type === CashflowType.Income 
                   ? 'Khoản tiền này sẽ được Nạp (Deposit) vào Tiền mặt của Portfolio đã chọn.' 
                   : 'Khoản tiền này sẽ được Rút (Withdraw) khỏi Tiền mặt của Portfolio đã chọn.'}
+                {cashflowToEdit && ' Lưu ý: Đổi Portfolio lúc này có thể không chuyển Transaction tương ứng, chỉ sửa thông tin.'}
               </small>
             </div>
 
@@ -157,9 +191,9 @@ export const AddCashflowModal: React.FC<AddCashflowModalProps> = ({ onClose, def
             <button
               type="submit"
               className={`submit-btn ${type === CashflowType.Income ? 'income-btn' : 'expense-btn'}`}
-              disabled={createCashflow.isPending}
+              disabled={createCashflow.isPending || isUpdating}
             >
-              {createCashflow.isPending ? 'Đang lưu...' : 'Lưu Giao Dịch'}
+              {createCashflow.isPending || isUpdating ? 'Đang lưu...' : (cashflowToEdit ? 'Cập Nhật Giao Dịch' : 'Lưu Giao Dịch')}
             </button>
           </form>
         </div>

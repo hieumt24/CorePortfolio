@@ -67,6 +67,20 @@ export const Navbar: React.FC = () => {
               >
                 Cashflow
               </NavLink>
+              <NavLink 
+                to="/watchlist" 
+                className={location.pathname.startsWith('/watchlist') ? "nav-link active" : "nav-link"}
+                onClick={closeMenu}
+              >
+                Watchlist
+              </NavLink>
+              <NavLink 
+                to="/analytics" 
+                className={location.pathname.startsWith('/analytics') ? "nav-link active" : "nav-link"}
+                onClick={closeMenu}
+              >
+                Analytics
+              </NavLink>
             </div>
           )}
           
@@ -75,15 +89,9 @@ export const Navbar: React.FC = () => {
               <div className="admin-actions">
                 <span className="user-greeting">Hi, {user?.email}</span>
                 {isAdmin && (
-                  <div className="navbar-dropdown">
-                    <span className="nav-link admin-link dropdown-toggle">Manage ▼</span>
-                    <div className="dropdown-menu">
-                      <NavLink to="/admin/settings" className={({ isActive }) => isActive ? "dropdown-item active" : "dropdown-item"} onClick={closeMenu}>System Settings</NavLink>
-                      <NavLink to="/admin/categories" className={({ isActive }) => isActive ? "dropdown-item active" : "dropdown-item"} onClick={closeMenu}>Category Management</NavLink>
-                      <NavLink to="/admin/cashflow-categories" className={({ isActive }) => isActive ? "dropdown-item active" : "dropdown-item"} onClick={closeMenu}>Cashflow Categories</NavLink>
-                      <NavLink to="/admin/market-assets" className={({ isActive }) => isActive ? "dropdown-item active" : "dropdown-item"} onClick={closeMenu}>Market Asset Management</NavLink>
-                    </div>
-                  </div>
+                  <NavLink to="/admin" className="btn-outline admin-panel-btn" onClick={closeMenu}>
+                    Admin Panel 🛡️
+                  </NavLink>
                 )}
                 <button onClick={handleLogout} className="btn-outline logout-btn">Logout</button>
               </div>

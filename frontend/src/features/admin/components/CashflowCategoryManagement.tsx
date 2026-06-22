@@ -3,7 +3,6 @@ import { cashflowsApi } from '../../cashflows/api/cashflowsApi';
 import type { CashflowCategory } from '../../cashflows/types/cashflows';
 import { CashflowType } from '../../cashflows/types/cashflows';
 import { useNotification } from '../../../context/NotificationContext';
-import './AdminDashboard.css';
 import './CashflowCategoryManagement.css';
 
 const COMMON_EMOJIS = [
@@ -29,7 +28,6 @@ export function CashflowCategoryManagement() {
   const loadCategories = async () => {
     try {
       const categoriesRes = await cashflowsApi.getCategories();
-      // Hiện tại Admin quản lý Global Categories
       setCategories(categoriesRes?.filter(c => c.isGlobal) || []);
     } catch (err: any) {
       console.error('Failed to load categories', err);
@@ -54,10 +52,10 @@ export function CashflowCategoryManagement() {
       }
       resetCategoryForm();
       loadCategories();
-      showNotification('Đã lưu Cashflow Category', 'success');
+      showNotification('Cashflow Category saved', 'success');
     } catch (error) {
       console.error('Failed to save category', error);
-      showNotification('Đã xảy ra lỗi khi lưu Category', 'error');
+      showNotification('Error saving Category', 'error');
     }
   };
 
@@ -70,14 +68,14 @@ export function CashflowCategoryManagement() {
   };
 
   const handleDeleteCategory = async (id: string) => {
-    if (!window.confirm('Bạn có chắc chắn muốn xóa Category này?')) return;
+    if (!window.confirm('Are you sure you want to delete this Category?')) return;
     try {
       await cashflowsApi.deleteCategory(id);
-      showNotification('Xóa Category thành công', 'success');
+      showNotification('Category deleted', 'success');
       loadCategories();
     } catch (error: any) {
       console.error('Failed to delete category', error);
-      showNotification('Không thể xóa Category này vì nó đang chứa dữ liệu giao dịch!', 'error');
+      showNotification('Cannot delete Category because it is in use!', 'error');
     }
   };
 
@@ -90,42 +88,47 @@ export function CashflowCategoryManagement() {
   };
 
   return (
-    <div className="admin-card">
-      <div className="admin-card-header">
-        <h2>Cashflow Category Management</h2>
+    <div className="admin-page-container">
+      <div className="admin-page-header">
+        <h2>Cashflow Categories</h2>
+        <p className="admin-page-subtitle">Manage categories for income and expenses</p>
       </div>
       
-      <div className="admin-card-body cashflow-category-layout">
+      <div className="cashflow-category-layout">
         
         {/* Left Side: Form */}
-        <div className="category-form-section">
-          <form onSubmit={handleSaveCategory} className="admin-form">
-            <div className="admin-form-group">
-              <label>Tên danh mục (Category Name)</label>
+        <div className="glass-panel form-section">
+          <div className="glass-panel-header">
+            <h3>{editingCategoryId ? 'Edit Category' : 'Create New Category'}</h3>
+          </div>
+
+          <form onSubmit={handleSaveCategory} className="glass-form">
+            <div className="form-group">
+              <label>Category Name</label>
               <input
                 type="text"
                 required
                 value={newCatName}
                 onChange={e => setNewCatName(e.target.value)}
-                className="admin-input"
-                placeholder="E.g. Lương, Ăn uống, Giải trí..."
+                className="modern-input"
+                placeholder="e.g. Salary, Food, Entertainment..."
               />
             </div>
             
-            <div className="admin-form-group">
-              <label>Loại (Type)</label>
+            <div className="form-group">
+              <label>Type</label>
               <select
                 value={newCatType}
                 onChange={e => setNewCatType(Number(e.target.value) as CashflowType)}
-                className="admin-input admin-select"
+                className="modern-select"
               >
-                <option value={CashflowType.Income}>Thu nhập (Income)</option>
-                <option value={CashflowType.Expense}>Chi tiêu (Expense)</option>
+                <option value={CashflowType.Income}>Income (Thu nhập)</option>
+                <option value={CashflowType.Expense}>Expense (Chi tiêu)</option>
               </select>
             </div>
 
-            <div className="admin-form-group">
-              <label>Biểu tượng (Icon / Emoji)</label>
+            <div className="form-group">
+              <label>Icon / Emoji</label>
               <div className="emoji-picker-container">
                 <div className="emoji-grid">
                   {COMMON_EMOJIS.map(emoji => (
@@ -140,41 +143,39 @@ export function CashflowCategoryManagement() {
                   ))}
                 </div>
                 <div className="emoji-custom-input">
-                  <label>Hoặc nhập/paste Emoji tuỳ chỉnh:</label>
                   <input
                     type="text"
                     value={newCatIcon}
                     onChange={e => setNewCatIcon(e.target.value)}
-                    className="admin-input"
-                    placeholder="🍔"
+                    className="modern-input"
+                    placeholder="Custom 🍔"
                     maxLength={2}
-                    style={{ width: '80px', textAlign: 'center', fontSize: '1.25rem', padding: '0.5rem' }}
+                    title="Paste a custom emoji here"
                   />
                 </div>
               </div>
             </div>
 
-            <div className="admin-form-group">
-              <label>Màu sắc (Theme Color)</label>
-              <div className="color-picker-container">
-                <div className="color-preview" style={{ backgroundColor: newCatColor }}>
-                  <input
-                    type="color"
-                    value={newCatColor}
-                    onChange={e => setNewCatColor(e.target.value)}
-                  />
-                </div>
+            <div className="form-group">
+              <label>Theme Color</label>
+              <div className="color-picker-wrapper">
+                <input
+                  type="color"
+                  value={newCatColor}
+                  onChange={e => setNewCatColor(e.target.value)}
+                  className="modern-color-picker"
+                />
                 <span className="color-hex">{newCatColor.toUpperCase()}</span>
               </div>
             </div>
 
-            <div style={{ display: 'flex', gap: '0.75rem', marginTop: '1rem' }}>
-              <button type="submit" className="admin-btn" style={{ flex: 1 }}>
-                {editingCategoryId ? '💾 Lưu thay đổi' : '✨ Thêm Danh mục'}
+            <div className="form-actions" style={{ marginTop: '1rem' }}>
+              <button type="submit" className="btn-primary glow-effect" style={{ flex: 1 }}>
+                {editingCategoryId ? '💾 Save Changes' : '✨ Add Category'}
               </button>
               {editingCategoryId && (
-                 <button type="button" onClick={resetCategoryForm} className="admin-btn" style={{ background: 'rgba(255,255,255,0.1)', color: 'white', border: '1px solid rgba(255,255,255,0.2)', boxShadow: 'none' }}>
-                  Hủy (Cancel)
+                 <button type="button" onClick={resetCategoryForm} className="btn-secondary">
+                  Cancel
                 </button>
               )}
             </div>
@@ -182,44 +183,47 @@ export function CashflowCategoryManagement() {
         </div>
 
         {/* Right Side: List/Grid */}
-        <div className="category-list-section">
-          <div className="filter-bar" style={{ borderRadius: '12px', marginBottom: '1rem', background: 'rgba(15, 23, 42, 0.3)' }}>
-            <span style={{ color: 'var(--text-secondary)', fontWeight: 500 }}>
-              Đang quản lý: {categories.length} danh mục Global
-            </span>
+        <div className="list-section">
+          <div className="glass-panel" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
+             <p style={{ margin: 0, fontWeight: 500, color: 'rgba(255,255,255,0.7)' }}>
+                Managing {categories.length} Global Categories
+             </p>
           </div>
 
-          <div className="category-grid-list">
+          <div className="category-grid">
             {categories.map(c => (
-              <div key={c.id} className="category-card">
-                <div 
-                  className="category-icon-wrapper"
-                  style={{ 
-                    backgroundColor: `${c.color}22`, // 22 is hex alpha for roughly 15% opacity
-                    color: c.color,
-                    border: `1px solid ${c.color}44`
-                  }}
-                >
-                  {c.icon}
+              <div key={c.id} className={`cf-category-card ${c.type === CashflowType.Income ? 'income' : 'expense'}`}>
+                <div className="cf-card-top">
+                  <div 
+                    className="cf-icon"
+                    style={{ 
+                      backgroundColor: `${c.color}20`,
+                      color: c.color,
+                      boxShadow: `0 0 15px ${c.color}30`
+                    }}
+                  >
+                    {c.icon}
+                  </div>
                 </div>
                 
-                <div className="category-info">
-                  <span className="category-name">{c.name}</span>
-                  <span className={`category-type-badge ${c.type === CashflowType.Income ? 'category-type-income' : 'category-type-expense'}`}>
-                    {c.type === CashflowType.Income ? 'Thu nhập' : 'Chi tiêu'}
+                <div className="cf-info">
+                  <h4 className="cf-name">{c.name}</h4>
+                  <span className={`cf-type-badge ${c.type === CashflowType.Income ? 'income' : 'expense'}`}>
+                    {c.type === CashflowType.Income ? 'INCOME' : 'EXPENSE'}
                   </span>
                 </div>
 
-                <div className="category-actions">
-                  <button onClick={() => handleEditCategory(c)} className="action-btn edit-btn" style={{ flex: 1 }}>Sửa</button>
-                  <button onClick={() => handleDeleteCategory(c.id)} className="action-btn delete-btn" style={{ flex: 1 }}>Xóa</button>
+                <div className="cf-actions">
+                  <button onClick={() => handleEditCategory(c)} className="btn-outline-small">Edit</button>
+                  <button onClick={() => handleDeleteCategory(c.id)} className="btn-outline-small danger">Delete</button>
                 </div>
               </div>
             ))}
             
             {categories.length === 0 && (
-              <div className="admin-empty-state" style={{ gridColumn: '1 / -1' }}>
-                Chưa có danh mục nào. Hãy tạo danh mục đầu tiên ở form bên trái!
+              <div className="empty-state">
+                <div className="empty-icon">📁</div>
+                <p>No categories yet. Create your first one on the left!</p>
               </div>
             )}
           </div>

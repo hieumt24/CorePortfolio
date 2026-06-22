@@ -3,6 +3,7 @@ import { updateTransaction } from '../api/transactionApi';
 import { TransactionType } from '../types';
 import type { TransactionDto } from '../types';
 import type { AssetSummaryDto } from '../../portfolios/types';
+import { NumericFormat } from 'react-number-format';
 import '../../portfolios/components/CreatePortfolioModal.css';
 
 interface EditTransactionModalProps {
@@ -73,15 +74,16 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({ tran
 
           <div className="form-group">
             <label htmlFor="quantity">Quantity</label>
-            <input
+            <NumericFormat
               id="quantity"
-              type="number"
-              step="any"
               value={quantity}
-              onChange={e => setQuantity(e.target.value)}
+              onValueChange={(values) => setQuantity(values.value)}
               placeholder="e.g. 1.5"
               className="glass-input"
               disabled={loading}
+              thousandSeparator="."
+              decimalSeparator=","
+              allowNegative={false}
               autoFocus
             />
           </div>
@@ -89,16 +91,17 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({ tran
           <div className="form-group">
             <label htmlFor="price">Price Per Unit</label>
             <div style={{ display: 'flex', gap: '10px' }}>
-              <input
+              <NumericFormat
                 id="price"
-                type="number"
-                step="any"
                 value={price}
-                onChange={e => setPrice(e.target.value)}
+                onValueChange={(values) => setPrice(values.value)}
                 placeholder="e.g. 150.00"
                 className="glass-input"
                 style={{ flex: 1 }}
                 disabled={loading}
+                thousandSeparator="."
+                decimalSeparator=","
+                allowNegative={false}
               />
               <select
                 value={currency}

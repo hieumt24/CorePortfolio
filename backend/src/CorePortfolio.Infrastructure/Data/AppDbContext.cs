@@ -20,6 +20,8 @@ public class AppDbContext : DbContext
     public DbSet<PortfolioSnapshot> PortfolioSnapshots => Set<PortfolioSnapshot>();
     public DbSet<CashflowCategory> CashflowCategories => Set<CashflowCategory>();
     public DbSet<CashflowRecord> CashflowRecords => Set<CashflowRecord>();
+    public DbSet<WatchlistItem> WatchlistItems => Set<WatchlistItem>();
+    public DbSet<TargetAllocation> TargetAllocations => Set<TargetAllocation>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -66,6 +68,30 @@ public class AppDbContext : DbContext
             .HasMany(u => u.CustomCategories)
             .WithOne(c => c.User)
             .HasForeignKey(c => c.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<User>()
+            .HasMany(u => u.WatchlistItems)
+            .WithOne(w => w.User)
+            .HasForeignKey(w => w.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<User>()
+            .HasMany(u => u.TargetAllocations)
+            .WithOne(t => t.User)
+            .HasForeignKey(t => t.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<TargetAllocation>()
+            .HasOne(t => t.Category)
+            .WithMany()
+            .HasForeignKey(t => t.CategoryId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<WatchlistItem>()
+            .HasOne(w => w.MarketAsset)
+            .WithMany()
+            .HasForeignKey(w => w.MarketAssetId)
             .OnDelete(DeleteBehavior.Cascade);
 
         modelBuilder.Entity<CashflowRecord>()

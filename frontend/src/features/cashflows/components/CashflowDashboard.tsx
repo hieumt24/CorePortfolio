@@ -2,6 +2,9 @@ import React, { useState, useMemo } from 'react';
 import { useCashflowsList, useCashflowSummary } from '../hooks/useCashflows';
 import { AddCashflowModal } from './AddCashflowModal';
 import { CashflowType } from '../types/cashflows';
+import type { CashflowRecord } from '../types/cashflows';
+import { cashflowsApi } from '../api/cashflowsApi';
+import { useNotification } from '../../../context/NotificationContext';
 import './CashflowDashboard.css';
 
 const getDateRange = (filter: string) => {
@@ -31,20 +34,52 @@ const getDateRange = (filter: string) => {
 };
 
 export const CashflowDashboard: React.FC = () => {
+  const { showNotification } = useNotification();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [cashflowToEdit, setCashflowToEdit] = useState<CashflowRecord | null>(null);
   const [defaultType, setDefaultType] = useState<CashflowType>(CashflowType.Income);
+  
+  // API Filters
   const [currency, setCurrency] = useState('VND');
   const [dateFilter, setDateFilter] = useState('thisMonth');
+
+  // Local Filters
+  const [searchQuery, setSearchQuery] = useState('');
+  const [typeFilter, setTypeFilter] = useState<string>('all');
+  const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [showCharts, setShowCharts] = useState(false);
 
   const { startDate, endDate } = useMemo(() => getDateRange(dateFilter), [dateFilter]);
 
   const { summary, loading: isSummaryLoading, refetch: refetchSummary } = useCashflowSummary(currency, startDate, endDate);
-  const { records: cashflows, loading: isCashflowsLoading, refetch: refetchCashflows } = useCashflowsList(1, 100, currency, startDate, endDate);
+  const { records: cashflows, loading: isCashflowsLoading, refetch: refetchCashflows } = useCashflowsList(1, 500, currency, startDate, endDate);
 
   const handleCashflowAdded = () => {
     setIsAddModalOpen(false);
+    setIsEditModalOpen(false);
+    setCashflowToEdit(null);
     refetchSummary();
     refetchCashflows();
+  };
+
+  const handleEdit = (record: CashflowRecord) => {
+    setCashflowToEdit(record);
+    setDefaultType(record.type);
+    setIsEditModalOpen(true);
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!window.confirm('Bạn có chắc chắn muốn xóa giao dịch này?')) return;
+    try {
+      await cashflowsApi.deleteCashflow(id);
+      showNotification('Xóa giao dịch thành công!', 'success');
+      refetchSummary();
+      refetchCashflows();
+    } catch (error) {
+      console.error(error);
+      showNotification('Đã có lỗi xảy ra khi xóa giao dịch.', 'error');
+    }
   };
 
   const formatCurrency = (amount: number) => {
@@ -69,41 +104,70 @@ export const CashflowDashboard: React.FC = () => {
     setIsAddModalOpen(true);
   };
 
+  // Extract unique categories for local filter
+  const availableCategories = useMemo(() => {
+    if (!cashflows) return [];
+    const cats = new Set<string>();
+    cashflows.forEach(c => cats.add(c.categoryName));
+    return Array.from(cats).sort();
+  }, [cashflows]);
+
+  // Apply local filtering
+  const filteredCashflows = useMemo(() => {
+    if (!cashflows) return [];
+    return cashflows.filter(c => {
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        if (!c.description?.toLowerCase().includes(q) && 
+            !c.categoryName.toLowerCase().includes(q) &&
+            !c.portfolioName.toLowerCase().includes(q)) {
+          return false;
+        }
+      }
+      if (typeFilter !== 'all') {
+        if (typeFilter === 'income' && c.type !== CashflowType.Income) return false;
+        if (typeFilter === 'expense' && c.type !== CashflowType.Expense) return false;
+      }
+      if (categoryFilter !== 'all' && c.categoryName !== categoryFilter) {
+        return false;
+      }
+      return true;
+    });
+  }, [cashflows, searchQuery, typeFilter, categoryFilter]);
+
   return (
     <div className="cashflow-dashboard">
-      <div className="dashboard-header">
-        <div className="header-title">
+      {/* Header Area */}
+      <div className="dashboard-header-premium">
+        <div className="header-info">
           <h1>Quản lý Thu Chi</h1>
-          <p className="subtitle">Theo dõi dòng tiền thông minh và trực quan</p>
+          <p>Theo dõi dòng tiền thông minh và trực quan</p>
         </div>
         <div className="header-actions">
-          <select 
-            className="modern-select"
-            value={dateFilter} 
-            onChange={(e) => setDateFilter(e.target.value)}
-          >
-            <option value="all">Tất cả thời gian</option>
-            <option value="thisMonth">Tháng này</option>
-            <option value="lastMonth">Tháng trước</option>
-            <option value="thisYear">Năm nay</option>
-          </select>
-          <select 
-            className="modern-select"
-            value={currency} 
-            onChange={(e) => setCurrency(e.target.value)}
-          >
-            <option value="VND">VND</option>
-            <option value="USD">USD</option>
-          </select>
-          <button className="btn btn-income" onClick={() => handleOpenModal(CashflowType.Income)}>
-            + Thêm Thu
-          </button>
-          <button className="btn btn-expense" onClick={() => handleOpenModal(CashflowType.Expense)}>
-            - Thêm Chi
-          </button>
+          <div className="global-filters">
+            <select className="modern-select" value={dateFilter} onChange={(e) => setDateFilter(e.target.value)}>
+              <option value="all">Tất cả thời gian</option>
+              <option value="thisMonth">Tháng này</option>
+              <option value="lastMonth">Tháng trước</option>
+              <option value="thisYear">Năm nay</option>
+            </select>
+            <select className="modern-select" value={currency} onChange={(e) => setCurrency(e.target.value)}>
+              <option value="VND">VND</option>
+              <option value="USD">USD</option>
+            </select>
+          </div>
+          <div className="action-buttons">
+            <button className="btn btn-income glow-effect" onClick={() => handleOpenModal(CashflowType.Income)}>
+              + Thêm Thu
+            </button>
+            <button className="btn btn-expense glow-effect" onClick={() => handleOpenModal(CashflowType.Expense)}>
+              - Thêm Chi
+            </button>
+          </div>
         </div>
       </div>
 
+      {/* Summary Cards Area */}
       <div className="summary-cards">
         <div className="card income-card">
           <div className="card-icon">↓</div>
@@ -130,114 +194,157 @@ export const CashflowDashboard: React.FC = () => {
         </div>
       </div>
 
-      <div className="dashboard-grid">
-        <div className="history-section">
-          <div className="section-header">
-            <h2>Lịch sử Giao dịch</h2>
+      <div className="main-content-area">
+        {/* Advanced Filters Bar */}
+        <div className="advanced-filters-bar glass-panel">
+          <div className="filter-group search-group">
+            <span className="filter-icon">🔍</span>
+            <input 
+              type="text" 
+              placeholder="Tìm kiếm giao dịch (Mô tả, Danh mục, Ví)..." 
+              className="search-input"
+              value={searchQuery}
+              onChange={e => setSearchQuery(e.target.value)}
+            />
           </div>
-          {isCashflowsLoading ? (
-            <div className="loading-state">
-               <div className="spinner"></div>
-               <p>Đang tải dữ liệu...</p>
-            </div>
-          ) : (
-            <div className="transactions-list">
-              {cashflows?.length === 0 && (
-                <div className="empty-state">
-                  <div className="empty-icon">📝</div>
-                  <p>Chưa có giao dịch nào trong thời gian này.</p>
-                </div>
-              )}
-              {cashflows?.map((record) => (
-                <div key={record.id} className="transaction-item">
-                  <div className="transaction-icon" style={{ backgroundColor: `${record.categoryColor}20`, color: record.categoryColor }}>
-                    {record.categoryIcon}
-                  </div>
-                  <div className="transaction-details">
-                    <h4>{record.categoryName}</h4>
-                    <div className="meta-info">
-                      <span className="portfolio-tag">{record.portfolioName}</span>
-                      <span className="date-tag">{formatDate(record.date)}</span>
-                    </div>
-                    {record.description && <p className="description">{record.description}</p>}
-                  </div>
-                  <div className={`transaction-amount ${record.type === CashflowType.Income ? 'positive' : 'negative'}`}>
-                    {record.type === CashflowType.Income ? '+' : '-'} {formatCurrency(record.amount)}
-                  </div>
-                </div>
+          <div className="filter-group">
+            <select className="filter-select" value={typeFilter} onChange={e => setTypeFilter(e.target.value)}>
+              <option value="all">Tất cả loại giao dịch</option>
+              <option value="income">Thu nhập</option>
+              <option value="expense">Chi tiêu</option>
+            </select>
+          </div>
+          <div className="filter-group">
+            <select className="filter-select" value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)}>
+              <option value="all">Tất cả danh mục</option>
+              {availableCategories.map(c => (
+                <option key={c} value={c}>{c}</option>
               ))}
-            </div>
-          )}
+            </select>
+          </div>
+          <div className="filter-group">
+            <button className={`btn-toggle-charts ${showCharts ? 'active' : ''}`} onClick={() => setShowCharts(!showCharts)}>
+              {showCharts ? 'Ẩn Biểu đồ' : '📊 Xem Biểu đồ'}
+            </button>
+          </div>
         </div>
 
-        <div className="charts-section">
-          <div className="chart-card">
-            <h2>Phân bổ Chi Tiêu</h2>
-            {isSummaryLoading ? (
-              <div className="loading-state"><div className="spinner"></div></div>
+        <div className={`dashboard-body ${showCharts ? 'with-charts' : 'list-only'}`}>
+          {/* History List */}
+          <div className="history-section glass-panel">
+            <div className="section-header border-bottom">
+              <h2>Lịch sử Giao dịch ({filteredCashflows.length})</h2>
+            </div>
+            {isCashflowsLoading ? (
+              <div className="loading-state">
+                 <div className="spinner"></div>
+                 <p>Đang tải dữ liệu...</p>
+              </div>
             ) : (
-              <div className="category-bars">
-                {summary?.expenseByCategory.length === 0 && <p className="empty-state">Không có dữ liệu chi tiêu.</p>}
-                {summary?.expenseByCategory.map((cat, idx) => {
-                  const percentage = summary.totalExpense > 0 ? (cat.amount / summary.totalExpense) * 100 : 0;
-                  return (
-                    <div key={idx} className="category-bar-item">
-                      <div className="cat-info">
-                        <span className="cat-name">
-                          <span className="cat-icon-small" style={{ backgroundColor: `${cat.color}20`, color: cat.color }}>{cat.icon}</span> 
-                          {cat.categoryName}
-                        </span>
-                        <div className="cat-stats">
-                          <span className="amount-text">{formatCurrency(cat.amount)}</span>
-                          <span className="percent-badge">{percentage.toFixed(1)}%</span>
-                        </div>
-                      </div>
-                      <div className="progress-bg">
-                        <div 
-                          className="progress-fill" 
-                          style={{ width: `${percentage}%`, backgroundColor: cat.color, boxShadow: `0 0 10px ${cat.color}80` }}
-                        ></div>
-                      </div>
+              <div className="transactions-list ledger-view">
+                {filteredCashflows.length === 0 && (
+                  <div className="empty-state">
+                    <div className="empty-icon">📝</div>
+                    <p>Không tìm thấy giao dịch nào phù hợp.</p>
+                  </div>
+                )}
+                {filteredCashflows.map((record) => (
+                  <div key={record.id} className="ledger-item">
+                    <div className="ledger-date">
+                      <div className="date-main">{new Date(record.date).toLocaleDateString('vi-VN', { day: '2-digit', month: 'short' })}</div>
+                      <div className="time-sub">{new Date(record.date).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</div>
                     </div>
-                  );
-                })}
+                    
+                    <div className="ledger-icon" style={{ backgroundColor: `${record.categoryColor}20`, color: record.categoryColor }}>
+                      {record.categoryIcon}
+                    </div>
+                    
+                    <div className="ledger-details">
+                      <div className="ledger-title-row">
+                        <h4>{record.categoryName}</h4>
+                        <span className="portfolio-badge">{record.portfolioName}</span>
+                      </div>
+                      {record.description && <p className="ledger-desc">{record.description}</p>}
+                    </div>
+                    
+                    <div className={`ledger-amount ${record.type === CashflowType.Income ? 'positive' : 'negative'}`}>
+                      {record.type === CashflowType.Income ? '+' : '-'} {formatCurrency(record.amount)}
+                    </div>
+                    
+                    <div className="ledger-actions">
+                      <button className="icon-action-btn edit" onClick={() => handleEdit(record)} title="Sửa">✏️</button>
+                      <button className="icon-action-btn delete" onClick={() => handleDelete(record.id)} title="Xóa">🗑️</button>
+                    </div>
+                  </div>
+                ))}
               </div>
             )}
           </div>
-          
-          <div className="chart-card mt-4">
-            <h2>Nguồn Thu Nhập</h2>
-            {isSummaryLoading ? (
-              <div className="loading-state"><div className="spinner"></div></div>
-            ) : (
-              <div className="category-bars">
-                {summary?.incomeByCategory.length === 0 && <p className="empty-state">Không có dữ liệu thu nhập.</p>}
-                {summary?.incomeByCategory.map((cat, idx) => {
-                  const percentage = summary.totalIncome > 0 ? (cat.amount / summary.totalIncome) * 100 : 0;
-                  return (
-                    <div key={idx} className="category-bar-item">
-                      <div className="cat-info">
-                        <span className="cat-name">
-                          <span className="cat-icon-small" style={{ backgroundColor: `${cat.color}20`, color: cat.color }}>{cat.icon}</span> 
-                          {cat.categoryName}
-                        </span>
-                        <div className="cat-stats">
-                          <span className="amount-text">{formatCurrency(cat.amount)}</span>
-                          <span className="percent-badge">{percentage.toFixed(1)}%</span>
+
+          {/* Charts Area - Collapsible */}
+          {showCharts && (
+            <div className="charts-sidebar">
+              <div className="chart-card glass-panel">
+                <h2>Phân bổ Chi Tiêu</h2>
+                {isSummaryLoading ? (
+                  <div className="loading-state"><div className="spinner"></div></div>
+                ) : (
+                  <div className="category-bars">
+                    {summary?.expenseByCategory.length === 0 && <p className="empty-state">Không có dữ liệu.</p>}
+                    {summary?.expenseByCategory.map((cat, idx) => {
+                      const percentage = summary.totalExpense > 0 ? (cat.amount / summary.totalExpense) * 100 : 0;
+                      return (
+                        <div key={idx} className="category-bar-item">
+                          <div className="cat-info">
+                            <span className="cat-name">
+                              <span className="cat-icon-small" style={{ backgroundColor: `${cat.color}20`, color: cat.color }}>{cat.icon}</span> 
+                              {cat.categoryName}
+                            </span>
+                            <div className="cat-stats">
+                              <span className="amount-text">{formatCurrency(cat.amount)}</span>
+                            </div>
+                          </div>
+                          <div className="progress-bg">
+                            <div className="progress-fill" style={{ width: `${percentage}%`, backgroundColor: cat.color }}></div>
+                          </div>
                         </div>
-                      </div>
-                      <div className="progress-bg">
-                        <div 
-                          className="progress-fill" 
-                          style={{ width: `${percentage}%`, backgroundColor: cat.color, boxShadow: `0 0 10px ${cat.color}80` }}
-                        ></div>
-                      </div>
-                    </div>
-                  );
-                })}
+                      );
+                    })}
+                  </div>
+                )}
               </div>
-            )}
-          </div>
+              
+              <div className="chart-card glass-panel mt-4">
+                <h2>Nguồn Thu Nhập</h2>
+                {isSummaryLoading ? (
+                  <div className="loading-state"><div className="spinner"></div></div>
+                ) : (
+                  <div className="category-bars">
+                    {summary?.incomeByCategory.length === 0 && <p className="empty-state">Không có dữ liệu.</p>}
+                    {summary?.incomeByCategory.map((cat, idx) => {
+                      const percentage = summary.totalIncome > 0 ? (cat.amount / summary.totalIncome) * 100 : 0;
+                      return (
+                        <div key={idx} className="category-bar-item">
+                          <div className="cat-info">
+                            <span className="cat-name">
+                              <span className="cat-icon-small" style={{ backgroundColor: `${cat.color}20`, color: cat.color }}>{cat.icon}</span> 
+                              {cat.categoryName}
+                            </span>
+                            <div className="cat-stats">
+                              <span className="amount-text">{formatCurrency(cat.amount)}</span>
+                            </div>
+                          </div>
+                          <div className="progress-bg">
+                            <div className="progress-fill" style={{ width: `${percentage}%`, backgroundColor: cat.color }}></div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
         </div>
       </div>
 
@@ -245,6 +352,14 @@ export const CashflowDashboard: React.FC = () => {
         <AddCashflowModal 
           defaultType={defaultType} 
           onClose={handleCashflowAdded} 
+        />
+      )}
+      
+      {isEditModalOpen && cashflowToEdit && (
+        <AddCashflowModal 
+          defaultType={defaultType} 
+          onClose={handleCashflowAdded} 
+          cashflowToEdit={cashflowToEdit}
         />
       )}
     </div>
