@@ -23,7 +23,7 @@ public class AssetPerformanceDto
     public string Name { get; set; } = string.Empty;
     public decimal ReturnPercentage { get; set; }
     public decimal ReturnValue { get; set; }
-    public decimal TotalCost { get; set; } // Added for correct grouping math
+    public decimal TotalBought { get; set; } // Use for correct grouping math
 }
 
 public class PortfolioHistoryDataPointDto
@@ -70,20 +70,23 @@ public class GetPerformanceAnalyticsHandler : IRequestHandler<GetPerformanceAnal
             {
                 var currentVal = asset.CurrentValue;
                 var cost = asset.TotalCost;
+                var totalBought = asset.TotalBought;
 
                 if (request.Currency == "VND" && asset.Currency == "USD")
                 {
                     currentVal *= vndUsdRate;
                     cost *= vndUsdRate;
+                    totalBought *= vndUsdRate;
                 }
                 else if (request.Currency == "USD" && asset.Currency == "VND")
                 {
                     currentVal /= vndUsdRate;
                     cost /= vndUsdRate;
+                    totalBought /= vndUsdRate;
                 }
 
                 var returnVal = currentVal - cost;
-                var returnPct = cost > 0 ? (returnVal / cost) * 100 : 0;
+                var returnPct = totalBought > 0 ? (returnVal / totalBought) * 100 : 0;
 
                 assetPerformances.Add(new AssetPerformanceDto
                 {
@@ -91,7 +94,7 @@ public class GetPerformanceAnalyticsHandler : IRequestHandler<GetPerformanceAnal
                     Name = asset.Name,
                     ReturnPercentage = returnPct,
                     ReturnValue = returnVal,
-                    TotalCost = cost
+                    TotalBought = totalBought
                 });
             }
         }
@@ -102,8 +105,8 @@ public class GetPerformanceAnalyticsHandler : IRequestHandler<GetPerformanceAnal
             .Select(g => 
             {
                 var totalReturn = g.Sum(a => a.ReturnValue);
-                var totalCost = g.Sum(a => a.TotalCost);
-                var returnPct = totalCost > 0 ? (totalReturn / totalCost) * 100 : 0;
+                var totalBoughtSum = g.Sum(a => a.TotalBought);
+                var returnPct = totalBoughtSum > 0 ? (totalReturn / totalBoughtSum) * 100 : 0;
 
                 return new AssetPerformanceDto
                 {

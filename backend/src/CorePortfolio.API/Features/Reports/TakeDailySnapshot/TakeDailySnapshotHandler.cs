@@ -26,27 +26,31 @@ public class TakeDailySnapshotHandler : IRequestHandler<TakeDailySnapshotCommand
         foreach (var pId in portfolios)
         {
             // Check if snapshot exists for today
-            var exists = await _dbContext.PortfolioSnapshots
-                .AnyAsync(s => s.PortfolioId == pId && s.Date == today, cancellationToken);
+            var existingSnapshot = await _dbContext.PortfolioSnapshots
+                .FirstOrDefaultAsync(s => s.PortfolioId == pId && s.Date == today, cancellationToken);
             
-            if (exists)
-                continue;
-
             // Get summary
             var summary = await _mediator.Send(new GetPortfolioSummaryQuery(pId), cancellationToken);
             if (summary == null)
                 continue;
 
-            var snapshot = new PortfolioSnapshot
+            if (existingSnapshot != null)
             {
-                Id = Guid.NewGuid(),
-                PortfolioId = pId,
-                Date = today,
-                TotalInvested = summary.TotalInvested,
-                TotalValue = summary.CurrentTotalValue
-            };
-
-            _dbContext.PortfolioSnapshots.Add(snapshot);
+                existingSnapshot.TotalInvested = summary.TotalInvested;
+                existingSnapshot.TotalValue = summary.CurrentTotalValue;
+            }
+            else
+            {
+                var snapshot = new PortfolioSnapshot
+                {
+                    Id = Guid.NewGuid(),
+                    PortfolioId = pId,
+                    Date = today,
+                    TotalInvested = summary.TotalInvested,
+                    TotalValue = summary.CurrentTotalValue
+                };
+                _dbContext.PortfolioSnapshots.Add(snapshot);
+            }
         }
 
         await _dbContext.SaveChangesAsync(cancellationToken);

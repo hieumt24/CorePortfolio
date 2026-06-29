@@ -19,6 +19,7 @@ using CorePortfolio.API.Features.Reports.TakeDailySnapshot;
 using CorePortfolio.API.Features.Portfolios.GetPortfolioHistory;
 using CorePortfolio.API.Features.Cashflows;
 using CorePortfolio.API.Features.Watchlist;
+using CorePortfolio.API.Features.Rebalancing.GetRebalanceSuggestions;
 using CorePortfolio.API.Features.Analytics;
 using CorePortfolio.API.Services;
 using CorePortfolio.API.Features.Auth;
@@ -60,6 +61,7 @@ builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Progr
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 builder.Services.AddScoped<IPortfolioReportService, PortfolioReportService>();
+builder.Services.AddScoped<ITelegramCommandProcessor, TelegramCommandProcessor>();
 builder.Services.AddHttpClient();
 builder.Services.AddHostedService<TelegramCronService>();
 
@@ -149,6 +151,7 @@ app.MapGetPortfolioHistoryEndpoint();
 app.MapCashflowsEndpoints();
 app.MapWatchlistEndpoints();
 app.MapAnalyticsEndpoints();
+app.MapGetRebalanceSuggestionsEndpoint();
 
 // Map fallback to index.html for SPA routing
 app.MapFallbackToFile("index.html");

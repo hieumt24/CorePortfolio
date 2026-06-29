@@ -63,7 +63,7 @@ public class GetGlobalReportHandler : IRequestHandler<GetGlobalReportQuery, Glob
             // Pass 2: Calculate Allocations
             foreach (var asset in portfolio.Assets)
             {
-                var assetTransactions = portfolio.Transactions.Where(t => t.AssetId == asset.Id).ToList();
+                var assetTransactions = portfolio.Transactions.Where(t => t.AssetId == asset.Id).OrderBy(t => t.Date).ToList();
                 var marketAsset = asset.MarketAsset;
                 var category = marketAsset?.Category;
                 var categoryName = category?.Name ?? "Unknown";
@@ -140,7 +140,11 @@ public class GetGlobalReportHandler : IRequestHandler<GetGlobalReportQuery, Glob
                 // To avoid double-counting TotalInvested when Fiat exists, we only add totalCost to Portfolio if:
                 // a) it's a Fiat asset, OR b) no Fiat asset exists for this currency.
                 decimal portfolioAddedCost = 0;
-                if (categoryName == "Fiat" || (!hasFiatAssetByCurrency.ContainsKey(currency) || !hasFiatAssetByCurrency[currency]))
+                if (categoryName == "Fiat")
+                {
+                    portfolioAddedCost = totalCost;
+                }
+                else if (!hasFiatAssetByCurrency.ContainsKey(currency) || !hasFiatAssetByCurrency[currency])
                 {
                     portfolioAddedCost = totalCost;
                 }

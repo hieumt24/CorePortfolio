@@ -76,6 +76,16 @@ export const AddCashflowModal: React.FC<AddCashflowModalProps> = ({ onClose, def
     }
   };
 
+  const getButtonClass = () => {
+    switch (type) {
+      case CashflowType.Income: return 'income-btn';
+      case CashflowType.Expense: return 'expense-btn';
+      case CashflowType.Investment: return 'investment-btn';
+      case CashflowType.Saving: return 'saving-btn';
+      default: return 'income-btn';
+    }
+  };
+
   return (
     <div className="modal-overlay">
       <div className="cashflow-modal">
@@ -84,7 +94,7 @@ export const AddCashflowModal: React.FC<AddCashflowModalProps> = ({ onClose, def
           <button className="close-btn" onClick={onClose}>&times;</button>
         </div>
         <div className="modal-body">
-          <div className="type-toggle">
+          <div className="type-toggle" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
             <button
               className={type === CashflowType.Income ? 'active income' : ''}
               onClick={() => setType(CashflowType.Income)}
@@ -96,6 +106,18 @@ export const AddCashflowModal: React.FC<AddCashflowModalProps> = ({ onClose, def
               onClick={() => setType(CashflowType.Expense)}
             >
               Chi tiêu
+            </button>
+            <button
+              className={type === CashflowType.Investment ? 'active investment' : ''}
+              onClick={() => setType(CashflowType.Investment)}
+            >
+              Đầu tư
+            </button>
+            <button
+              className={type === CashflowType.Saving ? 'active saving' : ''}
+              onClick={() => setType(CashflowType.Saving)}
+            >
+              Tiết kiệm
             </button>
           </div>
 
@@ -158,11 +180,24 @@ export const AddCashflowModal: React.FC<AddCashflowModalProps> = ({ onClose, def
                 required
               >
                 <option value="">Chọn nhóm phân loại...</option>
-                {filteredCategories.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.icon} {c.name}
-                  </option>
-                ))}
+                {filteredCategories.map((c) => {
+                  if (c.subCategories && c.subCategories.length > 0) {
+                    return (
+                      <optgroup key={c.id} label={`${c.icon} ${c.name}`}>
+                        {c.subCategories.map(sub => (
+                          <option key={sub.id} value={sub.id}>
+                            {sub.icon} {sub.name}
+                          </option>
+                        ))}
+                      </optgroup>
+                    );
+                  }
+                  return (
+                    <option key={c.id} value={c.id}>
+                      {c.icon} {c.name}
+                    </option>
+                  );
+                })}
               </select>
             </div>
 
@@ -190,7 +225,7 @@ export const AddCashflowModal: React.FC<AddCashflowModalProps> = ({ onClose, def
 
             <button
               type="submit"
-              className={`submit-btn ${type === CashflowType.Income ? 'income-btn' : 'expense-btn'}`}
+              className={`submit-btn ${getButtonClass()}`}
               disabled={createCashflow.isPending || isUpdating}
             >
               {createCashflow.isPending || isUpdating ? 'Đang lưu...' : (cashflowToEdit ? 'Cập Nhật Giao Dịch' : 'Lưu Giao Dịch')}

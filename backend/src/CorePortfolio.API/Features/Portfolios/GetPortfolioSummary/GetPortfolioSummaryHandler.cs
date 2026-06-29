@@ -67,7 +67,7 @@ public class GetPortfolioSummaryHandler : IRequestHandler<GetPortfolioSummaryQue
         // Pass 2: Build Asset Summaries
         foreach (var asset in portfolio.Assets)
         {
-            var assetTransactions = portfolio.Transactions.Where(t => t.AssetId == asset.Id).ToList();
+            var assetTransactions = portfolio.Transactions.Where(t => t.AssetId == asset.Id).OrderBy(t => t.Date).ToList();
             var marketAsset = asset.MarketAsset;
             var categoryName = marketAsset?.Category?.Name ?? "Unknown";
             var currency = marketAsset?.Category?.DefaultCurrency ?? "VND";
@@ -98,6 +98,16 @@ public class GetPortfolioSummaryHandler : IRequestHandler<GetPortfolioSummaryQue
                 totalCost = fiatDeposits - fiatWithdrawals; // Net Fiat Deposited
                 totalQuantity = totalCost + netCashFlowByCurrency[currency]; // Adjust cash balance with stock trades
                 
+                // If the user hasn't explicitly recorded enough fiat deposits to cover their stock purchases,
+                // their cash balance will go negative. We implicitly treat this deficit as virtual deposits
+                // to maintain correct Total Invested and Total Value figures.
+                if (totalQuantity < 0)
+                {
+                    decimal virtualDeposits = -totalQuantity;
+                    totalQuantity = 0; // Clamp cash balance to 0
+                    totalCost += virtualDeposits; // Add to Total Invested
+                }
+
                 var currentValue = totalQuantity * (marketAsset?.CurrentPrice ?? 1);
                 totalInvested += totalCost;
                 currentTotalValue += currentValue;
@@ -109,7 +119,7 @@ public class GetPortfolioSummaryHandler : IRequestHandler<GetPortfolioSummaryQue
             }
             else
             {
-                // Non-Fiat Asset logic (Stocks, Crypto, etc.) using Net Cash Flow
+                // Non-Fiat Asset logic (Stocks, Crypto, etc.) using Net Cash Flow (Total PNL method)
                 foreach (var t in assetTransactions)
                 {
                     if (t.Type == TransactionType.Buy)
@@ -131,11 +141,10 @@ public class GetPortfolioSummaryHandler : IRequestHandler<GetPortfolioSummaryQue
 
                 var currentValue = totalQuantity * (marketAsset?.CurrentPrice ?? 0);
                 
-                // If there is NO Fiat asset for this currency, we add this asset's totalCost to Portfolio's totalInvested 
+                // If there is NO Fiat asset for this currency, we add this asset's Net Cash Flow (totalCost) to Portfolio's totalInvested 
                 // to maintain backwards compatibility for users who haven't added Fiat assets yet.
                 if (!hasFiatAssetByCurrency.ContainsKey(currency) || !hasFiatAssetByCurrency[currency])
                 {
-                    // Fallback to legacy calculation for Portfolio Totals
                     totalInvested += totalCost;
                 }
 

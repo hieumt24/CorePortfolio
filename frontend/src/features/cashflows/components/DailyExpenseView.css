@@ -1,0 +1,117 @@
+.daily-expense-view {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  animation: fadeIn 0.4s ease;
+}
+
+.view-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
+}
+
+.view-header h2 {
+  margin: 0;
+  font-size: 1.5rem;
+  color: #fff;
+}
+
+.view-header p {
+  margin: 0.2rem 0 0;
+  color: #94a3b8;
+}
+
+.filters {
+  display: flex;
+  gap: 1rem;
+}
+
+.days-list {
+  display: flex;
+  flex-direction: column;
+}
+
+.day-item {
+  padding: 1.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.day-item:last-child {
+  border-bottom: none;
+}
+
+.day-item.today {
+  background: rgba(59, 130, 246, 0.05);
+}
+
+.day-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.day-date {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.day-number {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.day-name {
+  color: #94a3b8;
+  font-size: 0.9rem;
+  text-transform: uppercase;
+}
+
+.day-totals {
+  display: flex;
+  gap: 1rem;
+  font-weight: 600;
+}
+
+.positive { color: #10b981; }
+.negative { color: #ef4444; }
+
+.day-breakdown {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.breakdown-item {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  background: rgba(0, 0, 0, 0.2);
+  padding: 0.8rem;
+  border-radius: 12px;
+}
+
+.cat-icon {
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.cat-name {
+  flex: 1;
+  color: #e2e8f0;
+  font-size: 0.9rem;
+}
+
+.cat-amount {
+  color: #94a3b8;
+  font-size: 0.9rem;
+  font-weight: 500;
+}

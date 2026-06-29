@@ -1,0 +1,87 @@
+.monthly-report-view {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  animation: fadeIn 0.4s ease;
+}
+
+.charts-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(500px, 1fr));
+  gap: 1.5rem;
+}
+
+.chart-container {
+  padding: 1.5rem;
+}
+
+.chart-container h3 {
+  margin: 0 0 1rem;
+  font-size: 1.1rem;
+  color: #fff;
+}
+
+.trends-section {
+  padding: 1.5rem;
+}
+
+.trends-section h3 {
+  margin: 0 0 1.5rem;
+  font-size: 1.1rem;
+  color: #fff;
+}
+
+.trends-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 1.5rem;
+}
+
+.trend-item {
+  background: rgba(0, 0, 0, 0.2);
+  padding: 1rem;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.trend-header {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+}
+
+.trend-total {
+  margin-left: auto;
+  font-weight: 600;
+  color: #fff;
+}
+
+.trend-sparkline {
+  display: flex;
+  align-items: flex-end;
+  height: 40px;
+  gap: 4px;
+}
+
+.sparkline-bar-container {
+  flex: 1;
+  height: 100%;
+  display: flex;
+  align-items: flex-end;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 2px;
+}
+
+.sparkline-bar {
+  width: 100%;
+  border-radius: 2px;
+  transition: height 0.3s ease;
+}
+
+@media (max-width: 768px) {
+  .charts-grid {
+    grid-template-columns: 1fr;
+  }
+}

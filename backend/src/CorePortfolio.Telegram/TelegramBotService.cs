@@ -94,9 +94,65 @@ public class TelegramBotService : BackgroundService
         {
             await botClient.SendMessage(
                 chatId: senderChatId,
-                text: "Chào mừng! Các lệnh hỗ trợ:\n- `/report`: Báo cáo chi tiết\n- `/portfolio`: Danh sách danh mục\n- `/balance`: Tổng số dư",
+                text: "Chào mừng! Các lệnh hỗ trợ:\n- `/report`: Báo cáo chi tiết\n- `/portfolio`: Danh sách danh mục\n- `/balance`: Tổng số dư\n- `/cf [Số tiền] \"[Danh mục]\" \"[Ghi chú]\" [Ngày]`: Thêm Thu/Chi\n- `/tx [buy/sell] [Mã CK] [Số lượng] [Giá] [Ngày]`: Thêm Giao dịch",
                 parseMode: ParseMode.Markdown,
                 cancellationToken: cancellationToken);
+        }
+        else if (messageText.StartsWith("/cf", StringComparison.OrdinalIgnoreCase))
+        {
+            await ProcessCashflowMessageAsync(botClient, senderChatId, messageText, cancellationToken);
+        }
+        else if (messageText.StartsWith("/tx", StringComparison.OrdinalIgnoreCase))
+        {
+            await ProcessTransactionMessageAsync(botClient, senderChatId, messageText, cancellationToken);
+        }
+    }
+
+    private async Task ProcessCashflowMessageAsync(ITelegramBotClient botClient, string chatId, string text, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var data = TelegramMessageParser.ParseCashflow(text);
+            if (data == null)
+            {
+                await botClient.SendMessage(chatId, "❌ Sai định dạng.\nVí dụ: `/cf 50k \"Ăn uống\" \"Ăn sáng phở bò\" 2023-10-15`", parseMode: ParseMode.Markdown, cancellationToken: cancellationToken);
+                return;
+            }
+
+            using var scope = _serviceProvider.CreateScope();
+            var processor = scope.ServiceProvider.GetRequiredService<ITelegramCommandProcessor>();
+
+            var result = await processor.ProcessCashflowAsync(data, cancellationToken);
+            await botClient.SendMessage(chatId, result, parseMode: ParseMode.Markdown, cancellationToken: cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error processing Cashflow message");
+            await botClient.SendMessage(chatId, "❌ Đã xảy ra lỗi khi thêm Cashflow.", cancellationToken: cancellationToken);
+        }
+    }
+
+    private async Task ProcessTransactionMessageAsync(ITelegramBotClient botClient, string chatId, string text, CancellationToken cancellationToken)
+    {
+        try
+        {
+            var data = TelegramMessageParser.ParseTransaction(text);
+            if (data == null)
+            {
+                await botClient.SendMessage(chatId, "❌ Sai định dạng.\nVí dụ: `/tx buy HPG 100 25000 2023-10-15`", parseMode: ParseMode.Markdown, cancellationToken: cancellationToken);
+                return;
+            }
+
+            using var scope = _serviceProvider.CreateScope();
+            var processor = scope.ServiceProvider.GetRequiredService<ITelegramCommandProcessor>();
+
+            var result = await processor.ProcessTransactionAsync(data, cancellationToken);
+            await botClient.SendMessage(chatId, result, parseMode: ParseMode.Markdown, cancellationToken: cancellationToken);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error processing Transaction message");
+            await botClient.SendMessage(chatId, "❌ Đã xảy ra lỗi khi thêm Giao dịch.", cancellationToken: cancellationToken);
         }
     }
 

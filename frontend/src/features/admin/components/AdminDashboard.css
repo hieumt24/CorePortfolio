@@ -4,7 +4,7 @@
   min-height: calc(100vh - 100px); /* Account for navbar + margin */
   padding: 0 1rem 1rem 1rem;
   gap: 1.5rem;
-  max-width: 1400px;
+  max-width: 100%;
   margin: 0 auto;
   position: relative;
   font-family: 'Inter', -apple-system, sans-serif;

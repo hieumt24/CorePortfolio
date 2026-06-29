@@ -5,7 +5,8 @@ import type {
   PerformanceAnalyticsDto, 
   DividendMonthlyAnalyticsDto,
   TargetAllocationDto,
-  TargetAllocationInput
+  TargetAllocationInput,
+  RebalanceSuggestionDto
 } from '../types';
 
 export const analyticsApi = {
@@ -34,5 +35,15 @@ export const analyticsApi = {
       method: 'POST',
       body: JSON.stringify(inputs)
     });
+  },
+
+  triggerSnapshot: async (): Promise<{ message: string }> => {
+    return apiClient<{ message: string }>('/reports/snapshots/trigger', {
+      method: 'POST'
+    });
+  },
+
+  getRebalanceSuggestions: async (currency: string = 'VND'): Promise<RebalanceSuggestionDto[]> => {
+    return apiClient<RebalanceSuggestionDto[]>(`/rebalancing/suggestions?currency=${currency}`);
   }
 };

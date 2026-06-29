@@ -7,6 +7,8 @@ using CorePortfolio.API.Features.Cashflows.UpdateCashflowCategory;
 using CorePortfolio.API.Features.Cashflows.DeleteCashflowCategory;
 using CorePortfolio.API.Features.Cashflows.UpdateCashflowRecord;
 using CorePortfolio.API.Features.Cashflows.DeleteCashflowRecord;
+using CorePortfolio.API.Features.Cashflows.GetDailyCashflowSummary;
+using CorePortfolio.API.Features.Cashflows.GetMonthlyCashflowReport;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
 
@@ -77,6 +79,18 @@ public static class CashflowsEndpoints
         });
 
         group.MapGet("/summary", async ([AsParameters] GetCashflowSummaryQuery query, IMediator mediator) =>
+        {
+            var result = await mediator.Send(query);
+            return Results.Ok(result);
+        });
+
+        group.MapGet("/summary/daily", async ([AsParameters] GetDailyCashflowSummaryQuery query, IMediator mediator) =>
+        {
+            var result = await mediator.Send(query);
+            return Results.Ok(result);
+        });
+
+        group.MapGet("/report/monthly", async ([AsParameters] GetMonthlyCashflowReportQuery query, IMediator mediator) =>
         {
             var result = await mediator.Send(query);
             return Results.Ok(result);

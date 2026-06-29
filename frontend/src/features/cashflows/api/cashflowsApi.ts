@@ -5,6 +5,8 @@ import type {
   CashflowSummary,
   CreateCashflowCategoryCommand,
   CreateCashflowRecordCommand,
+  DailyCashflowSummaryDto,
+  MonthlyCashflowReportDto
 } from '../types/cashflows';
 
 export const cashflowsApi = {
@@ -78,5 +80,15 @@ export const cashflowsApi = {
     if (endDate) params.append('endDate', endDate);
 
     return apiClient<CashflowSummary>(`/cashflows/summary?${params.toString()}`);
+  },
+
+  getDailySummary: (currency: string, month: string): Promise<DailyCashflowSummaryDto> => {
+    const params = new URLSearchParams({ currency, month });
+    return apiClient<DailyCashflowSummaryDto>(`/cashflows/summary/daily?${params.toString()}`);
+  },
+
+  getMonthlyReport: (currency: string, year: number): Promise<MonthlyCashflowReportDto> => {
+    const params = new URLSearchParams({ currency, year: year.toString() });
+    return apiClient<MonthlyCashflowReportDto>(`/cashflows/report/monthly?${params.toString()}`);
   },
 };

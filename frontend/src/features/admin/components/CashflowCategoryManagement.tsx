@@ -42,7 +42,8 @@ export function CashflowCategoryManagement() {
         type: newCatType,
         icon: newCatIcon,
         color: newCatColor,
-        isGlobal: true
+        isGlobal: true,
+        sortOrder: 0
       };
 
       if (editingCategoryId) {

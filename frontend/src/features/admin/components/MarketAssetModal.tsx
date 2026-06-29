@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import ReactDOM from 'react-dom';
 import { useNotification } from '../../../context/NotificationContext';
 import { marketAssetsApi } from '../api/marketAssets';
 import type { AssetCategory, MarketAsset, DnseInstrument } from '../types';
@@ -52,7 +53,9 @@ export function MarketAssetModal({ isOpen, onClose, onSaved, assetToEdit, catego
 
   const isStockOrFundCategory = () => {
     const cat = categories.find(c => c.id === categoryId);
-    return cat && (cat.name.toLowerCase().includes('stock') || cat.name.toLowerCase().includes('fund') || cat.name.toLowerCase().includes('cổ phiếu'));
+    if (!cat) return false;
+    const name = cat.name.toLowerCase();
+    return name.includes('stock') || name.includes('fund') || name.includes('cổ phiếu') || name.includes('chứng khoán') || name.includes('chứng chỉ quỹ');
   };
 
   useEffect(() => {
@@ -124,11 +127,26 @@ export function MarketAssetModal({ isOpen, onClose, onSaved, assetToEdit, catego
     
     try {
       setIsFetchingPrice(true);
-      const data = await marketAssetsApi.fetchDnsePrice(symbol.trim().toUpperCase());
+      const symbolUpper = symbol.trim().toUpperCase();
+      const data = await marketAssetsApi.fetchDnsePrice(symbolUpper);
       
       if (data && data.price) {
         setPrice(data.price.toString());
-        showNotification(`Đã lấy giá DNSE: ${data.price}`, 'success');
+        
+        // Auto-fill Asset Full Name using DNSE instrument search
+        try {
+          const instruments = await marketAssetsApi.searchDnseInstruments(symbolUpper);
+          const exactMatch = instruments?.find(i => i.symbol.toUpperCase() === symbolUpper);
+          if (exactMatch) {
+            setName(`${exactMatch.shortName || exactMatch.name}`);
+            showNotification(`Đã lấy giá và tên từ DNSE: ${data.price}`, 'success');
+          } else {
+            showNotification(`Đã lấy giá DNSE: ${data.price}`, 'success');
+          }
+        } catch (searchErr) {
+          console.error('Failed to search instrument for name filling', searchErr);
+          showNotification(`Đã lấy giá DNSE: ${data.price}`, 'success');
+        }
       } else {
         showNotification(`Không tìm thấy giá cho Symbol "${symbol}".`, 'error');
       }
@@ -169,7 +187,7 @@ export function MarketAssetModal({ isOpen, onClose, onSaved, assetToEdit, catego
     }
   };
 
-  return (
+  const modalContent = (
     <div className="modal-overlay">
       <div className="modal-content admin-modal" style={{ maxWidth: '500px' }}>
         <div className="modal-header">
@@ -297,4 +315,6 @@ export function MarketAssetModal({ isOpen, onClose, onSaved, assetToEdit, catego
       </div>
     </div>
   );
+
+  return ReactDOM.createPortal(modalContent, document.body);
 }

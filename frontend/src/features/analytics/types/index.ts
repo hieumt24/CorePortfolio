@@ -47,3 +47,12 @@ export interface DividendMonthlyAnalyticsDto {
   month: string;
   amount: number;
 }
+
+export interface RebalanceSuggestionDto {
+  categoryId: string;
+  categoryName: string;
+  currentValue: number;
+  targetValue: number;
+  differenceValue: number;
+  action: string;
+}

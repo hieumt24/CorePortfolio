@@ -1,6 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { cashflowsApi } from '../api/cashflowsApi';
-import type { CashflowCategory, CashflowSummary, CashflowRecord, CreateCashflowRecordCommand } from '../types/cashflows';
+import type { 
+  CashflowCategory, 
+  CashflowSummary, 
+  CashflowRecord, 
+  CreateCashflowRecordCommand,
+  DailyCashflowSummaryDto,
+  MonthlyCashflowReportDto
+} from '../types/cashflows';
 
 export const useCashflowCategories = () => {
   const [categories, setCategories] = useState<CashflowCategory[]>([]);
@@ -46,6 +53,54 @@ export const useCashflowSummary = (currency = 'VND', startDate?: string, endDate
   }, [fetchSummary]);
 
   return { summary, loading, refetch: fetchSummary };
+};
+
+export const useDailyCashflowSummary = (currency = 'VND', month: string) => {
+  const [summary, setSummary] = useState<DailyCashflowSummaryDto | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const fetchSummary = useCallback(async () => {
+    if (!month) return;
+    try {
+      setLoading(true);
+      const data = await cashflowsApi.getDailySummary(currency, month);
+      setSummary(data);
+    } catch (error) {
+      console.error('Failed to fetch daily summary', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [currency, month]);
+
+  useEffect(() => {
+    fetchSummary();
+  }, [fetchSummary]);
+
+  return { summary, loading, refetch: fetchSummary };
+};
+
+export const useMonthlyCashflowReport = (currency = 'VND', year: number) => {
+  const [report, setReport] = useState<MonthlyCashflowReportDto | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const fetchReport = useCallback(async () => {
+    if (!year) return;
+    try {
+      setLoading(true);
+      const data = await cashflowsApi.getMonthlyReport(currency, year);
+      setReport(data);
+    } catch (error) {
+      console.error('Failed to fetch monthly report', error);
+    } finally {
+      setLoading(false);
+    }
+  }, [currency, year]);
+
+  useEffect(() => {
+    fetchReport();
+  }, [fetchReport]);
+
+  return { report, loading, refetch: fetchReport };
 };
 
 export const useCashflowsList = (page = 1, pageSize = 50, currency = 'VND', startDate?: string, endDate?: string) => {
