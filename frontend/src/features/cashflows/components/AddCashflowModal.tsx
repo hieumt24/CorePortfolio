@@ -207,7 +207,7 @@ export const AddCashflowModal: React.FC<AddCashflowModalProps> = ({ onClose, def
               <label>Ngày giao dịch</label>
               <DatePicker
                 selected={date}
-                onChange={(d) => setDate(d || new Date())}
+                onChange={(d: Date | null) => setDate(d || new Date())}
                 showTimeSelect
                 timeFormat="HH:mm"
                 timeIntervals={15}

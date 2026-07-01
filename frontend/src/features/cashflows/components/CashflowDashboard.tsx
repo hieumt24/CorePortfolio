@@ -341,7 +341,7 @@ export const CashflowDashboard: React.FC = () => {
                                   ))}
                                 </Pie>
                                 <Tooltip 
-                                  formatter={(value: number, name: string) => {
+                                  formatter={(value: any, name: any) => {
                                     const percentage = summary?.totalExpense ? ((value / summary.totalExpense) * 100).toFixed(1) + '%' : '0%';
                                     return [`${formatCurrency(value)} (${percentage})`, name];
                                   }}

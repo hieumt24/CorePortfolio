@@ -151,7 +151,7 @@ export const MonthlyReportView: React.FC = () => {
                       ))}
                     </Pie>
                     <Tooltip 
-                      formatter={(value: number, name: string) => {
+                      formatter={(value: any, name: any) => {
                         const total = pieData.reduce((sum, item) => sum + item.value, 0);
                         const percentage = total > 0 ? ((value / total) * 100).toFixed(1) + '%' : '0%';
                         return [`${formatCurrency(value)} (${percentage})`, name];
