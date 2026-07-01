@@ -1,5 +1,8 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { useDailyCashflowSummary } from '../hooks/useCashflows';
+import {
+  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer
+} from 'recharts';
 import './DailyExpenseView.css';
 
 export const DailyExpenseView: React.FC = () => {
@@ -17,6 +20,18 @@ export const DailyExpenseView: React.FC = () => {
       currency: currency,
     }).format(amount);
   };
+
+  const chartData = useMemo(() => {
+    if (!summary?.days) return [];
+    // The days are usually returned sorted (e.g., latest first or oldest first). We want them in chronological order for the chart.
+    // Assuming they are sorted chronologically from the API or we can just sort them to be sure.
+    const sortedDays = [...summary.days].sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime());
+    return sortedDays.map(day => ({
+      dateStr: new Date(day.date).getDate().toString().padStart(2, '0'),
+      Thu: day.income,
+      Chi: day.expense
+    }));
+  }, [summary]);
 
   return (
     <div className="daily-expense-view">
@@ -63,6 +78,28 @@ export const DailyExpenseView: React.FC = () => {
               </div>
             </div>
           </div>
+
+          {chartData.length > 0 && (
+            <div className="daily-chart glass-panel" style={{ marginTop: '1.5rem', marginBottom: '1.5rem', padding: '1.5rem' }}>
+              <h3 style={{ margin: '0 0 1rem 0', fontSize: '1.1rem', color: '#fff' }}>Biểu đồ Thu Chi theo ngày</h3>
+              <div style={{ height: 300 }}>
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={chartData} margin={{ top: 20, right: 30, left: 20, bottom: 5 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.1)" />
+                    <XAxis dataKey="dateStr" stroke="#94a3b8" />
+                    <YAxis stroke="#94a3b8" tickFormatter={(value) => new Intl.NumberFormat('en-US', { notation: "compact", compactDisplay: "short" }).format(value)} />
+                    <Tooltip 
+                      formatter={(value: any) => formatCurrency(Number(value) || 0)}
+                      contentStyle={{ backgroundColor: 'rgba(15, 23, 42, 0.9)', border: 'none', borderRadius: '8px', color: '#fff' }}
+                    />
+                    <Legend />
+                    <Bar dataKey="Thu" fill="#10b981" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="Chi" fill="#ef4444" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+          )}
 
           <div className="days-list glass-panel">
             {summary?.days.map((day) => {

@@ -220,8 +220,11 @@
   transform: translateY(-1px);
 }
 
-/* Fix for date input icon */
-input[type="datetime-local"].glass-input-light::-webkit-calendar-picker-indicator {
-  opacity: 0.5;
-  cursor: pointer;
+/* Fix for react-datepicker wrapper width */
+.react-datepicker-wrapper {
+  width: 100%;
+}
+
+.react-datepicker__input-container {
+  width: 100%;
 }

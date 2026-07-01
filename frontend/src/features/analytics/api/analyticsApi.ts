@@ -45,5 +45,9 @@ export const analyticsApi = {
 
   getRebalanceSuggestions: async (currency: string = 'VND'): Promise<RebalanceSuggestionDto[]> => {
     return apiClient<RebalanceSuggestionDto[]>(`/rebalancing/suggestions?currency=${currency}`);
+  },
+
+  getCashflowHeatmap: async (): Promise<{ date: string, count: number, totalAmount: number }[]> => {
+    return apiClient<{ date: string, count: number, totalAmount: number }[]>('/analytics/heatmap');
   }
 };

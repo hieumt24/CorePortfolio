@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useMonthlyCashflowReport } from '../hooks/useCashflows';
 import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer,
-  LineChart, Line
+  LineChart, Line, PieChart, Pie, Cell
 } from 'recharts';
 import './MonthlyReportView.css';
 
@@ -28,6 +28,16 @@ export const MonthlyReportView: React.FC = () => {
     'Tiết kiệm': m.saving,
     'Dòng tiền': m.netFlow
   })) || [];
+
+  const pieData = React.useMemo(() => {
+    if (!report) return [];
+    return [
+      { name: 'Thu nhập', value: report.yearTotalIncome || 0, fill: '#10b981' },
+      { name: 'Chi tiêu', value: report.yearTotalExpense || 0, fill: '#ef4444' },
+      { name: 'Đầu tư', value: report.months.reduce((sum, m) => sum + m.investment, 0), fill: '#8b5cf6' },
+      { name: 'Tiết kiệm', value: report.months.reduce((sum, m) => sum + m.saving, 0), fill: '#f59e0b' }
+    ].filter(item => item.value > 0);
+  }, [report]);
 
   return (
     <div className="monthly-report-view">
@@ -116,6 +126,41 @@ export const MonthlyReportView: React.FC = () => {
                     <Legend />
                     <Line type="monotone" dataKey="Dòng tiền" stroke="#3b82f6" strokeWidth={3} dot={{ r: 4 }} activeDot={{ r: 6 }} />
                   </LineChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
+
+            <div className="chart-container glass-panel">
+              <h3>Cơ cấu Dòng tiền</h3>
+              <div className="chart-wrapper">
+                <ResponsiveContainer width="100%" height={300}>
+                  <PieChart>
+                    <Pie
+                      data={pieData}
+                      dataKey="value"
+                      nameKey="name"
+                      cx="50%"
+                      cy="50%"
+                      innerRadius={60}
+                      outerRadius={90}
+                      paddingAngle={2}
+                      stroke="none"
+                    >
+                      {pieData.map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={entry.fill} stroke="none" />
+                      ))}
+                    </Pie>
+                    <Tooltip 
+                      formatter={(value: number, name: string) => {
+                        const total = pieData.reduce((sum, item) => sum + item.value, 0);
+                        const percentage = total > 0 ? ((value / total) * 100).toFixed(1) + '%' : '0%';
+                        return [`${formatCurrency(value)} (${percentage})`, name];
+                      }}
+                      contentStyle={{ backgroundColor: 'rgba(15, 23, 42, 0.9)', border: 'none', borderRadius: '8px', color: '#fff' }}
+                      itemStyle={{ color: '#e2e8f0' }}
+                    />
+                    <Legend wrapperStyle={{ fontSize: '12px' }} />
+                  </PieChart>
                 </ResponsiveContainer>
               </div>
             </div>

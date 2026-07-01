@@ -11,6 +11,7 @@ import { TransactionsDashboard } from '../features/transactions/components/Trans
 import { CashflowDashboard } from '../features/cashflows/components/CashflowDashboard';
 import { WatchlistDashboard } from '../features/watchlist/components/WatchlistDashboard';
 import { AnalyticsDashboard } from '../features/analytics/components/AnalyticsDashboard';
+import { BudgetsPage } from '../features/budgets/components/BudgetsPage';
 import { Navbar } from '../shared/components/Navbar';
 import { LoginPage } from '../features/auth/components/LoginPage';
 import { RegisterPage } from '../features/auth/components/RegisterPage';
@@ -33,6 +34,7 @@ function App() {
           <Route path="/cashflow" element={<ProtectedRoute><CashflowDashboard /></ProtectedRoute>} />
           <Route path="/watchlist" element={<ProtectedRoute><WatchlistDashboard /></ProtectedRoute>} />
           <Route path="/analytics" element={<ProtectedRoute><AnalyticsDashboard /></ProtectedRoute>} />
+          <Route path="/budgets" element={<ProtectedRoute><BudgetsPage /></ProtectedRoute>} />
           
           
           <Route path="/admin" element={<ProtectedRoute requireAdmin={true}><AdminDashboard /></ProtectedRoute>}>

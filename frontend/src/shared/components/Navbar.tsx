@@ -82,6 +82,13 @@ export const Navbar: React.FC = () => {
                   Watchlist
                 </NavLink>
                 <NavLink 
+                  to="/budgets" 
+                  className={location.pathname.startsWith('/budgets') ? "nav-link active" : "nav-link"}
+                  onClick={closeMenu}
+                >
+                  Budgets
+                </NavLink>
+                <NavLink 
                   to="/analytics" 
                   className={location.pathname.startsWith('/analytics') ? "nav-link active" : "nav-link"}
                   onClick={closeMenu}

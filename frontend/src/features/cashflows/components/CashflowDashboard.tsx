@@ -1,5 +1,6 @@
 import React, { useState, useMemo } from 'react';
 import { useCashflowsList, useCashflowSummary } from '../hooks/useCashflows';
+import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { AddCashflowModal } from './AddCashflowModal';
 import { DailyExpenseView } from './DailyExpenseView';
 import { MonthlyReportView } from './MonthlyReportView';
@@ -199,6 +200,15 @@ export const CashflowDashboard: React.FC = () => {
                 </p>
               </div>
             </div>
+            <div className="card cash-card">
+              <div className="card-icon">💵</div>
+              <div className="card-content">
+                <h3>Tiền mặt</h3>
+                <p className={`amount ${((summary?.totalIncome || 0) - (summary?.totalExpense || 0) - (summary?.totalInvestment || 0) - (summary?.totalSaving || 0)) < 0 ? 'negative' : 'positive'}`}>
+                  {isSummaryLoading ? '...' : formatCurrency((summary?.totalIncome || 0) - (summary?.totalExpense || 0) - (summary?.totalInvestment || 0) - (summary?.totalSaving || 0))}
+                </p>
+              </div>
+            </div>
           </div>
 
           <div className="main-content-area">
@@ -308,28 +318,65 @@ export const CashflowDashboard: React.FC = () => {
                     {isSummaryLoading ? (
                       <div className="loading-state"><div className="spinner"></div></div>
                     ) : (
-                      <div className="category-bars">
-                        {summary?.expenseByCategory.length === 0 && <p className="empty-state">Không có dữ liệu.</p>}
-                        {summary?.expenseByCategory.map((cat, idx) => {
-                          const percentage = summary.totalExpense > 0 ? (cat.amount / summary.totalExpense) * 100 : 0;
-                          return (
-                            <div key={idx} className="category-bar-item">
-                              <div className="cat-info">
-                                <span className="cat-name">
-                                  <span className="cat-icon-small" style={{ backgroundColor: `${cat.color}20`, color: cat.color }}>{cat.icon}</span> 
-                                  {cat.categoryName}
-                                </span>
-                                <div className="cat-stats">
-                                  <span className="amount-text">{formatCurrency(cat.amount)}</span>
+                      <>
+                        <div style={{ height: 260, width: '100%', marginBottom: '1.5rem' }}>
+                          {summary?.expenseByCategory.length === 0 ? (
+                            <p className="empty-state">Không có dữ liệu.</p>
+                          ) : (
+                            <ResponsiveContainer width="100%" height="100%">
+                              <PieChart>
+                                <Pie
+                                  data={summary?.expenseByCategory}
+                                  dataKey="amount"
+                                  nameKey="categoryName"
+                                  cx="50%"
+                                  cy="50%"
+                                  innerRadius={60}
+                                  outerRadius={90}
+                                  paddingAngle={2}
+                                  stroke="none"
+                                >
+                                  {summary?.expenseByCategory.map((entry, index) => (
+                                    <Cell key={`cell-${index}`} fill={entry.color || '#8884d8'} stroke="none" />
+                                  ))}
+                                </Pie>
+                                <Tooltip 
+                                  formatter={(value: number, name: string) => {
+                                    const percentage = summary?.totalExpense ? ((value / summary.totalExpense) * 100).toFixed(1) + '%' : '0%';
+                                    return [`${formatCurrency(value)} (${percentage})`, name];
+                                  }}
+                                  contentStyle={{ backgroundColor: 'rgba(15, 23, 42, 0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff' }}
+                                  itemStyle={{ color: '#e2e8f0' }}
+                                />
+                                <Legend wrapperStyle={{ fontSize: '12px' }} />
+                              </PieChart>
+                            </ResponsiveContainer>
+                          )}
+                        </div>
+
+                        <div className="category-bars">
+                          {summary?.expenseByCategory.map((cat, idx) => {
+                            const percentage = summary.totalExpense > 0 ? (cat.amount / summary.totalExpense) * 100 : 0;
+                            return (
+                              <div key={idx} className="category-bar-item">
+                                <div className="cat-info">
+                                  <span className="cat-name">
+                                    <span className="cat-icon-small" style={{ backgroundColor: `${cat.color}20`, color: cat.color }}>{cat.icon}</span> 
+                                    {cat.categoryName}
+                                  </span>
+                                  <div className="cat-stats">
+                                    <span className="amount-text">{formatCurrency(cat.amount)}</span>
+                                    <span className="percentage-text" style={{ marginLeft: '8px', fontSize: '0.85em', color: '#94a3b8', minWidth: '40px', textAlign: 'right', display: 'inline-block' }}>{percentage.toFixed(1)}%</span>
+                                  </div>
+                                </div>
+                                <div className="progress-bg">
+                                  <div className="progress-fill" style={{ width: `${percentage}%`, backgroundColor: cat.color }}></div>
                                 </div>
                               </div>
-                              <div className="progress-bg">
-                                <div className="progress-fill" style={{ width: `${percentage}%`, backgroundColor: cat.color }}></div>
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
+                            );
+                          })}
+                        </div>
+                      </>
                     )}
                   </div>
                   
@@ -351,6 +398,7 @@ export const CashflowDashboard: React.FC = () => {
                                 </span>
                                 <div className="cat-stats">
                                   <span className="amount-text">{formatCurrency(cat.amount)}</span>
+                                  <span className="percentage-text" style={{ marginLeft: '8px', fontSize: '0.85em', color: '#94a3b8', minWidth: '40px', textAlign: 'right', display: 'inline-block' }}>{percentage.toFixed(1)}%</span>
                                 </div>
                               </div>
                               <div className="progress-bg">

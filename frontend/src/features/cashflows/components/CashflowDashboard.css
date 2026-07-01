@@ -128,6 +128,7 @@
 .investment-card .card-icon { background: rgba(139, 92, 246, 0.15); color: #8b5cf6; }
 .saving-card .card-icon { background: rgba(245, 158, 11, 0.15); color: #f59e0b; }
 .net-card .card-icon { background: rgba(59, 130, 246, 0.15); color: #3b82f6; }
+.cash-card .card-icon { background: rgba(20, 184, 166, 0.15); color: #14b8a6; }
 .card-content h3 {
   margin: 0;
   font-size: 0.9rem;

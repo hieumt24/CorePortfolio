@@ -1,4 +1,6 @@
 import React, { useState } from 'react';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 import { useCreateCashflow, useCashflowCategories } from '../hooks/useCashflows';
 import { usePortfolios } from '../../portfolios/hooks/usePortfolios';
 import { CashflowType } from '../types/cashflows';
@@ -21,8 +23,8 @@ export const AddCashflowModal: React.FC<AddCashflowModalProps> = ({ onClose, def
   const [categoryId, setCategoryId] = useState<string>(cashflowToEdit?.categoryId ?? '');
   const [currency, setCurrency] = useState<string>(cashflowToEdit?.currency ?? 'VND');
   
-  const [date, setDate] = useState<string>(
-    cashflowToEdit ? new Date(cashflowToEdit.date).toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16)
+  const [date, setDate] = useState<Date>(
+    cashflowToEdit ? new Date(cashflowToEdit.date) : new Date()
   );
   const [description, setDescription] = useState<string>(cashflowToEdit?.description ?? '');
 
@@ -46,7 +48,7 @@ export const AddCashflowModal: React.FC<AddCashflowModalProps> = ({ onClose, def
           categoryId,
           amount: parseFloat(amount),
           currency,
-          date: new Date(date).toISOString(),
+          date: date.toISOString(),
           description,
         });
         showNotification('Cập nhật giao dịch thành công!', 'success');
@@ -64,7 +66,7 @@ export const AddCashflowModal: React.FC<AddCashflowModalProps> = ({ onClose, def
           categoryId,
           amount: parseFloat(amount),
           currency,
-          date: new Date(date).toISOString(),
+          date: date.toISOString(),
           description,
         },
         {
@@ -203,11 +205,15 @@ export const AddCashflowModal: React.FC<AddCashflowModalProps> = ({ onClose, def
 
             <div className="form-group">
               <label>Ngày giao dịch</label>
-              <input
-                type="datetime-local"
-                className="glass-input-light"
-                value={date}
-                onChange={(e) => setDate(e.target.value)}
+              <DatePicker
+                selected={date}
+                onChange={(d) => setDate(d || new Date())}
+                showTimeSelect
+                timeFormat="HH:mm"
+                timeIntervals={15}
+                timeCaption="Giờ"
+                dateFormat="dd/MM/yyyy HH:mm"
+                className="glass-input-light w-full"
                 required
               />
             </div>

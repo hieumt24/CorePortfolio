@@ -13,6 +13,7 @@ import {
   LineChart, Line
 } from 'recharts';
 import { TargetAllocationModal } from './TargetAllocationModal';
+import { CashflowHeatmap } from './CashflowHeatmap';
 import '../../cashflows/components/CashflowDashboard.css'; // Re-use styling
 
 export const AnalyticsDashboard: React.FC = () => {
@@ -209,6 +210,16 @@ export const AnalyticsDashboard: React.FC = () => {
                 </BarChart>
               </ResponsiveContainer>
             )}
+          </div>
+        </div>
+      </div>
+
+      {/* Heatmap Row */}
+      <div className="dashboard-grid" style={{ gridTemplateColumns: '1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
+        <div className="chart-card glass-panel">
+          <h2>Mức độ hoạt động giao dịch (365 ngày qua)</h2>
+          <div style={{ marginTop: '1rem' }}>
+            <CashflowHeatmap />
           </div>
         </div>
       </div>
