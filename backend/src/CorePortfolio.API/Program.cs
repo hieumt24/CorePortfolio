@@ -21,6 +21,7 @@ using CorePortfolio.API.Features.Cashflows;
 using CorePortfolio.API.Features.Watchlist;
 using CorePortfolio.API.Features.Rebalancing.GetRebalanceSuggestions;
 using CorePortfolio.API.Features.Analytics;
+using CorePortfolio.API.Features.Budgets;
 using CorePortfolio.API.Services;
 using CorePortfolio.API.Features.Auth;
 using CorePortfolio.Infrastructure.Data;
@@ -151,6 +152,7 @@ app.MapGetPortfolioHistoryEndpoint();
 app.MapCashflowsEndpoints();
 app.MapWatchlistEndpoints();
 app.MapAnalyticsEndpoints();
+app.MapBudgetsEndpoints();
 app.MapGetRebalanceSuggestionsEndpoint();
 
 // Map fallback to index.html for SPA routing

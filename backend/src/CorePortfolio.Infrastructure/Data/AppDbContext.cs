@@ -22,6 +22,7 @@ public class AppDbContext : DbContext
     public DbSet<CashflowRecord> CashflowRecords => Set<CashflowRecord>();
     public DbSet<WatchlistItem> WatchlistItems => Set<WatchlistItem>();
     public DbSet<TargetAllocation> TargetAllocations => Set<TargetAllocation>();
+    public DbSet<Budget> Budgets => Set<Budget>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -86,6 +87,18 @@ public class AppDbContext : DbContext
             .HasOne(t => t.Category)
             .WithMany()
             .HasForeignKey(t => t.CategoryId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<Budget>()
+            .HasOne(b => b.User)
+            .WithMany()
+            .HasForeignKey(b => b.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<Budget>()
+            .HasOne(b => b.Category)
+            .WithMany()
+            .HasForeignKey(b => b.CategoryId)
             .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<WatchlistItem>()

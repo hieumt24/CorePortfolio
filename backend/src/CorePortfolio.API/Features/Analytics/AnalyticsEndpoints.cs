@@ -44,6 +44,12 @@ public static class AnalyticsEndpoints
             return Results.Ok(result);
         });
 
+        group.MapGet("/heatmap", async (IMediator mediator) =>
+        {
+            var result = await mediator.Send(new GetCashflowHeatmapQuery());
+            return Results.Ok(result);
+        });
+
         group.MapPost("/target-allocations", async (IMediator mediator, ICurrentUserService currentUserService, [FromBody] List<TargetAllocationInput> inputs) =>
         {
             if (currentUserService.UserId == null) return Results.Unauthorized();
