@@ -27,11 +27,11 @@ jobs:
         run: dotnet build backend/CorePortfolio.slnx --configuration Release --no-restore
 
       - name: Publish
-        run: dotnet publish backend/src/CorePortfolio.API/CorePortfolio.API.csproj -c Release -o ${{env.DOTNET_ROOT}}/myapp
+        run: dotnet publish backend/src/CorePortfolio.API/CorePortfolio.API.csproj -c Release -r linux-x64 --self-contained true -o ${{env.DOTNET_ROOT}}/myapp
 
       - name: Deploy to Azure Web App
         uses: azure/webapps-deploy@v2
         with:
-          app-name: 'coreportfolio-api' 
+          app-name: 'coreportfolio-api-cdbchffjhtg2hgda' 
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE }}
           package: ${{env.DOTNET_ROOT}}/myapp
