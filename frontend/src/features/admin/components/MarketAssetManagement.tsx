@@ -21,6 +21,10 @@ export function MarketAssetManagement() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [assetToEdit, setAssetToEdit] = useState<MarketAsset | null>(null);
 
+  // Update All State
+  const [isUpdatingAll, setIsUpdatingAll] = useState(false);
+  const [updateProgress, setUpdateProgress] = useState({ current: 0, total: 0 });
+
   useEffect(() => {
     loadCategories();
   }, []);
@@ -83,6 +87,60 @@ export function MarketAssetManagement() {
     }
   };
 
+  const isStockCategory = () => {
+    const cat = categories.find(c => c.id === selectedCategoryId);
+    if (!cat) return false;
+    const name = cat.name.toLowerCase();
+    return name.includes('stock') || name.includes('cổ phiếu') || name.includes('chứng khoán');
+  };
+
+  const handleUpdateAll = async () => {
+    if (!selectedCategoryId) return;
+    
+    setIsUpdatingAll(true);
+    try {
+      const response = await marketAssetsApi.getMarketAssets(selectedCategoryId, 1, 1000);
+      const assetsToUpdate = response.items || [];
+      
+      if (assetsToUpdate.length === 0) {
+        showNotification('Không có tài sản nào để cập nhật.', 'info');
+        setIsUpdatingAll(false);
+        return;
+      }
+
+      setUpdateProgress({ current: 0, total: assetsToUpdate.length });
+
+      let successCount = 0;
+      for (let i = 0; i < assetsToUpdate.length; i++) {
+        const asset = assetsToUpdate[i];
+        try {
+          const priceData = await marketAssetsApi.fetchDnsePrice(asset.symbol);
+          if (priceData && priceData.price) {
+            await marketAssetsApi.updateMarketAsset(asset.id, {
+              categoryId: asset.categoryId,
+              symbol: asset.symbol,
+              name: asset.name,
+              currentPrice: priceData.price
+            });
+            successCount++;
+          }
+        } catch (err) {
+          console.error(`Failed to update price for ${asset.symbol}`, err);
+        }
+        setUpdateProgress(prev => ({ ...prev, current: i + 1 }));
+      }
+      
+      showNotification(`Cập nhật thành công ${successCount}/${assetsToUpdate.length} tài sản.`, 'success');
+      loadMarketAssets(selectedCategoryId || undefined, currentPage, pageSize);
+    } catch (error) {
+      console.error('Failed to update all assets', error);
+      showNotification('Đã xảy ra lỗi khi cập nhật tất cả.', 'error');
+    } finally {
+      setIsUpdatingAll(false);
+      setUpdateProgress({ current: 0, total: 0 });
+    }
+  };
+
   const totalPages = Math.ceil(totalCount / pageSize);
 
   return (
@@ -92,9 +150,21 @@ export function MarketAssetManagement() {
           <h2>Market Assets</h2>
           <p className="admin-page-subtitle">View, add, edit, and delete global market assets.</p>
         </div>
-        <button className="btn-primary glow-effect" onClick={handleOpenAddModal}>
-          ✨ Add Market Asset
-        </button>
+        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
+          {isStockCategory() && (
+            <button 
+              className="btn-outline glow-effect" 
+              onClick={handleUpdateAll}
+              disabled={isUpdatingAll}
+              style={{ border: '1px solid rgba(59, 130, 246, 0.5)', color: '#3b82f6', background: 'rgba(59, 130, 246, 0.1)', cursor: isUpdatingAll ? 'wait' : 'pointer' }}
+            >
+              {isUpdatingAll ? `⏳ Updating ${updateProgress.current}/${updateProgress.total}...` : '⚡ Update All Prices'}
+            </button>
+          )}
+          <button className="btn-primary glow-effect" onClick={handleOpenAddModal}>
+            ✨ Add Market Asset
+          </button>
+        </div>
       </div>
 
       <div className="modern-tabs">
