@@ -125,7 +125,8 @@ app.UseAuthorization();
 // app.UseMiddleware<GlobalExceptionMiddleware>();
 
 app.MapGet("/api", () => "Welcome to CorePortfolio API")
-    .WithName("GetRoot");
+    .WithName("GetRoot")
+    .AllowAnonymous();
 
 // Map Endpoints
 app.MapAuthEndpoints();
