@@ -11,17 +11,22 @@ public static class SettingsEndpoints
 {
     public static void MapSettingsEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/api/admin/settings")
-            .WithTags("Admin Settings")
-            .RequireAuthorization("Admin");
+        // Public group (Authenticated users)
+        var publicGroup = app.MapGroup("/api/settings")
+            .WithTags("Settings");
 
-        group.MapGet("/{key}", async (string key, IMediator mediator) =>
+        publicGroup.MapGet("/{key}", async (string key, IMediator mediator) =>
         {
             var value = await mediator.Send(new GetSettingQuery(key));
             return value != null ? Results.Ok(new { key, value }) : Results.NotFound();
         }).WithName("GetSetting");
 
-        group.MapPut("/{key}", async (string key, [FromBody] UpdateSettingRequest request, IMediator mediator) =>
+        // Admin group
+        var adminGroup = app.MapGroup("/api/admin/settings")
+            .WithTags("Admin Settings")
+            .RequireAuthorization("Admin");
+
+        adminGroup.MapPut("/{key}", async (string key, [FromBody] UpdateSettingRequest request, IMediator mediator) =>
         {
             var success = await mediator.Send(new UpdateSettingCommand(key, request.Value));
             return success ? Results.NoContent() : Results.BadRequest();

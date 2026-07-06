@@ -14,9 +14,12 @@ import {
 } from 'recharts';
 import { TargetAllocationModal } from './TargetAllocationModal';
 import { CashflowHeatmap } from './CashflowHeatmap';
+import { DashboardSkeleton } from '../../../shared/components/Skeleton';
 import '../../cashflows/components/CashflowDashboard.css'; // Re-use styling
+import { useNotification } from '../../../context/NotificationContext';
 
 export const AnalyticsDashboard: React.FC = () => {
+  const { showNotification } = useNotification();
   const [currency, setCurrency] = useState('VND');
   const [cashflowData, setCashflowData] = useState<CashflowMonthlyAnalyticsDto[]>([]);
   const [allocationData, setAllocationData] = useState<AssetAllocationDto[]>([]);
@@ -24,6 +27,7 @@ export const AnalyticsDashboard: React.FC = () => {
   const [dividendData, setDividendData] = useState<DividendMonthlyAnalyticsDto[]>([]);
   const [rebalanceSuggestions, setRebalanceSuggestions] = useState<RebalanceSuggestionDto[]>([]);
   const [loading, setLoading] = useState(true);
+  const [isSnapshotLoading, setIsSnapshotLoading] = useState(false);
   const [isTargetModalOpen, setIsTargetModalOpen] = useState(false);
 
   useEffect(() => {
@@ -85,25 +89,21 @@ export const AnalyticsDashboard: React.FC = () => {
 
   const handleTakeSnapshot = async () => {
     try {
+      setIsSnapshotLoading(true);
       await analyticsApi.triggerSnapshot();
-      alert('Đã cập nhật giá trị danh mục thành công!');
+      showNotification('Đã cập nhật giá trị danh mục thành công!', 'success');
       // Reload performance data
       const perf = await analyticsApi.getPerformanceAnalytics(currency);
       setPerformanceData(perf);
     } catch (error) {
-      alert('Có lỗi xảy ra khi cập nhật giá trị danh mục.');
+      showNotification('Có lỗi xảy ra khi cập nhật giá trị danh mục.', 'error');
+    } finally {
+      setIsSnapshotLoading(false);
     }
   };
 
   if (loading) {
-    return (
-      <div className="cashflow-dashboard">
-        <div className="loading-state">
-          <div className="spinner"></div>
-          <p>Đang phân tích dữ liệu danh mục...</p>
-        </div>
-      </div>
-    );
+    return <DashboardSkeleton />;
   }
 
   return (
@@ -230,8 +230,14 @@ export const AnalyticsDashboard: React.FC = () => {
         <div className="chart-card glass-panel" style={{ height: '400px', display: 'flex', flexDirection: 'column' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <h2>Tổng tài sản theo thời gian</h2>
-            <button className="btn-secondary" style={{ padding: '0.25rem 0.75rem', fontSize: '0.875rem' }} onClick={handleTakeSnapshot}>
-              Cập nhật giá trị mới nhất
+            <button 
+              className="btn-secondary" 
+              style={{ padding: '0.25rem 0.75rem', fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }} 
+              onClick={handleTakeSnapshot}
+              disabled={isSnapshotLoading}
+            >
+              {isSnapshotLoading ? <div className="spinner" style={{ width: '14px', height: '14px', borderWidth: '2px' }}></div> : null}
+              {isSnapshotLoading ? 'Đang cập nhật...' : 'Cập nhật giá trị mới nhất'}
             </button>
           </div>
           <div style={{ flex: 1, minHeight: 0, marginTop: '1rem' }}>

@@ -16,6 +16,8 @@ public record GlobalTransactionDto(
     TransactionType Type,
     decimal Quantity,
     decimal Price,
+    decimal Fee,
+    string Notes,
     DateTime Date
 );
 

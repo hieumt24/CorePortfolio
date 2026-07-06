@@ -18,6 +18,11 @@ export interface AssetSummaryDto {
   totalCost: number;
   currentValue: number;
   totalBought: number;
+  averageCost: number;
+  realizedPnl: number;
+  unrealizedPnl: number;
+  fees: number;
+  priceUpdatedAt: string;
 }
 
 export interface CreateAssetRequest {

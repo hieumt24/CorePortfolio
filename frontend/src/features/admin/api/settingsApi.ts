@@ -1,13 +1,9 @@
-const API_BASE_URL = '/api/admin/settings';
+import { apiClient } from '../../../shared/api/baseClient';
 
 export const settingsApi = {
   getSetting: async (key: string): Promise<string | null> => {
     try {
-      const response = await fetch(`${API_BASE_URL}/${key}`);
-      if (!response.ok) {
-        return null;
-      }
-      const data = await response.json();
+      const data = await apiClient<{ key: string; value: string }>(`/settings/${key}`);
       return data.value;
     } catch (error) {
       console.error('Error fetching setting:', error);
@@ -17,14 +13,11 @@ export const settingsApi = {
 
   updateSetting: async (key: string, value: string): Promise<boolean> => {
     try {
-      const response = await fetch(`${API_BASE_URL}/${key}`, {
+      await apiClient<void>(`/admin/settings/${key}`, {
         method: 'PUT',
-        headers: {
-          'Content-Type': 'application/json',
-        },
         body: JSON.stringify({ value }),
       });
-      return response.ok;
+      return true;
     } catch (error) {
       console.error('Error updating setting:', error);
       return false;

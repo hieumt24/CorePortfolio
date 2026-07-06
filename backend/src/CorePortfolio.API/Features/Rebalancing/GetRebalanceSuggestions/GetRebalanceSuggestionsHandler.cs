@@ -12,12 +12,14 @@ public class GetRebalanceSuggestionsHandler : IRequestHandler<GetRebalanceSugges
     private readonly AppDbContext _dbContext;
     private readonly ICurrentUserService _currentUserService;
     private readonly IMediator _mediator;
+    private readonly ExchangeRateService _exchangeRateService;
 
-    public GetRebalanceSuggestionsHandler(AppDbContext dbContext, ICurrentUserService currentUserService, IMediator mediator)
+    public GetRebalanceSuggestionsHandler(AppDbContext dbContext, ICurrentUserService currentUserService, IMediator mediator, ExchangeRateService exchangeRateService)
     {
         _dbContext = dbContext;
         _currentUserService = currentUserService;
         _mediator = mediator;
+        _exchangeRateService = exchangeRateService;
     }
 
     public async Task<List<RebalanceSuggestionDto>> Handle(GetRebalanceSuggestionsQuery request, CancellationToken cancellationToken)
@@ -27,10 +29,7 @@ public class GetRebalanceSuggestionsHandler : IRequestHandler<GetRebalanceSugges
 
         var report = await _mediator.Send(new GetGlobalReportQuery(userId.Value), cancellationToken);
 
-        var exchangeRateSetting = await _dbContext.SystemSettings.FirstOrDefaultAsync(s => s.Key == "VndUsdRate", cancellationToken);
-        decimal vndUsdRate = 25400m;
-        if (exchangeRateSetting != null && decimal.TryParse(exchangeRateSetting.Value, out var rate))
-            vndUsdRate = rate;
+        var vndUsdRate = await _exchangeRateService.GetUsdToVndAsync(cancellationToken);
 
         var convertedAllocations = new List<(string CategoryName, decimal TotalValue)>();
         foreach (var cat in report.AllocationsByCategory)

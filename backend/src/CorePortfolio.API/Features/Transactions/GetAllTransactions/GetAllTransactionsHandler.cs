@@ -63,6 +63,8 @@ public class GetAllTransactionsHandler : IRequestHandler<GetAllTransactionsQuery
                 t.Type,
                 t.Quantity,
                 t.Price,
+                t.Fee,
+                t.Notes,
                 t.Date
             ))
             .ToListAsync(cancellationToken);

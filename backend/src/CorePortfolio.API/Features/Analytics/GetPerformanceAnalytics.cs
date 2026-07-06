@@ -37,12 +37,14 @@ public class GetPerformanceAnalyticsHandler : IRequestHandler<GetPerformanceAnal
     private readonly AppDbContext _dbContext;
     private readonly ICurrentUserService _currentUserService;
     private readonly IMediator _mediator;
+    private readonly ExchangeRateService _exchangeRateService;
 
-    public GetPerformanceAnalyticsHandler(AppDbContext dbContext, ICurrentUserService currentUserService, IMediator mediator)
+    public GetPerformanceAnalyticsHandler(AppDbContext dbContext, ICurrentUserService currentUserService, IMediator mediator, ExchangeRateService exchangeRateService)
     {
         _dbContext = dbContext;
         _currentUserService = currentUserService;
         _mediator = mediator;
+        _exchangeRateService = exchangeRateService;
     }
 
     public async Task<PerformanceAnalyticsDto> Handle(GetPerformanceAnalyticsQuery request, CancellationToken cancellationToken)
@@ -56,10 +58,7 @@ public class GetPerformanceAnalyticsHandler : IRequestHandler<GetPerformanceAnal
 
         var assetPerformances = new List<AssetPerformanceDto>();
 
-        var exchangeRateSetting = await _dbContext.SystemSettings.FirstOrDefaultAsync(s => s.Key == "VndUsdRate", cancellationToken);
-        decimal vndUsdRate = 25400m;
-        if (exchangeRateSetting != null && decimal.TryParse(exchangeRateSetting.Value, out var rate))
-            vndUsdRate = rate;
+        var vndUsdRate = await _exchangeRateService.GetUsdToVndAsync(cancellationToken);
 
         foreach (var p in portfolios)
         {

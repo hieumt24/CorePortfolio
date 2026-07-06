@@ -1,5 +1,6 @@
 using CorePortfolio.API.Features.Admin.Categories;
 using CorePortfolio.API.Features.Admin.MarketAssets;
+using CorePortfolio.API.Features.Admin.Migration;
 using CorePortfolio.API.Features.Admin.Settings;
 using CorePortfolio.API.Features.Assets.CreateAsset;
 using CorePortfolio.API.Features.Assets.DeleteAsset;
@@ -22,6 +23,7 @@ using CorePortfolio.API.Features.Watchlist;
 using CorePortfolio.API.Features.Rebalancing.GetRebalanceSuggestions;
 using CorePortfolio.API.Features.Analytics;
 using CorePortfolio.API.Features.Budgets;
+using CorePortfolio.API.Features.CashAccounts;
 using CorePortfolio.API.Services;
 using CorePortfolio.API.Features.Auth;
 using CorePortfolio.Infrastructure.Data;
@@ -33,6 +35,9 @@ using CorePortfolio.Domain.Interfaces;
 using CorePortfolio.Coingecko;
 using CorePortfolio.Telegram;
 using CorePortfolio.DNSE;
+using CorePortfolio.API.Common;
+using CorePortfolio.Domain.Accounting;
+using Microsoft.AspNetCore.Diagnostics;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -40,6 +45,7 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddOpenApi();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
+builder.Services.AddProblemDetails();
 
 builder.Services.AddCors(options =>
 {
@@ -63,8 +69,13 @@ builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 builder.Services.AddScoped<IPortfolioReportService, PortfolioReportService>();
 builder.Services.AddScoped<ITelegramCommandProcessor, TelegramCommandProcessor>();
+builder.Services.AddScoped<TransactionLedgerService>();
+builder.Services.AddScoped<ExchangeRateService>();
 builder.Services.AddHttpClient();
 builder.Services.AddHostedService<TelegramCronService>();
+builder.Services.AddHostedService<DailySnapshotService>();
+builder.Services.AddScoped<BackupService>();
+builder.Services.AddScoped<MigrationService>();
 
 // External Infrastructures
 builder.Services.AddCoinGeckoInfrastructure(builder.Configuration);
@@ -98,6 +109,30 @@ builder.Services.AddAuthorization(options =>
 
 var app = builder.Build();
 
+app.Use(async (context, next) =>
+{
+    var correlationId = context.Request.Headers["X-Correlation-ID"].FirstOrDefault() ?? Guid.NewGuid().ToString("N");
+    context.Response.Headers["X-Correlation-ID"] = correlationId;
+    using (app.Logger.BeginScope(new Dictionary<string, object> { ["CorrelationId"] = correlationId }))
+        await next();
+});
+
+app.UseExceptionHandler(errorApp => errorApp.Run(async context =>
+{
+    var exception = context.Features.Get<IExceptionHandlerFeature>()?.Error;
+    var (status, title) = exception switch
+    {
+        AccountingValidationException => (StatusCodes.Status400BadRequest, "Dữ liệu giao dịch không hợp lệ"),
+        ResourceNotFoundException => (StatusCodes.Status404NotFound, "Không tìm thấy dữ liệu"),
+        ResourceConflictException => (StatusCodes.Status409Conflict, "Xung đột dữ liệu"),
+        UnauthorizedAccessException => (StatusCodes.Status401Unauthorized, "Chưa xác thực"),
+        _ => (StatusCodes.Status500InternalServerError, "Đã xảy ra lỗi hệ thống")
+    };
+    if (status == 500) app.Logger.LogError(exception, "Unhandled API exception");
+    await Results.Problem(statusCode: status, title: title,
+        detail: status == 500 ? null : exception?.Message).ExecuteAsync(context);
+}));
+
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -130,11 +165,18 @@ app.MapGet("/api", () => "Welcome to CorePortfolio API")
     .WithName("GetRoot")
     .AllowAnonymous();
 
+app.MapGet("/health", async (AppDbContext db, CancellationToken cancellationToken) =>
+    await db.Database.CanConnectAsync(cancellationToken)
+        ? Results.Ok(new { status = "healthy", database = "healthy" })
+        : Results.Problem(statusCode: 503, title: "Database unavailable"))
+    .AllowAnonymous();
+
 // Map Endpoints
 app.MapAuthEndpoints();
 app.MapCategoriesEndpoints();
 app.MapMarketAssetsEndpoints();
 app.MapSettingsEndpoints();
+app.MapMigrationEndpoints();
 app.MapCreatePortfolioEndpoint();
 app.MapGetPortfoliosEndpoint();
 app.MapGetPortfolioSummaryEndpoint();
@@ -156,6 +198,7 @@ app.MapCashflowsEndpoints();
 app.MapWatchlistEndpoints();
 app.MapAnalyticsEndpoints();
 app.MapBudgetsEndpoints();
+app.MapCashAccountsEndpoints();
 app.MapGetRebalanceSuggestionsEndpoint();
 
 // Map fallback to index.html for SPA routing

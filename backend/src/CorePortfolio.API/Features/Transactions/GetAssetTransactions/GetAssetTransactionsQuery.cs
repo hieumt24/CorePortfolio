@@ -9,5 +9,7 @@ public record TransactionDto(
     int Type,
     decimal Quantity,
     decimal Price,
+    decimal Fee,
+    string Notes,
     DateTime Timestamp
 );

@@ -21,20 +21,12 @@ public class GetGlobalHistoryHandler : IRequestHandler<GetGlobalHistoryQuery, Li
         var snapshots = await _dbContext.PortfolioSnapshots
             .AsNoTracking()
             .Where(s => s.Portfolio != null && s.Portfolio.UserId == _currentUserService.UserId)
-            .GroupBy(s => s.Date)
-            .Select(g => new
-            {
-                Date = g.Key,
-                TotalInvested = g.Sum(s => s.TotalInvested),
-                TotalValue = g.Sum(s => s.TotalValue)
-            })
-            .OrderBy(s => s.Date)
             .ToListAsync(cancellationToken);
 
-        return snapshots.Select(s => new SnapshotDto(
-            s.Date.ToString("yyyy-MM-dd"),
-            s.TotalInvested,
-            s.TotalValue
+        return snapshots.GroupBy(s => s.Date.Date).OrderBy(g => g.Key).Select(g => new SnapshotDto(
+            g.Key.ToString("yyyy-MM-dd"), g.Sum(s => s.TotalInvested), g.Sum(s => s.TotalValue), "VND",
+            g.Max(s => s.UsdToVndRate), g.Max(s => s.ValuationTimestamp),
+            g.All(s => s.QualityStatus == "Complete") ? "Complete" : "Partial"
         )).ToList();
     }
 }

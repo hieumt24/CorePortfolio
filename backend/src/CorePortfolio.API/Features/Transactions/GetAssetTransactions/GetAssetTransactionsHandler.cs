@@ -26,6 +26,8 @@ public class GetAssetTransactionsHandler : IRequestHandler<GetAssetTransactionsQ
                 (int)t.Type,
                 t.Quantity,
                 t.Price,
+                t.Fee,
+                t.Notes,
                 t.Date
             ))
             .ToListAsync(cancellationToken);

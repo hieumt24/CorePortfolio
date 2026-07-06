@@ -9,4 +9,8 @@ public class PortfolioSnapshot
     public DateTime Date { get; set; }
     public decimal TotalInvested { get; set; }
     public decimal TotalValue { get; set; }
+    public string BaseCurrency { get; set; } = "VND";
+    public decimal UsdToVndRate { get; set; }
+    public DateTime ValuationTimestamp { get; set; }
+    public string QualityStatus { get; set; } = "Complete";
 }

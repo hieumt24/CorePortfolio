@@ -11,6 +11,12 @@ export interface PortfolioSummaryDto {
   totalInvested: number;
   currentTotalValue: number;
   assets: AssetSummaryDto[];
+  cashBalances: Array<{ cashAccountId: string; currency: string; balance: number }>;
+  realizedPnl: number;
+  unrealizedPnl: number;
+  fees: number;
+  baseCurrency: string;
+  asOf: string;
 }
 
 export interface AssetSummaryDto {
@@ -25,4 +31,9 @@ export interface AssetSummaryDto {
   totalCost: number;
   currentValue: number;
   totalBought: number;
+  averageCost: number;
+  realizedPnl: number;
+  unrealizedPnl: number;
+  fees: number;
+  priceUpdatedAt: string;
 }

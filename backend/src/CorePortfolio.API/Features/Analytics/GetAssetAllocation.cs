@@ -25,12 +25,14 @@ public class GetAssetAllocationHandler : IRequestHandler<GetAssetAllocationQuery
     private readonly AppDbContext _dbContext;
     private readonly ICurrentUserService _currentUserService;
     private readonly IMediator _mediator;
+    private readonly ExchangeRateService _exchangeRateService;
 
-    public GetAssetAllocationHandler(AppDbContext dbContext, ICurrentUserService currentUserService, IMediator mediator)
+    public GetAssetAllocationHandler(AppDbContext dbContext, ICurrentUserService currentUserService, IMediator mediator, ExchangeRateService exchangeRateService)
     {
         _dbContext = dbContext;
         _currentUserService = currentUserService;
         _mediator = mediator;
+        _exchangeRateService = exchangeRateService;
     }
 
     public async Task<List<AssetAllocationDto>> Handle(GetAssetAllocationQuery request, CancellationToken cancellationToken)
@@ -40,10 +42,7 @@ public class GetAssetAllocationHandler : IRequestHandler<GetAssetAllocationQuery
 
         var report = await _mediator.Send(new GetGlobalReportQuery(userId.Value), cancellationToken);
 
-        var exchangeRateSetting = await _dbContext.SystemSettings.FirstOrDefaultAsync(s => s.Key == "VndUsdRate", cancellationToken);
-        decimal vndUsdRate = 25400m;
-        if (exchangeRateSetting != null && decimal.TryParse(exchangeRateSetting.Value, out var rate))
-            vndUsdRate = rate;
+        var vndUsdRate = await _exchangeRateService.GetUsdToVndAsync(cancellationToken);
 
         var result = new List<AssetAllocationDto>();
 

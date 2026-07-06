@@ -12,6 +12,8 @@ export interface TransactionDto {
   type: TransactionType;
   quantity: number;
   price: number;
+  fee: number;
+  notes: string;
   timestamp: string;
 }
 
@@ -21,6 +23,8 @@ export interface CreateTransactionRequest {
   type: TransactionType;
   quantity: number;
   price: number;
+  fee?: number;
+  notes?: string;
   currency?: string;
   timestamp?: string;
 }
@@ -29,6 +33,8 @@ export interface UpdateTransactionRequest {
   type: TransactionType;
   quantity: number;
   price: number;
+  fee?: number;
+  notes?: string;
   currency?: string;
   timestamp?: string;
 }
@@ -45,6 +51,8 @@ export interface GlobalTransactionDto {
   type: TransactionType;
   quantity: number;
   price: number;
+  fee: number;
+  notes: string;
   date: string;
 }
 

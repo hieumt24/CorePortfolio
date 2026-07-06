@@ -1,10 +1,13 @@
 import React, { useEffect, useState } from 'react';
 import { PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 import { getGlobalReport, getGlobalHistory } from '../api/reportsApi';
+import { analyticsApi } from '../../analytics/api/analyticsApi';
 import { settingsApi } from '../../admin/api/settingsApi';
 import type { GlobalReportDto, SnapshotDto } from '../types';
 import { HistoricalPerformanceChart } from './HistoricalPerformanceChart';
 import { InvestedCapitalChart } from './InvestedCapitalChart';
+import { GlobalReportSkeleton } from '../../../shared/components/Skeleton';
+import { useNotification } from '../../../context/NotificationContext';
 import './GlobalReportDashboard.css';
 
 const COLORS = ['#8b5cf6', '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#6366f1', '#14b8a6'];
@@ -12,8 +15,10 @@ const COLORS = ['#8b5cf6', '#3b82f6', '#10b981', '#f59e0b', '#ef4444', '#ec4899'
 export const GlobalReportDashboard: React.FC = () => {
   const [reportData, setReportData] = useState<GlobalReportDto | null>(null);
   const [historyData, setHistoryData] = useState<SnapshotDto[]>([]);
-  const [usdToVndRate, setUsdToVndRate] = useState<number>(26309);
+  const [usdToVndRate, setUsdToVndRate] = useState<number>(0);
   const [loading, setLoading] = useState(true);
+  const [isSnapshotLoading, setIsSnapshotLoading] = useState(false);
+  const { showNotification } = useNotification();
 
   useEffect(() => {
     const fetchData = async () => {
@@ -38,8 +43,23 @@ export const GlobalReportDashboard: React.FC = () => {
     fetchData();
   }, []);
 
-  if (loading) {
-    return <div className="loading-container">Loading report...</div>;
+  const handleTakeSnapshot = async () => {
+    try {
+      setIsSnapshotLoading(true);
+      await analyticsApi.triggerSnapshot();
+      showNotification('Đã cập nhật giá trị danh mục thành công!', 'success');
+      // Reload history data
+      const historyRes = await getGlobalHistory();
+      setHistoryData(historyRes);
+    } catch (error) {
+      showNotification('Có lỗi xảy ra khi cập nhật giá trị danh mục.', 'error');
+    } finally {
+      setIsSnapshotLoading(false);
+    }
+  };
+
+  if (loading || (usdToVndRate === 0 && !reportData)) {
+    return <GlobalReportSkeleton />;
   }
 
   if (!reportData) {
@@ -156,9 +176,20 @@ export const GlobalReportDashboard: React.FC = () => {
 
   return (
     <div className="report-dashboard">
-      <div className="report-header">
-        <h1>Global Portfolio Report</h1>
-        <p>Tỷ giá hiện tại: 1 USD = {formatterVnd.format(usdToVndRate)}</p>
+      <div className="report-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+        <div>
+          <h1>Global Portfolio Report</h1>
+          <p>Tỷ giá hiện tại: 1 USD = {formatterVnd.format(usdToVndRate)}</p>
+        </div>
+        <button 
+          className="btn-secondary" 
+          style={{ padding: '0.5rem 1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.5rem' }} 
+          onClick={handleTakeSnapshot}
+          disabled={isSnapshotLoading}
+        >
+          {isSnapshotLoading ? <div className="spinner" style={{ width: '14px', height: '14px', borderWidth: '2px' }}></div> : null}
+          {isSnapshotLoading ? 'Đang cập nhật...' : 'Cập nhật giá trị mới nhất'}
+        </button>
       </div>
       
       <div className="report-summary-cards" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>

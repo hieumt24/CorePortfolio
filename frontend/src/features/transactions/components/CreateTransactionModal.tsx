@@ -4,6 +4,7 @@ import { TransactionType } from '../types';
 import type { AssetSummaryDto } from '../../portfolios/types';
 import { NumericFormat } from 'react-number-format';
 import '../../portfolios/components/CreatePortfolioModal.css';
+import { calculateCashImpact } from '../utils/transactionImpact';
 
 interface CreateTransactionModalProps {
   portfolioId: string;
@@ -16,6 +17,8 @@ export const CreateTransactionModal: React.FC<CreateTransactionModalProps> = ({ 
   const [type, setType] = useState<TransactionType>(TransactionType.Buy);
   const [quantity, setQuantity] = useState('');
   const [price, setPrice] = useState('');
+  const [fee, setFee] = useState('0');
+  const [notes, setNotes] = useState('');
   const [currency, setCurrency] = useState(asset.currency || 'USD');
   const [timestamp, setTimestamp] = useState(new Date().toISOString().slice(0, 16));
   const [loading, setLoading] = useState(false);
@@ -37,6 +40,8 @@ export const CreateTransactionModal: React.FC<CreateTransactionModalProps> = ({ 
         type: Number(type) as TransactionType,
         quantity: Number(quantity),
         price: Number(price),
+        fee: Number(fee),
+        notes,
         currency,
         timestamp: new Date(timestamp).toISOString()
       });
@@ -120,6 +125,26 @@ export const CreateTransactionModal: React.FC<CreateTransactionModalProps> = ({ 
           </div>
 
           <div className="form-group">
+            <label htmlFor="fee">Phí giao dịch</label>
+            <NumericFormat
+              id="fee"
+              value={fee}
+              onValueChange={(values) => setFee(values.value)}
+              className="glass-input"
+              thousandSeparator="."
+              decimalSeparator=","
+              allowNegative={false}
+              disabled={loading}
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="notes">Ghi chú</label>
+            <input id="notes" value={notes} onChange={e => setNotes(e.target.value)}
+              className="glass-input" maxLength={500} disabled={loading} />
+          </div>
+
+          <div className="form-group">
             <label htmlFor="timestamp">Date</label>
             <input
               id="timestamp"
@@ -131,6 +156,13 @@ export const CreateTransactionModal: React.FC<CreateTransactionModalProps> = ({ 
             />
           </div>
 
+          {quantity && price && (
+            <div className="glass-panel" style={{ padding: '0.75rem', marginBottom: '1rem' }}>
+              Tác động tiền mặt: <strong>{new Intl.NumberFormat(currency === 'VND' ? 'vi-VN' : 'en-US', {
+                style: 'currency', currency,
+              }).format(calculateCashImpact(type, Number(quantity), Number(price), Number(fee)))}</strong>
+            </div>
+          )}
 
           <div className="modal-footer">
             <button type="button" className="btn btn-secondary" onClick={onClose} disabled={loading}>

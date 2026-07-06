@@ -23,6 +23,8 @@ public class AppDbContext : DbContext
     public DbSet<WatchlistItem> WatchlistItems => Set<WatchlistItem>();
     public DbSet<TargetAllocation> TargetAllocations => Set<TargetAllocation>();
     public DbSet<Budget> Budgets => Set<Budget>();
+    public DbSet<CashAccount> CashAccounts => Set<CashAccount>();
+    public DbSet<CashLedgerEntry> CashLedgerEntries => Set<CashLedgerEntry>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -58,6 +60,32 @@ public class AppDbContext : DbContext
             .WithOne(c => c.Portfolio)
             .HasForeignKey(c => c.PortfolioId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<Portfolio>()
+            .HasMany(p => p.CashAccounts)
+            .WithOne(c => c.Portfolio)
+            .HasForeignKey(c => c.PortfolioId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<CashAccount>()
+            .HasIndex(c => new { c.PortfolioId, c.Currency })
+            .IsUnique();
+
+        modelBuilder.Entity<CashLedgerEntry>()
+            .HasOne(e => e.CashAccount)
+            .WithMany(a => a.Entries)
+            .HasForeignKey(e => e.CashAccountId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<CashLedgerEntry>()
+            .HasOne(e => e.Transaction)
+            .WithMany()
+            .HasForeignKey(e => e.TransactionId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<CashLedgerEntry>()
+            .HasIndex(e => e.TransactionId)
+            .IsUnique();
 
         modelBuilder.Entity<User>()
             .HasMany(u => u.CashflowRecords)

@@ -89,6 +89,67 @@ namespace CorePortfolio.Infrastructure.Migrations
                     b.ToTable("Budgets");
                 });
 
+            modelBuilder.Entity("CorePortfolio.Domain.Entities.CashAccount", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Currency")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("PortfolioId")
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PortfolioId", "Currency")
+                        .IsUnique();
+
+                    b.ToTable("CashAccounts");
+                });
+
+            modelBuilder.Entity("CorePortfolio.Domain.Entities.CashLedgerEntry", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid>("CashAccountId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("CashflowRecordId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("OccurredAt")
+                        .HasColumnType("TEXT");
+
+                    b.Property<Guid?>("TransactionId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("INTEGER");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CashAccountId");
+
+                    b.HasIndex("CashflowRecordId");
+
+                    b.HasIndex("TransactionId")
+                        .IsUnique();
+
+                    b.ToTable("CashLedgerEntries");
+                });
+
             modelBuilder.Entity("CorePortfolio.Domain.Entities.CashflowCategory", b =>
                 {
                     b.Property<Guid>("Id")
@@ -720,16 +781,30 @@ namespace CorePortfolio.Infrastructure.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("BaseCurrency")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<DateTime>("Date")
                         .HasColumnType("TEXT");
 
                     b.Property<Guid>("PortfolioId")
                         .HasColumnType("TEXT");
 
+                    b.Property<string>("QualityStatus")
+                        .IsRequired()
+                        .HasColumnType("TEXT");
+
                     b.Property<decimal>("TotalInvested")
                         .HasColumnType("TEXT");
 
                     b.Property<decimal>("TotalValue")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("UsdToVndRate")
+                        .HasColumnType("TEXT");
+
+                    b.Property<DateTime>("ValuationTimestamp")
                         .HasColumnType("TEXT");
 
                     b.HasKey("Id");
@@ -803,6 +878,13 @@ namespace CorePortfolio.Infrastructure.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("Date")
+                        .HasColumnType("TEXT");
+
+                    b.Property<decimal>("Fee")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("Notes")
+                        .IsRequired()
                         .HasColumnType("TEXT");
 
                     b.Property<Guid>("PortfolioId")
@@ -915,6 +997,41 @@ namespace CorePortfolio.Infrastructure.Migrations
                     b.Navigation("Category");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("CorePortfolio.Domain.Entities.CashAccount", b =>
+                {
+                    b.HasOne("CorePortfolio.Domain.Entities.Portfolio", "Portfolio")
+                        .WithMany("CashAccounts")
+                        .HasForeignKey("PortfolioId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Portfolio");
+                });
+
+            modelBuilder.Entity("CorePortfolio.Domain.Entities.CashLedgerEntry", b =>
+                {
+                    b.HasOne("CorePortfolio.Domain.Entities.CashAccount", "CashAccount")
+                        .WithMany("Entries")
+                        .HasForeignKey("CashAccountId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("CorePortfolio.Domain.Entities.CashflowRecord", "CashflowRecord")
+                        .WithMany()
+                        .HasForeignKey("CashflowRecordId");
+
+                    b.HasOne("CorePortfolio.Domain.Entities.Transaction", "Transaction")
+                        .WithMany()
+                        .HasForeignKey("TransactionId")
+                        .OnDelete(DeleteBehavior.Cascade);
+
+                    b.Navigation("CashAccount");
+
+                    b.Navigation("CashflowRecord");
+
+                    b.Navigation("Transaction");
                 });
 
             modelBuilder.Entity("CorePortfolio.Domain.Entities.CashflowCategory", b =>
@@ -1058,6 +1175,11 @@ namespace CorePortfolio.Infrastructure.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("CorePortfolio.Domain.Entities.CashAccount", b =>
+                {
+                    b.Navigation("Entries");
+                });
+
             modelBuilder.Entity("CorePortfolio.Domain.Entities.CashflowCategory", b =>
                 {
                     b.Navigation("SubCategories");
@@ -1066,6 +1188,8 @@ namespace CorePortfolio.Infrastructure.Migrations
             modelBuilder.Entity("CorePortfolio.Domain.Entities.Portfolio", b =>
                 {
                     b.Navigation("Assets");
+
+                    b.Navigation("CashAccounts");
 
                     b.Navigation("CashflowRecords");
 

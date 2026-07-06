@@ -17,6 +17,8 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({ tran
   const [type, setType] = useState<TransactionType>(transaction.type);
   const [quantity, setQuantity] = useState(transaction.quantity.toString());
   const [price, setPrice] = useState(transaction.price.toString());
+  const [fee, setFee] = useState(transaction.fee.toString());
+  const [notes, setNotes] = useState(transaction.notes);
   const [currency, setCurrency] = useState(asset.currency || 'VND');
   const [timestamp, setTimestamp] = useState(transaction.timestamp ? new Date(transaction.timestamp).toISOString().slice(0, 16) : new Date().toISOString().slice(0, 16));
   const [loading, setLoading] = useState(false);
@@ -36,6 +38,8 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({ tran
         type: Number(type) as TransactionType,
         quantity: Number(quantity),
         price: Number(price),
+        fee: Number(fee),
+        notes,
         currency,
         timestamp: new Date(timestamp).toISOString()
       });
@@ -70,6 +74,18 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({ tran
               <option value={TransactionType.Buy}>Buy</option>
               <option value={TransactionType.Sell}>Sell</option>
             </select>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="fee">Phí giao dịch</label>
+            <NumericFormat id="fee" value={fee} onValueChange={(values) => setFee(values.value)}
+              className="glass-input" thousandSeparator="." decimalSeparator="," allowNegative={false} disabled={loading} />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="notes">Ghi chú</label>
+            <input id="notes" value={notes} onChange={e => setNotes(e.target.value)}
+              className="glass-input" maxLength={500} disabled={loading} />
           </div>
 
           <div className="form-group">
