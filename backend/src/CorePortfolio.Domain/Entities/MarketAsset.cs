@@ -10,4 +10,8 @@ public class MarketAsset
     public string Name { get; set; } = string.Empty;
     public decimal CurrentPrice { get; set; }
     public DateTime LastUpdated { get; set; }
+    public string PriceSource { get; set; } = "Manual";
+    public string? ExternalId { get; set; }
+    public string PriceStatus { get; set; } = "Manual";
+    public string? LastPriceError { get; set; }
 }

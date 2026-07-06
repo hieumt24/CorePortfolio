@@ -7,7 +7,9 @@ using CorePortfolio.API.Common.Models;
 
 namespace CorePortfolio.API.Features.Admin.MarketAssets;
 
-public record MarketAssetDto(Guid Id, Guid CategoryId, string CategoryName, string Symbol, string Name, decimal CurrentPrice, DateTime LastUpdated);
+public record MarketAssetDto(Guid Id, Guid CategoryId, string CategoryName, string Symbol, string Name,
+    decimal CurrentPrice, DateTime LastUpdated, string PriceSource, string? ExternalId,
+    string PriceStatus, string? LastPriceError);
 
 public record GetMarketAssetsQuery(Guid? CategoryId, int Page = 1, int PageSize = 10) : IRequest<PaginatedResult<MarketAssetDto>>;
 
@@ -31,7 +33,10 @@ public class GetMarketAssetsHandler : IRequestHandler<GetMarketAssetsQuery, Pagi
             .OrderBy(m => m.Symbol)
             .Skip((request.Page - 1) * request.PageSize)
             .Take(request.PageSize)
-            .Select(m => new MarketAssetDto(m.Id, m.CategoryId, m.Category!.Name, m.Symbol, m.Name, m.CurrentPrice, m.LastUpdated))
+            .Select(m => new MarketAssetDto(m.Id, m.CategoryId, m.Category!.Name, m.Symbol, m.Name,
+                m.CurrentPrice, m.LastUpdated, m.PriceSource, m.ExternalId,
+                m.PriceStatus == "Fresh" && m.LastUpdated < DateTime.UtcNow.AddHours(-48) ? "Stale" : m.PriceStatus,
+                m.LastPriceError))
             .ToListAsync(cancellationToken);
             
         return new PaginatedResult<MarketAssetDto>(items, totalCount, request.Page, request.PageSize);

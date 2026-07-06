@@ -22,6 +22,9 @@ public class UpdateMarketAssetPriceHandler : IRequestHandler<UpdateMarketAssetPr
 
         marketAsset.CurrentPrice = request.NewPrice;
         marketAsset.LastUpdated = DateTime.UtcNow;
+        marketAsset.PriceSource = "Manual";
+        marketAsset.PriceStatus = "Manual";
+        marketAsset.LastPriceError = null;
         
         await _dbContext.SaveChangesAsync(cancellationToken);
     }

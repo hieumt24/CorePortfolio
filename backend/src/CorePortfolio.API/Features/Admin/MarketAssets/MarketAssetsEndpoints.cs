@@ -3,9 +3,11 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace CorePortfolio.API.Features.Admin.MarketAssets;
 
-public record CreateMarketAssetRequest(Guid CategoryId, string Symbol, string Name, decimal CurrentPrice);
+public record CreateMarketAssetRequest(Guid CategoryId, string Symbol, string Name, decimal CurrentPrice,
+    string PriceSource = "Manual", string? ExternalId = null);
 
-public record UpdateMarketAssetRequest(Guid CategoryId, string Symbol, string Name, decimal CurrentPrice);
+public record UpdateMarketAssetRequest(Guid CategoryId, string Symbol, string Name, decimal CurrentPrice,
+    string PriceSource = "Manual", string? ExternalId = null);
 
 public static class MarketAssetsEndpoints
 {
@@ -16,13 +18,15 @@ public static class MarketAssetsEndpoints
 
         group.MapPost("/", async ([FromBody] CreateMarketAssetRequest request, IMediator mediator) =>
         {
-            var id = await mediator.Send(new CreateMarketAssetCommand(request.CategoryId, request.Symbol, request.Name, request.CurrentPrice));
+            var id = await mediator.Send(new CreateMarketAssetCommand(request.CategoryId, request.Symbol, request.Name,
+                request.CurrentPrice, request.PriceSource, request.ExternalId));
             return Results.Created($"/api/admin/market-assets/{id}", new { Id = id });
         }).RequireAuthorization("Admin");
 
         group.MapPut("/{id}", async (Guid id, [FromBody] UpdateMarketAssetRequest request, IMediator mediator) =>
         {
-            var success = await mediator.Send(new UpdateMarketAssetCommand(id, request.CategoryId, request.Symbol, request.Name, request.CurrentPrice));
+            var success = await mediator.Send(new UpdateMarketAssetCommand(id, request.CategoryId, request.Symbol, request.Name,
+                request.CurrentPrice, request.PriceSource, request.ExternalId));
             return success ? Results.NoContent() : Results.NotFound();
         }).RequireAuthorization("Admin");
 

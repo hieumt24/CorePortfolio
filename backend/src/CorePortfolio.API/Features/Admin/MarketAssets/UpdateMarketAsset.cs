@@ -3,7 +3,8 @@ using MediatR;
 
 namespace CorePortfolio.API.Features.Admin.MarketAssets;
 
-public record UpdateMarketAssetCommand(Guid Id, Guid CategoryId, string Symbol, string Name, decimal CurrentPrice) : IRequest<bool>;
+public record UpdateMarketAssetCommand(Guid Id, Guid CategoryId, string Symbol, string Name, decimal CurrentPrice,
+    string PriceSource = "Manual", string? ExternalId = null) : IRequest<bool>;
 
 public class UpdateMarketAssetHandler : IRequestHandler<UpdateMarketAssetCommand, bool>
 {
@@ -24,6 +25,14 @@ public class UpdateMarketAssetHandler : IRequestHandler<UpdateMarketAssetCommand
         marketAsset.Symbol = request.Symbol;
         marketAsset.Name = request.Name;
         marketAsset.CurrentPrice = request.CurrentPrice;
+        marketAsset.PriceSource = request.PriceSource;
+        marketAsset.ExternalId = request.ExternalId;
+        if (request.PriceSource.Equals("Manual", StringComparison.OrdinalIgnoreCase))
+        {
+            marketAsset.PriceStatus = "Manual";
+            marketAsset.LastPriceError = null;
+            marketAsset.LastUpdated = DateTime.UtcNow;
+        }
 
         await _dbContext.SaveChangesAsync(cancellationToken);
         return true;

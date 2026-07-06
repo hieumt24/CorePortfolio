@@ -5,7 +5,8 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CorePortfolio.API.Features.Admin.MarketAssets;
 
-public record CreateMarketAssetCommand(Guid CategoryId, string Symbol, string Name, decimal CurrentPrice) : IRequest<Guid>;
+public record CreateMarketAssetCommand(Guid CategoryId, string Symbol, string Name, decimal CurrentPrice,
+    string PriceSource = "Manual", string? ExternalId = null) : IRequest<Guid>;
 
 public class CreateMarketAssetHandler : IRequestHandler<CreateMarketAssetCommand, Guid>
 {
@@ -24,7 +25,10 @@ public class CreateMarketAssetHandler : IRequestHandler<CreateMarketAssetCommand
             Symbol = request.Symbol,
             Name = request.Name,
             CurrentPrice = request.CurrentPrice,
-            LastUpdated = DateTime.UtcNow
+            LastUpdated = DateTime.UtcNow,
+            PriceSource = request.PriceSource,
+            ExternalId = request.ExternalId,
+            PriceStatus = "Manual"
         };
         _dbContext.MarketAssets.Add(marketAsset);
         await _dbContext.SaveChangesAsync(cancellationToken);
