@@ -1,6 +1,7 @@
 using CorePortfolio.Domain.Entities;
 using CorePortfolio.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
+using CorePortfolio.API.Common;
 
 namespace CorePortfolio.API.Services;
 
@@ -21,11 +22,12 @@ public class MigrationService
     {
         _logger.LogInformation("Starting legacy data migration...");
 
-        // 1. Delete all existing cash ledger entries and cash accounts
-        await _dbContext.Database.ExecuteSqlRawAsync("DELETE FROM CashLedgerEntries", cancellationToken);
-        await _dbContext.Database.ExecuteSqlRawAsync("DELETE FROM CashAccounts", cancellationToken);
+        if (await _dbContext.CashLedgerEntries.AnyAsync(cancellationToken))
+            throw new ResourceConflictException("Ledger đã có dữ liệu. Migration legacy chỉ được phép chạy một lần.");
 
-        // 2. Fetch all transactions ordered by Date
+        await using var databaseTransaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+
+        // Fetch all transactions ordered by Date
         var transactions = await _dbContext.Transactions
             .Include(t => t.Asset)
             .ThenInclude(a => a.MarketAsset)
@@ -61,7 +63,7 @@ public class MigrationService
         {
             if (transaction.Asset?.MarketAsset?.Category != null)
             {
-                await _ledgerService.SyncLedgerEntryAsync(transaction, cancellationToken);
+                await _ledgerService.SyncLedgerEntryAsync(transaction, cancellationToken, allowNegativeBalance: true);
             }
         }
         
@@ -93,6 +95,7 @@ public class MigrationService
         }
 
         await _dbContext.SaveChangesAsync(cancellationToken);
+        await databaseTransaction.CommitAsync(cancellationToken);
         _logger.LogInformation("Legacy data migration completed.");
     }
 }

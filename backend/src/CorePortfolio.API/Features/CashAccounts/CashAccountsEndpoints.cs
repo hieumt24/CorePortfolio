@@ -54,6 +54,7 @@ public sealed class CashAccountsHandler :
         if (!await _db.Portfolios.AnyAsync(p => p.Id == request.PortfolioId && p.UserId == _currentUser.UserId, cancellationToken))
             throw new ResourceNotFoundException("Không tìm thấy danh mục.");
 
+        await using var openingTransaction = await _db.Database.BeginTransactionAsync(cancellationToken);
         var account = await _db.CashAccounts.SingleOrDefaultAsync(a => a.PortfolioId == request.PortfolioId &&
             a.Currency == currency, cancellationToken);
         if (account == null)
@@ -66,6 +67,7 @@ public sealed class CashAccountsHandler :
             Description = request.Notes?.Trim() ?? "Số dư đầu kỳ", OccurredAt = DateTime.UtcNow });
         await _db.SaveChangesAsync(cancellationToken);
         var balance = await _db.CashLedgerEntries.Where(e => e.CashAccountId == account.Id).SumAsync(e => e.Amount, cancellationToken);
+        await openingTransaction.CommitAsync(cancellationToken);
         return new CashAccountDto(account.Id, account.PortfolioId, account.Currency, balance);
     }
     public async Task<CashAccountDto> Handle(AdjustCashBalanceCommand request, CancellationToken cancellationToken)
@@ -76,6 +78,7 @@ public sealed class CashAccountsHandler :
         if (!await _db.Portfolios.AnyAsync(p => p.Id == request.PortfolioId && p.UserId == _currentUser.UserId, cancellationToken))
             throw new ResourceNotFoundException("Không tìm thấy danh mục.");
 
+        await using var adjustmentTransaction = await _db.Database.BeginTransactionAsync(cancellationToken);
         var account = await _db.CashAccounts.SingleOrDefaultAsync(a => a.PortfolioId == request.PortfolioId &&
             a.Currency == currency, cancellationToken);
 
@@ -89,6 +92,12 @@ public sealed class CashAccountsHandler :
         var entryAmount = request.IsDeposit ? request.Amount : -request.Amount;
         var entryType = request.IsDeposit ? CashLedgerEntryType.Deposit : CashLedgerEntryType.Withdrawal;
 
+        var currentBalance = await _db.CashLedgerEntries
+            .Where(e => e.CashAccountId == account.Id)
+            .SumAsync(e => e.Amount, cancellationToken);
+        if (!request.IsDeposit && currentBalance < request.Amount)
+            throw new AccountingValidationException("Số dư không đủ để thực hiện giao dịch rút tiền.");
+
         _db.CashLedgerEntries.Add(new CashLedgerEntry
         {
             Id = Guid.NewGuid(),
@@ -100,9 +109,9 @@ public sealed class CashAccountsHandler :
         });
 
         await _db.SaveChangesAsync(cancellationToken);
+        await adjustmentTransaction.CommitAsync(cancellationToken);
 
-        var balance = await _db.CashLedgerEntries.Where(e => e.CashAccountId == account.Id).SumAsync(e => e.Amount, cancellationToken);
-        if (balance < 0) throw new AccountingValidationException("Số dư không đủ để thực hiện giao dịch rút tiền.");
+        var balance = currentBalance + entryAmount;
 
         return new CashAccountDto(account.Id, account.PortfolioId, account.Currency, balance);
     }
