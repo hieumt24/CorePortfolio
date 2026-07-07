@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using CorePortfolio.API.Features.MarketAssets.UpdateMarketAssetPrice;
 
 namespace CorePortfolio.API.Features.Admin.MarketAssets;
 
@@ -66,5 +67,13 @@ public static class MarketAssetsEndpoints
             var result = await mediator.Send(new SearchDnseInstrumentsQuery { Query = query ?? string.Empty });
             return Results.Ok(result);
         });
+
+        group.MapPost("/refresh", async (IMediator mediator) =>
+            Results.Ok(await mediator.Send(new RefreshMarketAssetPricesCommand())))
+            .RequireAuthorization("Admin");
+
+        group.MapPost("/{id:guid}/refresh", async (Guid id, IMediator mediator) =>
+            Results.Ok(await mediator.Send(new RefreshMarketAssetPricesCommand(id))))
+            .RequireAuthorization("Admin");
     }
 }
