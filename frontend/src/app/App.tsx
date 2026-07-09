@@ -12,6 +12,9 @@ import { CashflowDashboard } from '../features/cashflows/components/CashflowDash
 import { WatchlistDashboard } from '../features/watchlist/components/WatchlistDashboard';
 import { AnalyticsDashboard } from '../features/analytics/components/AnalyticsDashboard';
 import { BudgetsPage } from '../features/budgets/components/BudgetsPage';
+import { DcaPlansPage } from '../features/dcaPlans/components/DcaPlansPage';
+import { RebalancingPlansPage } from '../features/rebalancing/components/RebalancingPlansPage';
+import { SavingGoalsPage } from '../features/savingGoals/components/SavingGoalsPage';
 import { Navbar } from '../shared/components/Navbar';
 import { LoginPage } from '../features/auth/components/LoginPage';
 import { RegisterPage } from '../features/auth/components/RegisterPage';
@@ -35,6 +38,9 @@ function App() {
           <Route path="/watchlist" element={<ProtectedRoute><WatchlistDashboard /></ProtectedRoute>} />
           <Route path="/analytics" element={<ProtectedRoute><AnalyticsDashboard /></ProtectedRoute>} />
           <Route path="/budgets" element={<ProtectedRoute><BudgetsPage /></ProtectedRoute>} />
+          <Route path="/saving-goals" element={<ProtectedRoute><SavingGoalsPage /></ProtectedRoute>} />
+          <Route path="/rebalancing" element={<ProtectedRoute><RebalancingPlansPage /></ProtectedRoute>} />
+          <Route path="/dca-plans" element={<ProtectedRoute><DcaPlansPage /></ProtectedRoute>} />
           
           
           <Route path="/admin" element={<ProtectedRoute requireAdmin={true}><AdminDashboard /></ProtectedRoute>}>

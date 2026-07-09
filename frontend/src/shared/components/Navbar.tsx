@@ -89,11 +89,32 @@ export const Navbar: React.FC = () => {
                   Budgets
                 </NavLink>
                 <NavLink 
+                  to="/saving-goals" 
+                  className={location.pathname.startsWith('/saving-goals') ? "nav-link active" : "nav-link"}
+                  onClick={closeMenu}
+                >
+                  Saving Goals
+                </NavLink>
+                <NavLink 
                   to="/analytics" 
                   className={location.pathname.startsWith('/analytics') ? "nav-link active" : "nav-link"}
                   onClick={closeMenu}
                 >
                   Analytics
+                </NavLink>
+                <NavLink 
+                  to="/rebalancing" 
+                  className={location.pathname.startsWith('/rebalancing') ? "nav-link active" : "nav-link"}
+                  onClick={closeMenu}
+                >
+                  Rebalancing
+                </NavLink>
+                <NavLink 
+                  to="/dca-plans" 
+                  className={location.pathname.startsWith('/dca-plans') ? "nav-link active" : "nav-link"}
+                  onClick={closeMenu}
+                >
+                  DCA Plans
                 </NavLink>
               </div>
             )}

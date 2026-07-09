@@ -1,0 +1,154 @@
+.rebalancing-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.rebalancing-header,
+.rebalancing-controls,
+.rebalance-plan-header,
+.step-title-row,
+.history-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.rebalancing-header p,
+.rebalance-plan-header p,
+.cash-limited {
+  color: var(--text-secondary);
+}
+
+.rebalancing-controls select {
+  min-width: 120px;
+}
+
+.rebalance-summary {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1rem;
+  padding: 1.25rem;
+}
+
+.rebalance-summary div,
+.step-values div {
+  border: 1px solid var(--glass-border);
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  padding: 0.85rem;
+}
+
+.rebalance-summary span,
+.step-values span {
+  display: block;
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  margin-bottom: 0.25rem;
+}
+
+.rebalance-plan-card,
+.rebalance-history {
+  padding: 1.25rem;
+}
+
+.rebalance-steps {
+  display: flex;
+  flex-direction: column;
+  gap: 0.9rem;
+  margin-top: 1rem;
+}
+
+.rebalance-step {
+  display: grid;
+  grid-template-columns: 42px 1fr;
+  gap: 1rem;
+  border: 1px solid var(--glass-border);
+  border-radius: 12px;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.step-priority {
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: rgba(99, 102, 241, 0.16);
+  color: var(--primary-hover);
+  font-weight: 700;
+}
+
+.step-main h3 {
+  margin: 0;
+}
+
+.action-pill {
+  border-radius: 999px;
+  border: 1px solid var(--glass-border);
+  font-size: 0.8rem;
+  padding: 0.25rem 0.65rem;
+}
+
+.action-pill.buy {
+  color: var(--success-color);
+  border-color: rgba(16, 185, 129, 0.35);
+}
+
+.action-pill.sell {
+  color: var(--danger-color);
+  border-color: rgba(239, 68, 68, 0.35);
+}
+
+.step-values {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.75rem;
+  margin-top: 0.85rem;
+}
+
+.cash-limited {
+  margin-top: 0.75rem;
+}
+
+.rebalancing-empty {
+  padding: 2rem;
+  color: var(--text-secondary);
+  text-align: center;
+}
+
+.rebalancing-empty.compact {
+  padding: 1rem;
+}
+
+.history-row {
+  border-top: 1px solid var(--glass-border);
+  color: var(--text-secondary);
+  padding: 0.75rem 0;
+}
+
+@media (max-width: 900px) {
+  .rebalancing-header,
+  .rebalance-plan-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .rebalance-summary,
+  .step-values {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 600px) {
+  .rebalance-summary,
+  .step-values {
+    grid-template-columns: 1fr;
+  }
+
+  .rebalance-step {
+    grid-template-columns: 1fr;
+  }
+}

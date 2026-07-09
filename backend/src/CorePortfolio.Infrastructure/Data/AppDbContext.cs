@@ -25,6 +25,10 @@ public class AppDbContext : DbContext
     public DbSet<Budget> Budgets => Set<Budget>();
     public DbSet<CashAccount> CashAccounts => Set<CashAccount>();
     public DbSet<CashLedgerEntry> CashLedgerEntries => Set<CashLedgerEntry>();
+    public DbSet<SavingGoal> SavingGoals => Set<SavingGoal>();
+    public DbSet<DcaPlan> DcaPlans => Set<DcaPlan>();
+    public DbSet<RebalanceExecutionPlan> RebalanceExecutionPlans => Set<RebalanceExecutionPlan>();
+    public DbSet<RebalanceExecutionPlanItem> RebalanceExecutionPlanItems => Set<RebalanceExecutionPlanItem>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -127,6 +131,66 @@ public class AppDbContext : DbContext
             .HasOne(b => b.Category)
             .WithMany()
             .HasForeignKey(b => b.CategoryId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<SavingGoal>()
+            .HasOne(g => g.User)
+            .WithMany()
+            .HasForeignKey(g => g.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<SavingGoal>()
+            .HasOne(g => g.Portfolio)
+            .WithMany()
+            .HasForeignKey(g => g.PortfolioId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<SavingGoal>()
+            .HasOne(g => g.CashAccount)
+            .WithMany()
+            .HasForeignKey(g => g.CashAccountId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        modelBuilder.Entity<SavingGoal>()
+            .HasOne(g => g.CashflowCategory)
+            .WithMany()
+            .HasForeignKey(g => g.CashflowCategoryId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<DcaPlan>()
+            .HasOne(p => p.User)
+            .WithMany()
+            .HasForeignKey(p => p.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<DcaPlan>()
+            .HasOne(p => p.Portfolio)
+            .WithMany()
+            .HasForeignKey(p => p.PortfolioId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<DcaPlan>()
+            .HasOne(p => p.MarketAsset)
+            .WithMany()
+            .HasForeignKey(p => p.MarketAssetId)
+            .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<RebalanceExecutionPlan>()
+            .HasOne(p => p.User)
+            .WithMany()
+            .HasForeignKey(p => p.UserId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<RebalanceExecutionPlanItem>()
+            .HasOne(i => i.Plan)
+            .WithMany(p => p.Items)
+            .HasForeignKey(i => i.PlanId)
+            .OnDelete(DeleteBehavior.Cascade);
+
+        modelBuilder.Entity<RebalanceExecutionPlanItem>()
+            .HasOne(i => i.Category)
+            .WithMany()
+            .HasForeignKey(i => i.CategoryId)
             .OnDelete(DeleteBehavior.Restrict);
 
         modelBuilder.Entity<WatchlistItem>()
