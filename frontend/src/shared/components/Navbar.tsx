@@ -47,6 +47,13 @@ export const Navbar: React.FC = () => {
             {isAuthenticated && (
               <div className="navbar-links">
                 <NavLink 
+                  to="/dashboard" 
+                  className={location.pathname.startsWith('/dashboard') ? "nav-link active" : "nav-link"}
+                  onClick={closeMenu}
+                >
+                  Dashboard
+                </NavLink>
+                <NavLink 
                   to="/portfolios" 
                   className={location.pathname.startsWith('/portfolios') ? "nav-link active" : "nav-link"}
                   onClick={closeMenu}

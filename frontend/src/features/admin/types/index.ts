@@ -17,6 +17,10 @@ export interface MarketAsset {
   name: string;
   currentPrice: number;
   lastUpdated: string;
+  priceSource: 'Manual' | 'DNSE' | 'CoinGecko' | string;
+  externalId: string | null;
+  priceStatus: 'Manual' | 'Fresh' | 'Stale' | 'Error' | string;
+  lastPriceError: string | null;
 }
 
 export interface CreateMarketAssetRequest {
@@ -24,6 +28,8 @@ export interface CreateMarketAssetRequest {
   symbol: string;
   name: string;
   currentPrice: number;
+  priceSource?: string;
+  externalId?: string | null;
 }
 
 export interface DnseInstrument {
@@ -42,3 +48,10 @@ export interface PaginatedResult<T> {
   pageSize: number;
 }
 
+export interface PriceRefreshResult {
+  marketAssetId: string;
+  symbol: string;
+  status: string;
+  price: number | null;
+  error: string | null;
+}

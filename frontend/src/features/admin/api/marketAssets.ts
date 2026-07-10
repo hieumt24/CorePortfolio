@@ -1,5 +1,5 @@
 import { apiClient } from '../../../shared/api/baseClient';
-import type { MarketAsset, CreateMarketAssetRequest, PaginatedResult } from '../types';
+import type { MarketAsset, CreateMarketAssetRequest, PaginatedResult, PriceRefreshResult } from '../types';
 
 export const marketAssetsApi = {
   getMarketAssets: (categoryId?: string, page = 1, pageSize = 10) => {
@@ -25,4 +25,10 @@ export const marketAssetsApi = {
 
   searchDnseInstruments: (query: string) =>
     apiClient<import('../types').DnseInstrument[]>(`/admin/market-assets/dnse-instruments?query=${encodeURIComponent(query)}`, { method: 'GET' }),
+
+  refreshPrices: () =>
+    apiClient<PriceRefreshResult[]>('/admin/market-assets/refresh', { method: 'POST' }),
+
+  refreshPrice: (id: string) =>
+    apiClient<PriceRefreshResult[]>(`/admin/market-assets/${id}/refresh`, { method: 'POST' }),
 };

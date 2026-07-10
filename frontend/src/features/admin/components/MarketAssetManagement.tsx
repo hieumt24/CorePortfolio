@@ -1,29 +1,55 @@
-import { useState, useEffect } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { categoriesApi } from '../api/categories';
 import { marketAssetsApi } from '../api/marketAssets';
 import { useNotification } from '../../../context/NotificationContext';
-import type { AssetCategory, MarketAsset } from '../types';
+import type { AssetCategory, MarketAsset, PriceRefreshResult } from '../types';
 import { MarketAssetModal } from './MarketAssetModal';
 import './MarketAssetManagement.css';
+
+const formatPrice = (value: number) =>
+  new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 8 }).format(value);
+
+const formatDateTime = (value: string) => {
+  if (!value) return 'Never';
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Never';
+  return new Intl.DateTimeFormat('vi-VN', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  }).format(date);
+};
+
+const getSourceTone = (source: string) => {
+  const normalized = source.toLowerCase();
+  if (normalized === 'dnse') return 'dnse';
+  if (normalized === 'coingecko') return 'coingecko';
+  return 'manual';
+};
+
+const getStatusTone = (status: string) => {
+  const normalized = status.toLowerCase();
+  if (normalized === 'fresh') return 'fresh';
+  if (normalized === 'stale') return 'stale';
+  if (normalized === 'error') return 'error';
+  return 'manual';
+};
 
 export function MarketAssetManagement() {
   const { showNotification } = useNotification();
   const [categories, setCategories] = useState<AssetCategory[]>([]);
   const [marketAssets, setMarketAssets] = useState<MarketAsset[]>([]);
   const [selectedCategoryId, setSelectedCategoryId] = useState<string>('');
-  
-  // Pagination State
   const [currentPage, setCurrentPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [totalCount, setTotalCount] = useState(0);
-
-  // Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [assetToEdit, setAssetToEdit] = useState<MarketAsset | null>(null);
-
-  // Update All State
   const [isUpdatingAll, setIsUpdatingAll] = useState(false);
-  const [updateProgress, setUpdateProgress] = useState({ current: 0, total: 0 });
+  const [refreshingAssetId, setRefreshingAssetId] = useState<string | null>(null);
+  const [inlineErrors, setInlineErrors] = useState<Record<string, string>>({});
 
   useEffect(() => {
     loadCategories();
@@ -33,15 +59,16 @@ export function MarketAssetManagement() {
     loadMarketAssets(selectedCategoryId || undefined, currentPage, pageSize);
   }, [selectedCategoryId, currentPage, pageSize]);
 
+  const automaticAssetsCount = useMemo(
+    () => marketAssets.filter(asset => asset.priceSource.toLowerCase() !== 'manual').length,
+    [marketAssets]
+  );
+
   const loadCategories = async () => {
     try {
       const categoriesRes = await categoriesApi.getCategories();
       setCategories(categoriesRes || []);
-      
-      if (categoriesRes && categoriesRes.length > 0 && !selectedCategoryId) {
-        setSelectedCategoryId(''); // Default to All
-      }
-    } catch (err: any) {
+    } catch (err) {
       console.error('Failed to load categories', err);
     }
   };
@@ -49,11 +76,14 @@ export function MarketAssetManagement() {
   const loadMarketAssets = async (categoryId?: string, page = 1, size = 10) => {
     try {
       const response = await marketAssetsApi.getMarketAssets(categoryId, page, size);
-      if (response) {
-        setMarketAssets(response.items || []);
-        setTotalCount(response.totalCount || 0);
-        setCurrentPage(response.page || 1);
-      }
+      setMarketAssets(response.items || []);
+      setTotalCount(response.totalCount || 0);
+      setCurrentPage(response.page || 1);
+      const serverErrors = (response.items || []).reduce<Record<string, string>>((acc, asset) => {
+        if (asset.lastPriceError) acc[asset.id] = asset.lastPriceError;
+        return acc;
+      }, {});
+      setInlineErrors(serverErrors);
     } catch (error) {
       console.error('Failed to load market assets', error);
       showNotification('Failed to load market assets', 'error');
@@ -62,7 +92,7 @@ export function MarketAssetManagement() {
 
   const handleFilterChange = (categoryId: string) => {
     setSelectedCategoryId(categoryId);
-    setCurrentPage(1); // Reset to first page when changing category
+    setCurrentPage(1);
   };
 
   const handleOpenAddModal = () => {
@@ -70,8 +100,8 @@ export function MarketAssetManagement() {
     setIsModalOpen(true);
   };
 
-  const handleEditMarketAsset = (m: MarketAsset) => {
-    setAssetToEdit(m);
+  const handleEditMarketAsset = (asset: MarketAsset) => {
+    setAssetToEdit(asset);
     setIsModalOpen(true);
   };
 
@@ -81,63 +111,53 @@ export function MarketAssetManagement() {
       await marketAssetsApi.deleteMarketAsset(id);
       showNotification('Asset deleted', 'success');
       loadMarketAssets(selectedCategoryId || undefined, currentPage, pageSize);
-    } catch (error: any) {
+    } catch (error) {
       console.error('Failed to delete asset', error);
       showNotification('Cannot delete this Asset because it is currently used in a Portfolio!', 'error');
     }
   };
 
-  const isStockCategory = () => {
-    const cat = categories.find(c => c.id === selectedCategoryId);
-    if (!cat) return false;
-    const name = cat.name.toLowerCase();
-    return name.includes('stock') || name.includes('cổ phiếu') || name.includes('chứng khoán');
+  const applyRefreshResults = (results: PriceRefreshResult[]) => {
+    const nextErrors = { ...inlineErrors };
+    for (const result of results) {
+      if (result.error) nextErrors[result.marketAssetId] = result.error;
+      else delete nextErrors[result.marketAssetId];
+    }
+    setInlineErrors(nextErrors);
+    return results.filter(result => !result.error).length;
+  };
+
+  const handleRefreshAsset = async (asset: MarketAsset) => {
+    if (asset.priceSource.toLowerCase() === 'manual') return;
+    setRefreshingAssetId(asset.id);
+    try {
+      const results = await marketAssetsApi.refreshPrice(asset.id);
+      const successCount = applyRefreshResults(results);
+      showNotification(successCount > 0 ? `Refreshed ${asset.symbol}` : `Cannot refresh ${asset.symbol}`, successCount > 0 ? 'success' : 'error');
+      await loadMarketAssets(selectedCategoryId || undefined, currentPage, pageSize);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Refresh failed';
+      setInlineErrors(prev => ({ ...prev, [asset.id]: message }));
+      showNotification(message, 'error');
+    } finally {
+      setRefreshingAssetId(null);
+    }
   };
 
   const handleUpdateAll = async () => {
-    if (!selectedCategoryId) return;
-    
     setIsUpdatingAll(true);
     try {
-      const response = await marketAssetsApi.getMarketAssets(selectedCategoryId, 1, 1000);
-      const assetsToUpdate = response.items || [];
-      
-      if (assetsToUpdate.length === 0) {
-        showNotification('Không có tài sản nào để cập nhật.', 'info');
-        setIsUpdatingAll(false);
-        return;
-      }
-
-      setUpdateProgress({ current: 0, total: assetsToUpdate.length });
-
-      let successCount = 0;
-      for (let i = 0; i < assetsToUpdate.length; i++) {
-        const asset = assetsToUpdate[i];
-        try {
-          const priceData = await marketAssetsApi.fetchDnsePrice(asset.symbol);
-          if (priceData && priceData.price) {
-            await marketAssetsApi.updateMarketAsset(asset.id, {
-              categoryId: asset.categoryId,
-              symbol: asset.symbol,
-              name: asset.name,
-              currentPrice: priceData.price
-            });
-            successCount++;
-          }
-        } catch (err) {
-          console.error(`Failed to update price for ${asset.symbol}`, err);
-        }
-        setUpdateProgress(prev => ({ ...prev, current: i + 1 }));
-      }
-      
-      showNotification(`Cập nhật thành công ${successCount}/${assetsToUpdate.length} tài sản.`, 'success');
-      loadMarketAssets(selectedCategoryId || undefined, currentPage, pageSize);
+      const results = await marketAssetsApi.refreshPrices();
+      const successCount = applyRefreshResults(results);
+      const failedCount = results.length - successCount;
+      showNotification(`Refresh complete: ${successCount} success, ${failedCount} failed.`, failedCount > 0 ? 'info' : 'success');
+      await loadMarketAssets(selectedCategoryId || undefined, currentPage, pageSize);
     } catch (error) {
-      console.error('Failed to update all assets', error);
-      showNotification('Đã xảy ra lỗi khi cập nhật tất cả.', 'error');
+      const message = error instanceof Error ? error.message : 'Failed to refresh prices.';
+      console.error('Failed to refresh all assets', error);
+      showNotification(message, 'error');
     } finally {
       setIsUpdatingAll(false);
-      setUpdateProgress({ current: 0, total: 0 });
     }
   };
 
@@ -145,89 +165,102 @@ export function MarketAssetManagement() {
 
   return (
     <div className="admin-page-container">
-      <div className="admin-page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+      <div className="market-assets-header">
         <div>
+          <span className="admin-kicker">Market data operations</span>
           <h2>Market Assets</h2>
-          <p className="admin-page-subtitle">View, add, edit, and delete global market assets.</p>
+          <p className="admin-page-subtitle">Manage asset metadata, pricing source, refresh status, and provider errors.</p>
         </div>
-        <div style={{ display: 'flex', gap: '1rem', alignItems: 'center' }}>
-          {isStockCategory() && (
-            <button 
-              className="btn-outline glow-effect" 
-              onClick={handleUpdateAll}
-              disabled={isUpdatingAll}
-              style={{ border: '1px solid rgba(59, 130, 246, 0.5)', color: '#3b82f6', background: 'rgba(59, 130, 246, 0.1)', cursor: isUpdatingAll ? 'wait' : 'pointer' }}
-            >
-              {isUpdatingAll ? `⏳ Updating ${updateProgress.current}/${updateProgress.total}...` : '⚡ Update All Prices'}
-            </button>
-          )}
+        <div className="market-assets-actions">
+          <button className="btn-outline market-refresh-all" onClick={handleUpdateAll} disabled={isUpdatingAll || automaticAssetsCount === 0}>
+            {isUpdatingAll ? 'Refreshing...' : `Refresh auto prices (${automaticAssetsCount})`}
+          </button>
           <button className="btn-primary glow-effect" onClick={handleOpenAddModal}>
-            ✨ Add Market Asset
+            Add Market Asset
           </button>
         </div>
       </div>
 
       <div className="modern-tabs">
-        <button
-          className={`tab-btn ${!selectedCategoryId ? 'active' : ''}`}
-          onClick={() => handleFilterChange('')}
-        >
+        <button className={`tab-btn ${!selectedCategoryId ? 'active' : ''}`} onClick={() => handleFilterChange('')}>
           All Assets
         </button>
-        {categories.map(c => (
+        {categories.map(category => (
           <button
-            key={c.id}
-            className={`tab-btn ${selectedCategoryId === c.id ? 'active' : ''}`}
-            onClick={() => handleFilterChange(c.id)}
+            key={category.id}
+            className={`tab-btn ${selectedCategoryId === category.id ? 'active' : ''}`}
+            onClick={() => handleFilterChange(category.id)}
           >
-            {c.name}
+            {category.name}
           </button>
         ))}
       </div>
 
-      <div className="glass-panel" style={{ padding: 0, overflow: 'hidden' }}>
+      <div className="market-assets-table-panel">
         <div className="table-responsive">
-          <table className="modern-data-table">
+          <table className="modern-data-table market-assets-table">
             <thead>
               <tr>
                 <th>Symbol</th>
-                <th>Asset Name</th>
+                <th>Name</th>
                 <th>Category</th>
-                <th className="text-right">Price</th>
+                <th>Price Source</th>
+                <th className="text-right">Current Price</th>
+                <th>Last Updated</th>
+                <th>Status</th>
                 <th className="text-center">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {marketAssets.map(m => (
-                <tr key={m.id}>
-                  <td className="symbol-cell">
-                    <span className="symbol-text">{m.symbol}</span>
-                  </td>
-                  <td className="name-cell">{m.name}</td>
-                  <td>
-                    <span className="badge category-badge">{m.categoryName}</span>
-                  </td>
-                  <td className="text-right price-cell">
-                    {m.currentPrice.toLocaleString(undefined, { maximumFractionDigits: 8 })}
-                  </td>
-                  <td className="text-center actions-cell">
-                    <div className="row-actions">
-                      <button onClick={() => handleEditMarketAsset(m)} className="icon-btn edit-btn" title="Edit">
-                        ✏️
-                      </button>
-                      <button onClick={() => handleDeleteMarketAsset(m.id)} className="icon-btn delete-btn" title="Delete">
-                        🗑️
-                      </button>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-              
+              {marketAssets.map(asset => {
+                const error = inlineErrors[asset.id];
+                return (
+                  <tr key={asset.id} className={error ? 'has-inline-error' : ''}>
+                    <td className="symbol-cell">
+                      <span className="symbol-text">{asset.symbol}</span>
+                    </td>
+                    <td className="name-cell">
+                      <strong>{asset.name}</strong>
+                      {asset.externalId && <small>{asset.externalId}</small>}
+                    </td>
+                    <td>
+                      <span className="badge category-badge">{asset.categoryName}</span>
+                    </td>
+                    <td>
+                      <span className={`source-badge ${getSourceTone(asset.priceSource)}`}>{asset.priceSource}</span>
+                    </td>
+                    <td className="text-right price-cell">{formatPrice(asset.currentPrice)}</td>
+                    <td className="updated-cell">{formatDateTime(asset.lastUpdated)}</td>
+                    <td>
+                      <span className={`status-badge ${getStatusTone(asset.priceStatus)}`}>{asset.priceStatus}</span>
+                      {error && <div className="inline-price-error">{error}</div>}
+                    </td>
+                    <td className="text-center actions-cell">
+                      <div className="row-actions">
+                        <button
+                          onClick={() => handleRefreshAsset(asset)}
+                          className="icon-btn refresh-btn"
+                          title="Refresh price"
+                          disabled={asset.priceSource.toLowerCase() === 'manual' || refreshingAssetId === asset.id}
+                        >
+                          {refreshingAssetId === asset.id ? '...' : 'Refresh'}
+                        </button>
+                        <button onClick={() => handleEditMarketAsset(asset)} className="icon-btn edit-btn" title="Edit">
+                          Edit
+                        </button>
+                        <button onClick={() => handleDeleteMarketAsset(asset.id)} className="icon-btn delete-btn" title="Delete">
+                          Delete
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                );
+              })}
+
               {marketAssets.length === 0 && (
                 <tr>
-                  <td colSpan={5}>
-                    <div className="empty-state" style={{ padding: '3rem 0', border: 'none' }}>
-                      <div className="empty-icon">📈</div>
+                  <td colSpan={8}>
+                    <div className="empty-state market-empty">
                       <p>No market assets found for this filter.</p>
                     </div>
                   </td>
@@ -237,18 +270,17 @@ export function MarketAssetManagement() {
           </table>
         </div>
 
-        {/* Pagination Controls */}
         {totalCount > 0 && (
           <div className="pagination-bar">
             <div className="pagination-info">
               Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, totalCount)} of {totalCount} entries
             </div>
-            
+
             <div className="pagination-controls">
-              <select 
-                value={pageSize} 
-                onChange={(e) => {
-                  setPageSize(Number(e.target.value));
+              <select
+                value={pageSize}
+                onChange={event => {
+                  setPageSize(Number(event.target.value));
                   setCurrentPage(1);
                 }}
                 className="modern-select pagination-select"
@@ -259,22 +291,12 @@ export function MarketAssetManagement() {
               </select>
 
               <div className="pagination-buttons">
-                <button 
-                  className="page-btn nav-btn" 
-                  disabled={currentPage === 1}
-                  onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-                >
-                  « Prev
+                <button className="page-btn nav-btn" disabled={currentPage === 1} onClick={() => setCurrentPage(page => Math.max(1, page - 1))}>
+                  Prev
                 </button>
-                <span className="page-current">
-                  {currentPage}
-                </span>
-                <button 
-                  className="page-btn nav-btn" 
-                  disabled={currentPage >= totalPages}
-                  onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-                >
-                  Next »
+                <span className="page-current">{currentPage}</span>
+                <button className="page-btn nav-btn" disabled={currentPage >= totalPages} onClick={() => setCurrentPage(page => Math.min(totalPages, page + 1))}>
+                  Next
                 </button>
               </div>
             </div>
@@ -282,7 +304,7 @@ export function MarketAssetManagement() {
         )}
       </div>
 
-      <MarketAssetModal 
+      <MarketAssetModal
         isOpen={isModalOpen}
         onClose={() => setIsModalOpen(false)}
         onSaved={() => loadMarketAssets(selectedCategoryId || undefined, currentPage, pageSize)}

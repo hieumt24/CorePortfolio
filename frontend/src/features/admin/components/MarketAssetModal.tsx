@@ -21,6 +21,8 @@ export function MarketAssetModal({ isOpen, onClose, onSaved, assetToEdit, catego
   const [symbol, setSymbol] = useState('');
   const [name, setName] = useState('');
   const [price, setPrice] = useState('');
+  const [priceSource, setPriceSource] = useState('Manual');
+  const [externalId, setExternalId] = useState('');
   const [isFetchingPrice, setIsFetchingPrice] = useState(false);
 
   const [instrumentSuggestions, setInstrumentSuggestions] = useState<DnseInstrument[]>([]);
@@ -34,11 +36,15 @@ export function MarketAssetModal({ isOpen, onClose, onSaved, assetToEdit, catego
         setSymbol(assetToEdit.symbol);
         setName(assetToEdit.name);
         setPrice(assetToEdit.currentPrice.toString());
+        setPriceSource(assetToEdit.priceSource || 'Manual');
+        setExternalId(assetToEdit.externalId || '');
       } else {
         setCategoryId(defaultCategoryId || '');
         setSymbol('');
         setName('');
         setPrice('');
+        setPriceSource('Manual');
+        setExternalId('');
       }
       setInstrumentSuggestions([]);
       setShowSuggestions(false);
@@ -107,6 +113,8 @@ export function MarketAssetModal({ isOpen, onClose, onSaved, assetToEdit, catego
       
       if (data && typeof data.price === 'number' && data.price > 0) {
         setPrice(data.price.toString());
+        setPriceSource('CoinGecko');
+        setExternalId(coinId);
         showNotification(`Đã lấy giá CoinGecko: $${data.price}`, 'success');
       } else {
         showNotification(`Không tìm thấy giá cho ID "${coinId}". Hãy đảm bảo Full Name khớp với CoinGecko ID.`, 'error');
@@ -132,6 +140,8 @@ export function MarketAssetModal({ isOpen, onClose, onSaved, assetToEdit, catego
       
       if (data && data.price) {
         setPrice(data.price.toString());
+        setPriceSource('DNSE');
+        setExternalId(symbolUpper);
         
         // Auto-fill Asset Full Name using DNSE instrument search
         try {
@@ -169,7 +179,9 @@ export function MarketAssetModal({ isOpen, onClose, onSaved, assetToEdit, catego
         categoryId,
         symbol,
         name,
-        currentPrice: Number(price)
+        currentPrice: Number(price),
+        priceSource,
+        externalId: externalId.trim() || null
       };
 
       if (assetToEdit) {
@@ -290,6 +302,31 @@ export function MarketAssetModal({ isOpen, onClose, onSaved, assetToEdit, catego
                     {isFetchingPrice ? 'Fetching...' : '⚡ Fetch DNSE Price'}
                   </button>
                 )}
+            </div>
+          </div>
+
+          <div className="grid-cols-2" style={{ gap: '1rem' }}>
+            <div className="admin-form-group">
+              <label>Price Source</label>
+              <select
+                value={priceSource}
+                onChange={e => setPriceSource(e.target.value)}
+                className="admin-input admin-select"
+              >
+                <option value="Manual">Manual</option>
+                <option value="DNSE">DNSE</option>
+                <option value="CoinGecko">CoinGecko</option>
+              </select>
+            </div>
+            <div className="admin-form-group">
+              <label>External ID</label>
+              <input
+                type="text"
+                value={externalId}
+                onChange={e => setExternalId(e.target.value)}
+                className="admin-input"
+                placeholder="HPG or bitcoin"
+              />
             </div>
           </div>
           

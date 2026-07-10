@@ -19,6 +19,7 @@ import { Navbar } from '../shared/components/Navbar';
 import { LoginPage } from '../features/auth/components/LoginPage';
 import { RegisterPage } from '../features/auth/components/RegisterPage';
 import { ProtectedRoute } from '../shared/components/ProtectedRoute';
+import { OverviewDashboard } from '../features/dashboard/components/OverviewDashboard';
 
 function App() {
   return (
@@ -26,10 +27,11 @@ function App() {
       <Navbar />
       <div className="main-content">
         <Routes>
-          <Route path="/" element={<Navigate to="/portfolios" replace />} />
+          <Route path="/" element={<Navigate to="/dashboard" replace />} />
           <Route path="/login" element={<LoginPage />} />
           <Route path="/register" element={<RegisterPage />} />
           
+          <Route path="/dashboard" element={<ProtectedRoute><OverviewDashboard /></ProtectedRoute>} />
           <Route path="/portfolios" element={<ProtectedRoute><PortfolioDashboard /></ProtectedRoute>} />
           <Route path="/portfolios/:id" element={<ProtectedRoute><PortfolioDetails /></ProtectedRoute>} />
           <Route path="/transactions" element={<ProtectedRoute><TransactionsDashboard /></ProtectedRoute>} />
