@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Link } from 'react-router-dom';
 import { useCashflowsList, useCashflowSummary } from '../hooks/useCashflows';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { AddCashflowModal } from './AddCashflowModal';
@@ -48,6 +49,12 @@ const getBudgetMonthFromFilter = (filter: string) => {
 
 type TabType = 'overview' | 'daily' | 'monthly';
 
+const getBudgetToneLabel = (budget: BudgetProgress) => {
+  if (budget.isExceeded) return 'Vượt budget';
+  if (budget.rawProgressPercentage >= 80) return 'Gần chạm budget';
+  return 'Trong budget';
+};
+
 export const CashflowDashboard: React.FC = () => {
   const { showNotification } = useNotification();
   const [activeTab, setActiveTab] = useState<TabType>('overview');
@@ -95,6 +102,12 @@ export const CashflowDashboard: React.FC = () => {
     const totalSpent = budgetProgress.reduce((sum, budget) => sum + budget.spentAmount, 0);
     const progress = totalLimit > 0 ? Math.min((totalSpent / totalLimit) * 100, 100) : 0;
     return { totalLimit, totalSpent, progress };
+  }, [budgetProgress]);
+
+  const budgetRiskCounts = useMemo(() => {
+    const exceeded = budgetProgress.filter(budget => budget.isExceeded).length;
+    const warning = budgetProgress.filter(budget => !budget.isExceeded && budget.rawProgressPercentage >= 80).length;
+    return { exceeded, warning };
   }, [budgetProgress]);
 
   const exceededBudgets = useMemo(
@@ -274,9 +287,12 @@ export const CashflowDashboard: React.FC = () => {
                 <h2>Ngân sách tháng {budgetMonth.month}/{budgetMonth.year}</h2>
                 <p>Theo dõi mục tiêu chi tiêu theo category ngay trong Cashflow.</p>
               </div>
-              <div className="budget-total-meter">
-                <span>{isBudgetLoading ? '...' : `${budgetSummary.progress.toFixed(1)}%`}</span>
-                <small>{formatCurrency(budgetSummary.totalSpent)} / {formatCurrency(budgetSummary.totalLimit)}</small>
+              <div className="budget-panel-actions">
+                <div className="budget-total-meter">
+                  <span>{isBudgetLoading ? '...' : `${budgetSummary.progress.toFixed(1)}%`}</span>
+                  <small>{formatCurrency(budgetSummary.totalSpent)} / {formatCurrency(budgetSummary.totalLimit)}</small>
+                </div>
+                <Link className="btn btn-outline btn-sm" to="/budgets">Mở Budgets</Link>
               </div>
             </div>
 
@@ -290,6 +306,12 @@ export const CashflowDashboard: React.FC = () => {
             {budgetProgress.length === 0 ? (
               <div className="budget-empty-inline">Chưa có budget nào cho các category chi tiêu.</div>
             ) : (
+              <>
+              <div className="budget-health-row">
+                <span>{budgetProgress.length} budget đang theo dõi</span>
+                <span>{budgetRiskCounts.warning} cần chú ý</span>
+                <span>{budgetRiskCounts.exceeded} vượt mức</span>
+              </div>
               <div className="cashflow-budget-grid">
                 {budgetProgress.map(budget => (
                   <div key={budget.id} className={`cashflow-budget-card ${budget.alertLevel.toLowerCase()}`}>
@@ -313,6 +335,7 @@ export const CashflowDashboard: React.FC = () => {
                   </div>
                 ))}
               </div>
+              </>
             )}
           </div>
 
@@ -382,8 +405,10 @@ export const CashflowDashboard: React.FC = () => {
                         <p>Không tìm thấy giao dịch nào phù hợp.</p>
                       </div>
                     )}
-                    {filteredCashflows.map((record) => (
-                      <div key={record.id} className="ledger-item">
+                    {filteredCashflows.map((record) => {
+                      const recordBudget = budgetByCategoryName.get(record.categoryName);
+                      return (
+                      <div key={record.id} className={`ledger-item ${recordBudget?.isExceeded ? 'budget-exceeded' : recordBudget && recordBudget.rawProgressPercentage >= 80 ? 'budget-warning' : ''}`}>
                         <div className="ledger-date">
                           <div className="date-main">{new Date(record.date).toLocaleDateString('vi-VN', { day: '2-digit', month: 'short' })}</div>
                           <div className="time-sub">{new Date(record.date).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</div>
@@ -397,6 +422,11 @@ export const CashflowDashboard: React.FC = () => {
                           <div className="ledger-title-row">
                             <h4>{record.categoryName}</h4>
                             <span className="portfolio-badge">{record.portfolioName}</span>
+                            {recordBudget && (
+                              <span className={`ledger-budget-chip ${recordBudget.isExceeded ? 'exceeded' : recordBudget.rawProgressPercentage >= 80 ? 'warning' : 'healthy'}`}>
+                                {getBudgetToneLabel(recordBudget)} · {recordBudget.rawProgressPercentage.toFixed(0)}%
+                              </span>
+                            )}
                           </div>
                           {record.description && <p className="ledger-desc">{record.description}</p>}
                         </div>
@@ -410,7 +440,8 @@ export const CashflowDashboard: React.FC = () => {
                           <button className="icon-action-btn delete" onClick={() => handleDelete(record.id)} title="Xóa">🗑️</button>
                         </div>
                       </div>
-                    ))}
+                      );
+                    })}
                   </div>
                 )}
               </div>

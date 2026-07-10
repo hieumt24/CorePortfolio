@@ -140,6 +140,13 @@
   text-align: right;
 }
 
+.budget-panel-actions {
+  align-items: flex-end;
+  display: flex;
+  flex-direction: column;
+  gap: 0.65rem;
+}
+
 .budget-total-meter span {
   color: #fff;
   display: block;
@@ -157,6 +164,23 @@
   gap: 0.75rem;
   margin-bottom: 1rem;
   padding: 0.75rem 0.9rem;
+}
+
+.budget-health-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-bottom: 0.85rem;
+}
+
+.budget-health-row span {
+  background: rgba(255, 255, 255, 0.045);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 999px;
+  color: #cbd5e1;
+  font-size: 0.82rem;
+  font-weight: 650;
+  padding: 0.35rem 0.65rem;
 }
 
 .cashflow-budget-grid {
@@ -474,6 +498,14 @@
   background: rgba(255, 255, 255, 0.02);
 }
 
+.ledger-item.budget-warning {
+  border-left: 3px solid #f59e0b;
+}
+
+.ledger-item.budget-exceeded {
+  border-left: 3px solid #ef4444;
+}
+
 .ledger-item:last-child {
   border-bottom: none;
 }
@@ -536,6 +568,29 @@
   border-radius: 10px;
   color: #cbd5e1;
   white-space: nowrap;
+}
+
+.ledger-budget-chip {
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  padding: 0.14rem 0.5rem;
+  white-space: nowrap;
+}
+
+.ledger-budget-chip.healthy {
+  background: rgba(16, 185, 129, 0.12);
+  color: #34d399;
+}
+
+.ledger-budget-chip.warning {
+  background: rgba(245, 158, 11, 0.14);
+  color: #fbbf24;
+}
+
+.ledger-budget-chip.exceeded {
+  background: rgba(239, 68, 68, 0.14);
+  color: #fca5a5;
 }
 
 .ledger-desc {
@@ -727,6 +782,10 @@
   .budget-total-meter {
     min-width: 0;
     text-align: left;
+  }
+
+  .budget-panel-actions {
+    align-items: stretch;
   }
 
   .advanced-filters-bar {

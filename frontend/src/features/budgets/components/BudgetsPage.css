@@ -1,43 +1,114 @@
 .budgets-page {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1rem;
 }
 
-.budgets-hero {
-  align-items: flex-end;
-  background:
-    linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(17, 24, 39, 0.72)),
-    linear-gradient(90deg, rgba(245, 158, 11, 0.16), rgba(16, 185, 129, 0.08));
+.budgets-toolbar,
+.budget-alert-strip,
+.budget-summary-card,
+.budget-list-panel,
+.budget-detail-panel,
+.budget-modal {
+  background: rgba(15, 23, 42, 0.72);
   border: 1px solid var(--glass-border);
   border-radius: 8px;
   box-shadow: var(--glass-shadow);
+}
+
+.budgets-toolbar {
+  align-items: center;
   display: flex;
   gap: 1rem;
   justify-content: space-between;
-  padding: 1.5rem;
+  padding: 1rem;
+}
+
+.budgets-toolbar h1 {
+  font-size: 1.7rem;
+  margin: 0;
 }
 
 .budgets-kicker {
-  color: var(--warning-color);
+  color: var(--accent-color);
   display: block;
-  font-size: 0.8rem;
+  font-size: 0.78rem;
   font-weight: 700;
   letter-spacing: 0.08em;
-  margin-bottom: 0.4rem;
+  margin-bottom: 0.25rem;
   text-transform: uppercase;
 }
 
-.budgets-hero p,
+.budgets-toolbar-actions {
+  align-items: center;
+  display: flex;
+  gap: 0.65rem;
+}
+
+.budgets-toolbar-actions input,
+.budgets-toolbar-actions select,
+.budget-modal select,
+.budget-modal input {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  color: var(--text-primary);
+  min-height: 40px;
+  padding: 0.6rem 0.75rem;
+}
+
+.budget-alert-strip {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+  overflow: hidden;
+  padding: 0.85rem 1rem;
+  position: relative;
+}
+
+.budget-alert-strip::before {
+  content: '';
+  inset: 0 auto 0 0;
+  position: absolute;
+  width: 4px;
+}
+
+.budget-alert-strip.healthy::before {
+  background: var(--success-color);
+}
+
+.budget-alert-strip.warning::before {
+  background: var(--warning-color);
+}
+
+.budget-alert-strip.danger::before {
+  background: var(--danger-color);
+}
+
+.budget-alert-strip strong,
+.budget-alert-strip span {
+  display: block;
+}
+
+.budget-alert-strip span,
 .budget-summary-card span,
 .budget-summary-card small,
-.budget-overview-copy p,
-.budget-card-header span,
-.budget-values span,
-.meter-label,
+.budget-section-header span,
+.budget-row-values,
+.budget-row-side small,
+.budget-detail-header p,
+.budget-detail-meter span,
+.cashflow-link-header span,
+.linked-cashflow-main small,
 .budget-modal-header p,
 .budget-empty {
   color: var(--text-secondary);
+}
+
+.budget-alert-percent {
+  color: var(--text-primary) !important;
+  font-size: 1.35rem;
+  font-weight: 800;
 }
 
 .budget-summary-grid {
@@ -46,180 +117,287 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
-.budget-month-bar {
-  align-items: center;
-  border-radius: 8px;
-  display: flex;
-  gap: 1rem;
-  justify-content: space-between;
-  padding: 1rem;
-}
-
-.budget-month-bar span {
-  color: var(--text-secondary);
-  display: block;
-  font-size: 0.82rem;
-  margin-bottom: 0.2rem;
-}
-
-.budget-month-bar strong {
-  font-size: 1.1rem;
-}
-
-.budget-month-bar input {
-  max-width: 220px;
-}
-
-.budget-summary-card,
-.budget-overview,
-.budget-card,
-.budget-modal,
-.budget-empty {
-  border-radius: 8px;
-}
-
 .budget-summary-card {
   padding: 1rem;
 }
 
 .budget-summary-card strong {
   display: block;
-  font-size: 1.5rem;
-  margin: 0.35rem 0 0.1rem;
+  font-size: 1.45rem;
+  margin: 0.35rem 0 0.15rem;
 }
 
-.budget-overview {
-  align-items: center;
-  display: grid;
-  gap: 1.5rem;
-  grid-template-columns: 1fr 1.4fr;
-  padding: 1.25rem;
-}
-
-.budget-overview-copy h2 {
-  font-size: 1.2rem;
-  margin-bottom: 0.25rem;
-}
-
-.budget-overview-meter {
-  min-width: 0;
-}
-
-.meter-label {
-  display: flex;
-  font-size: 0.85rem;
-  justify-content: space-between;
-  margin-bottom: 0.45rem;
-}
-
-.budget-track {
-  background: rgba(255, 255, 255, 0.08);
-  border-radius: 8px;
-  height: 10px;
-  overflow: hidden;
-}
-
-.budget-fill {
-  border-radius: inherit;
-  height: 100%;
-  transition: width 0.25s ease;
-}
-
-.budget-fill.healthy {
-  background: linear-gradient(90deg, var(--success-color), var(--accent-color));
-}
-
-.budget-fill.warning {
-  background: linear-gradient(90deg, var(--warning-color), #facc15);
-}
-
-.budget-fill.danger {
-  background: linear-gradient(90deg, var(--danger-color), #fb7185);
-}
-
-.budget-card-grid {
+.budget-workbench {
+  align-items: start;
   display: grid;
   gap: 1rem;
-  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+  grid-template-columns: minmax(0, 1.1fr) minmax(380px, 0.9fr);
 }
 
-.budget-card {
-  overflow: hidden;
-  padding: 1.25rem;
-  position: relative;
+.budget-list-panel,
+.budget-detail-panel {
+  padding: 1rem;
 }
 
-.budget-card::before {
-  content: '';
-  display: block;
-  height: 3px;
-  inset: 0 0 auto 0;
-  position: absolute;
+.budget-detail-panel {
+  position: sticky;
+  top: 1rem;
 }
 
-.budget-card.healthy::before {
-  background: linear-gradient(90deg, var(--success-color), var(--accent-color));
+.budget-section-header,
+.budget-detail-header,
+.cashflow-link-header,
+.budget-modal-header {
+  align-items: flex-start;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
 }
 
-.budget-card.warning::before {
-  background: linear-gradient(90deg, var(--warning-color), #facc15);
+.budget-section-header h2,
+.budget-detail-header h2,
+.cashflow-link-header h3,
+.budget-modal-header h2 {
+  font-size: 1.12rem;
+  margin: 0;
 }
 
-.budget-card.danger::before {
-  background: linear-gradient(90deg, var(--danger-color), #fb7185);
+.budget-card-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+  margin-top: 1rem;
 }
 
-.budget-card-header {
+.budget-row {
   align-items: center;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  color: var(--text-primary);
+  cursor: pointer;
   display: grid;
-  gap: 0.85rem;
-  grid-template-columns: auto 1fr auto;
+  gap: 0.8rem;
+  grid-template-columns: auto minmax(0, 1fr) minmax(120px, auto);
+  padding: 0.85rem;
+  text-align: left;
+  transition: background 0.15s ease, border-color 0.15s ease, transform 0.15s ease;
+  width: 100%;
 }
 
-.budget-category-mark {
+.budget-row:hover,
+.budget-row.selected {
+  background: rgba(255, 255, 255, 0.075);
+  transform: translateY(-1px);
+}
+
+.budget-row.selected {
+  border-color: rgba(96, 165, 250, 0.65);
+}
+
+.budget-row.danger {
+  border-color: rgba(239, 68, 68, 0.35);
+}
+
+.budget-row.warning {
+  border-color: rgba(245, 158, 11, 0.35);
+}
+
+.budget-row-mark,
+.linked-cashflow-icon {
   align-items: center;
   background: rgba(255, 255, 255, 0.04);
   border: 1px solid var(--glass-border);
   border-radius: 8px;
   display: flex;
-  font-size: 1.35rem;
-  height: 48px;
+  flex: 0 0 auto;
+  height: 42px;
   justify-content: center;
-  width: 48px;
+  width: 42px;
 }
 
-.budget-card h2 {
-  font-size: 1.1rem;
-  margin: 0;
+.budget-row-main {
+  min-width: 0;
 }
 
-.budget-values {
+.budget-row-title,
+.budget-row-values {
+  align-items: center;
+  display: flex;
+  justify-content: space-between;
+}
+
+.budget-row-title strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.budget-row-title em {
+  color: var(--text-secondary);
+  font-size: 0.78rem;
+  font-style: normal;
+}
+
+.budget-row-meter,
+.budget-detail-track,
+.budget-mini-track {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  display: block;
+  height: 8px;
+  margin: 0.55rem 0 0.4rem;
+  overflow: hidden;
+}
+
+.budget-row-meter span,
+.budget-detail-track span,
+.budget-mini-track div {
+  background: linear-gradient(90deg, var(--success-color), var(--accent-color));
+  border-radius: inherit;
+  display: block;
+  height: 100%;
+}
+
+.budget-row.warning .budget-row-meter span,
+.budget-status-pill.warning,
+.budget-detail-alert.warning {
+  background: rgba(245, 158, 11, 0.16);
+  color: var(--warning-color);
+}
+
+.budget-row.warning .budget-row-meter span {
+  background: linear-gradient(90deg, var(--warning-color), #facc15);
+}
+
+.budget-row.danger .budget-row-meter span,
+.budget-status-pill.danger,
+.budget-detail-alert.danger {
+  background: rgba(239, 68, 68, 0.16);
+  color: var(--danger-color);
+}
+
+.budget-row.danger .budget-row-meter span {
+  background: linear-gradient(90deg, var(--danger-color), #fb7185);
+}
+
+.budget-row-side {
+  text-align: right;
+}
+
+.budget-row-side strong {
+  display: block;
+  font-size: 1.15rem;
+}
+
+.budget-status-pill {
+  background: rgba(16, 185, 129, 0.14);
+  border-radius: 999px;
+  color: var(--success-color);
+  display: inline-flex;
+  font-size: 0.75rem;
+  font-weight: 700;
+  margin-bottom: 0.45rem;
+  padding: 0.25rem 0.55rem;
+}
+
+.budget-detail-meter {
   display: grid;
   gap: 0.75rem;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   margin: 1rem 0;
 }
 
-.budget-values div {
-  background: rgba(255, 255, 255, 0.03);
+.budget-detail-meter div {
+  background: rgba(255, 255, 255, 0.035);
   border: 1px solid var(--glass-border);
   border-radius: 8px;
   padding: 0.75rem;
 }
 
-.budget-values span {
+.budget-detail-meter span,
+.budget-detail-meter strong {
   display: block;
-  font-size: 0.78rem;
-  margin-bottom: 0.25rem;
+}
+
+.budget-detail-meter strong {
+  font-size: 1rem;
+  margin-top: 0.2rem;
+}
+
+.budget-detail-alert {
+  background: rgba(16, 185, 129, 0.12);
+  border-radius: 8px;
+  color: var(--success-color);
+  font-weight: 700;
+  margin: 0.85rem 0 1rem;
+  padding: 0.75rem;
+}
+
+.cashflow-link-header {
+  border-top: 1px solid var(--glass-border);
+  margin-top: 1rem;
+  padding-top: 1rem;
+}
+
+.linked-cashflow-list {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  margin-top: 0.9rem;
+  max-height: 520px;
+  overflow: auto;
+  padding-right: 0.25rem;
+}
+
+.linked-cashflow-item {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  display: grid;
+  gap: 0.7rem;
+  grid-template-columns: 58px auto minmax(0, 1fr) auto;
+  padding: 0.7rem;
+}
+
+.linked-cashflow-date {
+  color: var(--text-secondary);
+  font-size: 0.8rem;
+}
+
+.linked-cashflow-main {
+  min-width: 0;
+}
+
+.linked-cashflow-main strong,
+.linked-cashflow-main small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.linked-cashflow-amount {
+  white-space: nowrap;
 }
 
 .budget-empty {
   align-items: center;
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px dashed var(--glass-border);
+  border-radius: 8px;
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
+  margin-top: 1rem;
   padding: 2rem;
   text-align: center;
+}
+
+.budget-empty.compact {
+  margin-top: 0.9rem;
+  padding: 1rem;
 }
 
 .budget-modal-backdrop {
@@ -236,21 +414,24 @@
 
 .budget-modal {
   max-width: 520px;
-  padding: 1.25rem;
+  padding: 1.2rem;
   width: 100%;
 }
 
-.budget-modal-header {
-  align-items: flex-start;
-  display: flex;
-  gap: 1rem;
-  justify-content: space-between;
-  margin-bottom: 1rem;
+.budget-modal .form-group {
+  margin-top: 1rem;
 }
 
-.budget-modal-header h2 {
-  font-size: 1.25rem;
-  margin-bottom: 0.25rem;
+.budget-modal .form-group label {
+  color: var(--text-secondary);
+  display: block;
+  font-size: 0.85rem;
+  margin-bottom: 0.4rem;
+}
+
+.budget-modal select,
+.budget-modal input {
+  width: 100%;
 }
 
 .modal-close-btn {
@@ -270,31 +451,55 @@
   margin-top: 1rem;
 }
 
-@media (max-width: 900px) {
-  .budgets-hero,
-  .budget-overview,
-  .budget-month-bar {
-    align-items: stretch;
-    display: flex;
-    flex-direction: column;
+@media (max-width: 1050px) {
+  .budget-workbench {
+    grid-template-columns: 1fr;
   }
 
-  .budget-summary-grid {
-    grid-template-columns: 1fr;
+  .budget-detail-panel {
+    position: static;
   }
 }
 
-@media (max-width: 600px) {
-  .budget-card-header,
-  .budget-values,
+@media (max-width: 760px) {
+  .budgets-toolbar,
+  .budgets-toolbar-actions,
+  .budget-alert-strip,
+  .budget-section-header,
+  .budget-detail-header,
+  .cashflow-link-header,
   .budget-modal-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .budgets-toolbar {
+    display: flex;
+  }
+
+  .budgets-toolbar-actions {
+    display: grid;
+    grid-template-columns: 1fr;
+    width: 100%;
+  }
+
+  .budget-summary-grid,
+  .budget-detail-meter {
     grid-template-columns: 1fr;
   }
 
-  .budget-card-header,
-  .budget-modal-actions {
-    align-items: stretch;
-    display: flex;
-    flex-direction: column;
+  .budget-row,
+  .linked-cashflow-item {
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .budget-row-side,
+  .linked-cashflow-amount {
+    grid-column: 2;
+    text-align: left;
+  }
+
+  .linked-cashflow-date {
+    grid-column: 1 / -1;
   }
 }
