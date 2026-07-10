@@ -4,6 +4,16 @@
   gap: 1.5rem;
 }
 
+.saving-goals-hero {
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  padding: 1.5rem;
+  background:
+    linear-gradient(135deg, rgba(15, 23, 42, 0.88), rgba(17, 24, 39, 0.68)),
+    linear-gradient(90deg, rgba(16, 185, 129, 0.18), rgba(6, 182, 212, 0.08));
+  box-shadow: var(--glass-shadow);
+}
+
 .saving-goals-header {
   display: flex;
   align-items: flex-end;
@@ -11,13 +21,84 @@
   gap: 1rem;
 }
 
+.page-kicker {
+  color: var(--accent-color);
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  margin-bottom: 0.4rem;
+  text-transform: uppercase;
+}
+
 .saving-goals-header p {
   color: var(--text-secondary);
   max-width: 720px;
 }
 
+.hero-balance-card {
+  min-width: 260px;
+  border: 1px solid rgba(16, 185, 129, 0.28);
+  border-radius: 8px;
+  padding: 1rem;
+  background: rgba(16, 185, 129, 0.08);
+}
+
+.hero-balance-card span,
+.saving-summary-card span,
+.saving-summary-card small,
+.form-section-heading p {
+  color: var(--text-secondary);
+}
+
+.hero-balance-card span {
+  display: block;
+  font-size: 0.82rem;
+  margin-bottom: 0.25rem;
+}
+
+.hero-balance-card strong {
+  color: var(--success-color);
+  display: block;
+  font-size: 1.3rem;
+}
+
+.saving-summary-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.saving-summary-card {
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.saving-summary-card strong {
+  display: block;
+  font-size: 1.5rem;
+  margin: 0.35rem 0 0.1rem;
+}
+
+.saving-summary-card small {
+  display: block;
+}
+
 .saving-goal-form {
+  border-radius: 8px;
   padding: 1.25rem;
+}
+
+.form-section-heading {
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.form-section-heading h2 {
+  font-size: 1.2rem;
+  margin-bottom: 0.25rem;
 }
 
 .form-grid {
@@ -38,7 +119,18 @@
 
 .saving-goal-card {
   padding: 1.25rem;
-  border-radius: 14px;
+  border-radius: 8px;
+  position: relative;
+  overflow: hidden;
+}
+
+.saving-goal-card::before {
+  content: '';
+  display: block;
+  height: 3px;
+  inset: 0 0 auto 0;
+  position: absolute;
+  background: linear-gradient(90deg, var(--success-color), var(--accent-color), var(--warning-color));
 }
 
 .saving-goal-card.completed {
@@ -57,7 +149,7 @@
 .goal-category,
 .goal-status {
   border: 1px solid var(--glass-border);
-  border-radius: 999px;
+  border-radius: 8px;
   color: var(--text-secondary);
   font-size: 0.8rem;
   padding: 0.25rem 0.65rem;
@@ -87,7 +179,7 @@
 .goal-progress-track {
   height: 10px;
   overflow: hidden;
-  border-radius: 999px;
+  border-radius: 8px;
   background: rgba(255, 255, 255, 0.08);
   margin-top: 0.5rem;
 }
@@ -107,7 +199,7 @@
 
 .goal-metrics div {
   border: 1px solid var(--glass-border);
-  border-radius: 10px;
+  border-radius: 8px;
   padding: 0.75rem;
   background: rgba(255, 255, 255, 0.03);
 }
@@ -124,6 +216,11 @@
 }
 
 .saving-goals-empty {
+  align-items: center;
+  border-radius: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
   padding: 2rem;
   color: var(--text-secondary);
   text-align: center;
@@ -138,12 +235,25 @@
   .form-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
+
+  .saving-summary-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 @media (max-width: 700px) {
+  .saving-goals-header {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
   .form-grid,
   .goal-metrics {
     grid-template-columns: 1fr;
+  }
+
+  .hero-balance-card {
+    min-width: 0;
   }
 
   .form-group-wide {

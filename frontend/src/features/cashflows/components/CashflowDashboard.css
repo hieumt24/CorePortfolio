@@ -94,6 +94,165 @@
   gap: 1.5rem;
 }
 
+.cashflow-budget-panel {
+  border-radius: 12px;
+  padding: 1.25rem;
+}
+
+.cashflow-budget-panel.has-alert {
+  border-color: rgba(239, 68, 68, 0.28);
+}
+
+.cashflow-budget-header {
+  align-items: flex-start;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.budget-kicker {
+  color: #f59e0b;
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  margin-bottom: 0.3rem;
+  text-transform: uppercase;
+}
+
+.cashflow-budget-header h2 {
+  font-size: 1.25rem;
+  margin: 0 0 0.25rem;
+}
+
+.cashflow-budget-header p,
+.budget-empty-inline,
+.budget-total-meter small,
+.cashflow-budget-card small,
+.budget-card-values,
+.category-budget-note {
+  color: #94a3b8;
+}
+
+.budget-total-meter {
+  min-width: 210px;
+  text-align: right;
+}
+
+.budget-total-meter span {
+  color: #fff;
+  display: block;
+  font-size: 1.6rem;
+  font-weight: 800;
+}
+
+.budget-alert-banner {
+  align-items: center;
+  background: rgba(239, 68, 68, 0.11);
+  border: 1px solid rgba(239, 68, 68, 0.28);
+  border-radius: 10px;
+  color: #fecaca;
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+  padding: 0.75rem 0.9rem;
+}
+
+.cashflow-budget-grid {
+  display: grid;
+  gap: 0.85rem;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+}
+
+.cashflow-budget-card {
+  background: rgba(255, 255, 255, 0.035);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 0.9rem;
+}
+
+.cashflow-budget-card.warning {
+  border-color: rgba(245, 158, 11, 0.35);
+}
+
+.cashflow-budget-card.exceeded {
+  border-color: rgba(239, 68, 68, 0.38);
+}
+
+.budget-card-title {
+  align-items: center;
+  display: flex;
+  gap: 0.7rem;
+}
+
+.budget-card-title > span {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 8px;
+  display: flex;
+  font-size: 1.25rem;
+  height: 38px;
+  justify-content: center;
+  width: 38px;
+}
+
+.budget-card-title strong,
+.budget-card-title small {
+  display: block;
+}
+
+.budget-card-values {
+  display: flex;
+  font-size: 0.82rem;
+  justify-content: space-between;
+  margin: 0.75rem 0 0.4rem;
+}
+
+.budget-mini-track {
+  background: rgba(255, 255, 255, 0.07);
+  border-radius: 999px;
+  height: 7px;
+  overflow: hidden;
+}
+
+.budget-mini-track div {
+  background: linear-gradient(90deg, #10b981, #06b6d4);
+  border-radius: inherit;
+  height: 100%;
+}
+
+.cashflow-budget-card.warning .budget-mini-track div {
+  background: linear-gradient(90deg, #f59e0b, #facc15);
+}
+
+.cashflow-budget-card.exceeded .budget-mini-track div {
+  background: linear-gradient(90deg, #ef4444, #fb7185);
+}
+
+.budget-over-text {
+  color: #fca5a5 !important;
+  display: block;
+  margin-top: 0.45rem;
+}
+
+.budget-empty-inline {
+  border: 1px dashed rgba(255, 255, 255, 0.12);
+  border-radius: 10px;
+  padding: 1rem;
+  text-align: center;
+}
+
+.category-budget-note {
+  font-size: 0.78rem;
+  margin-top: -0.15rem;
+  text-align: right;
+}
+
+.category-budget-note.exceeded {
+  color: #fca5a5;
+}
+
 .card {
   background: rgba(15, 23, 42, 0.6);
   border: 1px solid rgba(255, 255, 255, 0.08);
@@ -559,6 +718,17 @@
 }
 
 @media (max-width: 768px) {
+  .cashflow-budget-header,
+  .budget-alert-banner {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .budget-total-meter {
+    min-width: 0;
+    text-align: left;
+  }
+
   .advanced-filters-bar {
     flex-direction: column;
     align-items: stretch;

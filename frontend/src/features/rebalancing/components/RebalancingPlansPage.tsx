@@ -52,13 +52,22 @@ export const RebalancingPlansPage: React.FC = () => {
   };
 
   const latestPlan = plans[0];
+  const latestPlanStats = latestPlan
+    ? {
+        buyCount: latestPlan.items.filter(item => item.action === RebalanceExecutionAction.Buy).length,
+        sellCount: latestPlan.items.filter(item => item.action === RebalanceExecutionAction.Sell).length,
+        executableTotal: latestPlan.items.reduce((sum, item) => sum + item.executableAmount, 0),
+        limitedCount: latestPlan.items.filter(item => item.isCashLimited).length,
+      }
+    : null;
 
   return (
     <div className="rebalancing-page container">
-      <div className="rebalancing-header">
+      <div className="rebalancing-header rebalancing-hero">
         <div>
-          <h1>Rebalancing Execution Plans</h1>
-          <p>Bien goi y tai can bang thanh cac buoc mua/ban co tinh den cash balance.</p>
+          <span className="page-kicker">Kế hoạch hành động</span>
+          <h1>Rebalancing</h1>
+          <p>Biến gợi ý tái cân bằng thành các bước mua/bán cụ thể, có tính đến lượng tiền mặt khả dụng.</p>
         </div>
         <div className="rebalancing-controls">
           <select value={currency} onChange={e => setCurrency(e.target.value)}>
@@ -66,51 +75,58 @@ export const RebalancingPlansPage: React.FC = () => {
             <option value="USD">USD</option>
           </select>
           <button className="btn btn-primary" onClick={simulatePlan} disabled={simulating}>
-            {simulating ? 'Dang simulate...' : 'Simulate plan'}
+            {simulating ? 'Đang mô phỏng...' : 'Mô phỏng plan'}
           </button>
         </div>
       </div>
 
       {loading ? (
-        <div className="glass-panel rebalancing-empty">Dang tai du lieu...</div>
+        <div className="glass-panel rebalancing-empty">Đang tải dữ liệu...</div>
       ) : !latestPlan ? (
-        <div className="glass-panel rebalancing-empty">Chua co execution plan. Hay simulate plan dau tien.</div>
+        <div className="glass-panel rebalancing-empty">
+          <strong>Chưa có execution plan.</strong>
+          <span>Hãy mô phỏng plan đầu tiên để xem danh mục nên mua/bán theo thứ tự nào.</span>
+        </div>
       ) : (
         <>
           <section className="rebalance-summary glass-panel">
             <div>
-              <span>Plan gan nhat</span>
+              <span>Plan gần nhất</span>
               <strong>{new Date(latestPlan.createdAt).toLocaleString()}</strong>
             </div>
             <div>
-              <span>Trang thai</span>
-              <strong>{latestPlan.status === RebalanceExecutionPlanStatus.Applied ? 'Applied' : 'Simulated'}</strong>
+              <span>Trạng thái</span>
+              <strong>{latestPlan.status === RebalanceExecutionPlanStatus.Applied ? 'Đã áp dụng' : 'Mô phỏng'}</strong>
             </div>
             <div>
-              <span>Cash kha dung</span>
+              <span>Cash khả dụng</span>
               <strong>{formatCurrency(latestPlan.availableCash, latestPlan.currency)}</strong>
             </div>
             <div>
-              <span>So buoc</span>
-              <strong>{latestPlan.items.length}</strong>
+              <span>Có thể thực hiện</span>
+              <strong>{formatCurrency(latestPlanStats?.executableTotal || 0, latestPlan.currency)}</strong>
             </div>
           </section>
 
           <section className="rebalance-plan-card glass-panel">
             <div className="rebalance-plan-header">
               <div>
-                <h2>Execution steps</h2>
+                <h2>Các bước thực hiện</h2>
+                <p>
+                  {latestPlanStats?.sellCount || 0} bước bán, {latestPlanStats?.buyCount || 0} bước mua
+                  {latestPlanStats?.limitedCount ? `, ${latestPlanStats.limitedCount} bước bị giới hạn bởi cash` : ''}.
+                </p>
                 {latestPlan.notes && <p>{latestPlan.notes}</p>}
               </div>
               {latestPlan.status === RebalanceExecutionPlanStatus.Simulated && (
                 <button className="btn btn-outline" onClick={() => applyPlan(latestPlan.id)}>
-                  Mark as applied
+                  Đánh dấu đã áp dụng
                 </button>
               )}
             </div>
 
             {latestPlan.items.length === 0 ? (
-              <div className="rebalancing-empty compact">Danh muc dang can bang theo muc tieu hien tai.</div>
+              <div className="rebalancing-empty compact">Danh mục đang cân bằng theo mục tiêu hiện tại.</div>
             ) : (
               <div className="rebalance-steps">
                 {latestPlan.items.map(item => (
@@ -125,23 +141,23 @@ export const RebalancingPlansPage: React.FC = () => {
                       </div>
                       <div className="step-values">
                         <div>
-                          <span>Hien tai</span>
+                          <span>Hiện tại</span>
                           <strong>{formatCurrency(item.currentValue, latestPlan.currency)}</strong>
                         </div>
                         <div>
-                          <span>Muc tieu</span>
+                          <span>Mục tiêu</span>
                           <strong>{formatCurrency(item.targetValue, latestPlan.currency)}</strong>
                         </div>
                         <div>
-                          <span>De xuat</span>
+                          <span>Đề xuất</span>
                           <strong>{formatCurrency(item.suggestedAmount, latestPlan.currency)}</strong>
                         </div>
                         <div>
-                          <span>Co the thuc hien</span>
+                          <span>Có thể thực hiện</span>
                           <strong>{formatCurrency(item.executableAmount, latestPlan.currency)}</strong>
                         </div>
                       </div>
-                      {item.isCashLimited && <p className="cash-limited">Bi gioi han boi cash kha dung.</p>}
+                      {item.isCashLimited && <p className="cash-limited">Bị giới hạn bởi cash khả dụng.</p>}
                     </div>
                   </article>
                 ))}
@@ -151,13 +167,13 @@ export const RebalancingPlansPage: React.FC = () => {
 
           {plans.length > 1 && (
             <section className="rebalance-history glass-panel">
-              <h2>Plan history</h2>
+              <h2>Lịch sử plan</h2>
               {plans.slice(1).map(plan => (
                 <div key={plan.id} className="history-row">
                   <span>{new Date(plan.createdAt).toLocaleString()}</span>
                   <span>{plan.currency}</span>
-                  <span>{plan.status === RebalanceExecutionPlanStatus.Applied ? 'Applied' : 'Simulated'}</span>
-                  <span>{plan.items.length} buoc</span>
+                  <span>{plan.status === RebalanceExecutionPlanStatus.Applied ? 'Đã áp dụng' : 'Mô phỏng'}</span>
+                  <span>{plan.items.length} bước</span>
                 </div>
               ))}
             </section>

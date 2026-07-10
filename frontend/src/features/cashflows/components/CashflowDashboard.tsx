@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useCashflowsList, useCashflowSummary } from '../hooks/useCashflows';
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from 'recharts';
 import { AddCashflowModal } from './AddCashflowModal';
@@ -7,6 +7,7 @@ import { MonthlyReportView } from './MonthlyReportView';
 import { CashflowType } from '../types/cashflows';
 import type { CashflowRecord } from '../types/cashflows';
 import { cashflowsApi } from '../api/cashflowsApi';
+import { getBudgetsProgress, type BudgetProgress } from '../../budgets/api/budgetApi';
 import { useNotification } from '../../../context/NotificationContext';
 import './CashflowDashboard.css';
 
@@ -36,6 +37,15 @@ const getDateRange = (filter: string) => {
   return { startDate, endDate };
 };
 
+const getBudgetMonthFromFilter = (filter: string) => {
+  const now = new Date();
+  const targetDate = filter === 'lastMonth'
+    ? new Date(now.getFullYear(), now.getMonth() - 1, 1)
+    : new Date(now.getFullYear(), now.getMonth(), 1);
+
+  return { year: targetDate.getFullYear(), month: targetDate.getMonth() + 1 };
+};
+
 type TabType = 'overview' | 'daily' | 'monthly';
 
 export const CashflowDashboard: React.FC = () => {
@@ -55,11 +65,55 @@ export const CashflowDashboard: React.FC = () => {
   const [typeFilter, setTypeFilter] = useState<string>('all');
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [showCharts, setShowCharts] = useState(false);
+  const [budgetProgress, setBudgetProgress] = useState<BudgetProgress[]>([]);
+  const [isBudgetLoading, setIsBudgetLoading] = useState(false);
+  const budgetAlertKeyRef = useRef('');
 
   const { startDate, endDate } = useMemo(() => getDateRange(dateFilter), [dateFilter]);
+  const budgetMonth = useMemo(() => getBudgetMonthFromFilter(dateFilter), [dateFilter]);
 
   const { summary, loading: isSummaryLoading, refetch: refetchSummary } = useCashflowSummary(currency, startDate, endDate);
   const { records: cashflows, loading: isCashflowsLoading, refetch: refetchCashflows } = useCashflowsList(1, 500, currency, startDate, endDate);
+
+  const refetchBudgets = useCallback(async () => {
+    try {
+      setIsBudgetLoading(true);
+      setBudgetProgress(await getBudgetsProgress({ year: budgetMonth.year, month: budgetMonth.month, currency }));
+    } catch (error) {
+      console.error('Failed to load budget progress', error);
+    } finally {
+      setIsBudgetLoading(false);
+    }
+  }, [budgetMonth.month, budgetMonth.year, currency]);
+
+  useEffect(() => {
+    refetchBudgets();
+  }, [refetchBudgets]);
+
+  const budgetSummary = useMemo(() => {
+    const totalLimit = budgetProgress.reduce((sum, budget) => sum + budget.monthlyLimit, 0);
+    const totalSpent = budgetProgress.reduce((sum, budget) => sum + budget.spentAmount, 0);
+    const progress = totalLimit > 0 ? Math.min((totalSpent / totalLimit) * 100, 100) : 0;
+    return { totalLimit, totalSpent, progress };
+  }, [budgetProgress]);
+
+  const exceededBudgets = useMemo(
+    () => budgetProgress.filter(budget => budget.isExceeded),
+    [budgetProgress]
+  );
+
+  const budgetByCategoryName = useMemo(
+    () => new Map(budgetProgress.map(budget => [budget.categoryName, budget])),
+    [budgetProgress]
+  );
+
+  useEffect(() => {
+    if (exceededBudgets.length === 0) return;
+    const alertKey = `${budgetMonth.year}-${budgetMonth.month}-${currency}-${exceededBudgets.map(b => b.categoryId).join('|')}`;
+    if (budgetAlertKeyRef.current === alertKey) return;
+    budgetAlertKeyRef.current = alertKey;
+    showNotification(`Có ${exceededBudgets.length} danh mục đã vượt ngân sách tháng ${budgetMonth.month}/${budgetMonth.year}.`, 'error');
+  }, [budgetMonth.month, budgetMonth.year, currency, exceededBudgets, showNotification]);
 
   const handleCashflowAdded = () => {
     setIsAddModalOpen(false);
@@ -67,6 +121,7 @@ export const CashflowDashboard: React.FC = () => {
     setCashflowToEdit(null);
     refetchSummary();
     refetchCashflows();
+    refetchBudgets();
   };
 
   const handleEdit = (record: CashflowRecord) => {
@@ -82,6 +137,7 @@ export const CashflowDashboard: React.FC = () => {
       showNotification('Xóa giao dịch thành công!', 'success');
       refetchSummary();
       refetchCashflows();
+      refetchBudgets();
     } catch (error) {
       console.error(error);
       showNotification('Đã có lỗi xảy ra khi xóa giao dịch.', 'error');
@@ -209,6 +265,55 @@ export const CashflowDashboard: React.FC = () => {
                 </p>
               </div>
             </div>
+          </div>
+
+          <div className={`cashflow-budget-panel glass-panel ${exceededBudgets.length > 0 ? 'has-alert' : ''}`}>
+            <div className="cashflow-budget-header">
+              <div>
+                <span className="budget-kicker">Budget linked</span>
+                <h2>Ngân sách tháng {budgetMonth.month}/{budgetMonth.year}</h2>
+                <p>Theo dõi mục tiêu chi tiêu theo category ngay trong Cashflow.</p>
+              </div>
+              <div className="budget-total-meter">
+                <span>{isBudgetLoading ? '...' : `${budgetSummary.progress.toFixed(1)}%`}</span>
+                <small>{formatCurrency(budgetSummary.totalSpent)} / {formatCurrency(budgetSummary.totalLimit)}</small>
+              </div>
+            </div>
+
+            {exceededBudgets.length > 0 && (
+              <div className="budget-alert-banner">
+                <strong>Vượt ngân sách</strong>
+                <span>{exceededBudgets.map(budget => budget.categoryName).join(', ')} đã vượt hạn mức tháng này.</span>
+              </div>
+            )}
+
+            {budgetProgress.length === 0 ? (
+              <div className="budget-empty-inline">Chưa có budget nào cho các category chi tiêu.</div>
+            ) : (
+              <div className="cashflow-budget-grid">
+                {budgetProgress.map(budget => (
+                  <div key={budget.id} className={`cashflow-budget-card ${budget.alertLevel.toLowerCase()}`}>
+                    <div className="budget-card-title">
+                      <span style={{ color: budget.categoryColor }}>{budget.categoryIcon || budget.categoryName.slice(0, 1)}</span>
+                      <div>
+                        <strong>{budget.categoryName}</strong>
+                        <small>{budget.rawProgressPercentage.toFixed(1)}% budget</small>
+                      </div>
+                    </div>
+                    <div className="budget-card-values">
+                      <span>{formatCurrency(budget.spentAmount)}</span>
+                      <span>{formatCurrency(budget.monthlyLimit)}</span>
+                    </div>
+                    <div className="budget-mini-track">
+                      <div style={{ width: `${Math.min(budget.rawProgressPercentage, 100)}%` }} />
+                    </div>
+                    {budget.isExceeded && (
+                      <small className="budget-over-text">Vượt {formatCurrency(budget.spentAmount - budget.monthlyLimit)}</small>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
 
           <div className="main-content-area">
@@ -357,6 +462,7 @@ export const CashflowDashboard: React.FC = () => {
                         <div className="category-bars">
                           {summary?.expenseByCategory.map((cat, idx) => {
                             const percentage = summary.totalExpense > 0 ? (cat.amount / summary.totalExpense) * 100 : 0;
+                            const categoryBudget = budgetByCategoryName.get(cat.categoryName);
                             return (
                               <div key={idx} className="category-bar-item">
                                 <div className="cat-info">
@@ -369,6 +475,11 @@ export const CashflowDashboard: React.FC = () => {
                                     <span className="percentage-text" style={{ marginLeft: '8px', fontSize: '0.85em', color: '#94a3b8', minWidth: '40px', textAlign: 'right', display: 'inline-block' }}>{percentage.toFixed(1)}%</span>
                                   </div>
                                 </div>
+                                {categoryBudget && (
+                                  <div className={`category-budget-note ${categoryBudget.isExceeded ? 'exceeded' : ''}`}>
+                                    Budget: {categoryBudget.rawProgressPercentage.toFixed(1)}%
+                                  </div>
+                                )}
                                 <div className="progress-bg">
                                   <div className="progress-fill" style={{ width: `${percentage}%`, backgroundColor: cat.color }}></div>
                                 </div>

@@ -15,9 +15,9 @@ const formatCurrency = (amount: number, currency: string) =>
   }).format(amount);
 
 const frequencyLabel = (frequency: DcaFrequency) => {
-  if (frequency === DcaFrequency.Weekly) return 'Hang tuan';
-  if (frequency === DcaFrequency.Quarterly) return 'Hang quy';
-  return 'Hang thang';
+  if (frequency === DcaFrequency.Weekly) return 'Hàng tuần';
+  if (frequency === DcaFrequency.Quarterly) return 'Hàng quý';
+  return 'Hàng tháng';
 };
 
 const buildDefaultForm = (): SaveDcaPlanRequest => ({
@@ -46,6 +46,20 @@ export const DcaPlansPage: React.FC = () => {
     () => marketAssets.find(asset => asset.id === form.marketAssetId),
     [marketAssets, form.marketAssetId]
   );
+
+  const planSummary = useMemo(() => {
+    const activePlans = plans.filter(plan => plan.isActive);
+    const nextPlan = activePlans
+      .slice()
+      .sort((a, b) => new Date(a.nextExecutionDate).getTime() - new Date(b.nextExecutionDate).getTime())[0];
+
+    return {
+      activeCount: activePlans.length,
+      totalPerCycle: activePlans.reduce((sum, plan) => sum + plan.amount, 0),
+      currency: activePlans[0]?.currency || form.currency,
+      nextExecutionDate: nextPlan?.nextExecutionDate,
+    };
+  }, [plans, form.currency]);
 
   const fetchData = async () => {
     try {
@@ -128,14 +142,52 @@ export const DcaPlansPage: React.FC = () => {
 
   return (
     <div className="dca-plans-page container">
-      <div className="dca-header">
+      <div className="dca-header dca-hero">
         <div>
+          <span className="page-kicker">Kỷ luật đầu tư</span>
           <h1>DCA Plans</h1>
-          <p>Lap lich dau tu dinh ky, xem tien mat kha dung va uoc tinh khoi luong mua.</p>
+          <p>Lập lịch đầu tư định kỳ, kiểm tra tiền mặt khả dụng và ước tính khối lượng mua trước mỗi kỳ.</p>
+        </div>
+        <div className="dca-hero-stats">
+          <div>
+            <span>Plan đang chạy</span>
+            <strong>{planSummary.activeCount}</strong>
+          </div>
+          <div>
+            <span>Tổng tiền mỗi kỳ</span>
+            <strong>{formatCurrency(planSummary.totalPerCycle, planSummary.currency)}</strong>
+          </div>
+          <div>
+            <span>Lần mua gần nhất</span>
+            <strong>{planSummary.nextExecutionDate ? toDateInput(planSummary.nextExecutionDate) : 'Chưa có'}</strong>
+          </div>
         </div>
       </div>
 
       <form className="dca-form glass-panel" onSubmit={handleSubmit}>
+        <div className="dca-form-title">
+          <div>
+            <h2>{editingId ? 'Cập nhật DCA plan' : 'Tạo DCA plan mới'}</h2>
+            <p>Chọn tài sản, tần suất và ngày mua tiếp theo. App sẽ kiểm tra số dư cash cho từng plan.</p>
+          </div>
+          {editingId && (
+            <button
+              className="btn btn-outline btn-sm"
+              type="button"
+              onClick={() => {
+                setEditingId(null);
+                setForm(prev => ({
+                  ...buildDefaultForm(),
+                  portfolioId: prev.portfolioId,
+                  marketAssetId: prev.marketAssetId,
+                  currency: prev.currency,
+                }));
+              }}
+            >
+              Hủy sửa
+            </button>
+          )}
+        </div>
         <div className="dca-form-grid">
           <div className="form-group">
             <label>Portfolio</label>
@@ -149,7 +201,7 @@ export const DcaPlansPage: React.FC = () => {
             </select>
           </div>
           <div className="form-group">
-            <label>Tai san</label>
+            <label>Tài sản</label>
             <select
               value={form.marketAssetId}
               onChange={e => {
@@ -165,7 +217,7 @@ export const DcaPlansPage: React.FC = () => {
             </select>
           </div>
           <div className="form-group">
-            <label>So tien moi ky</label>
+            <label>Số tiền mỗi kỳ</label>
             <input
               type="number"
               min="0"
@@ -175,25 +227,25 @@ export const DcaPlansPage: React.FC = () => {
             />
           </div>
           <div className="form-group">
-            <label>Tien te</label>
+            <label>Tiền tệ</label>
             <select value={form.currency} onChange={e => setForm(prev => ({ ...prev, currency: e.target.value }))}>
               <option value="VND">VND</option>
               <option value="USD">USD</option>
             </select>
           </div>
           <div className="form-group">
-            <label>Tan suat</label>
+            <label>Tần suất</label>
             <select
               value={form.frequency}
               onChange={e => setForm(prev => ({ ...prev, frequency: Number(e.target.value) as DcaFrequency }))}
             >
-              <option value={DcaFrequency.Weekly}>Hang tuan</option>
-              <option value={DcaFrequency.Monthly}>Hang thang</option>
-              <option value={DcaFrequency.Quarterly}>Hang quy</option>
+              <option value={DcaFrequency.Weekly}>Hàng tuần</option>
+              <option value={DcaFrequency.Monthly}>Hàng tháng</option>
+              <option value={DcaFrequency.Quarterly}>Hàng quý</option>
             </select>
           </div>
           <div className="form-group">
-            <label>Ngay bat dau</label>
+            <label>Ngày bắt đầu</label>
             <input
               type="date"
               value={form.startDate}
@@ -201,7 +253,7 @@ export const DcaPlansPage: React.FC = () => {
             />
           </div>
           <div className="form-group">
-            <label>Ngay mua tiep theo</label>
+            <label>Ngày mua tiếp theo</label>
             <input
               type="date"
               value={form.nextExecutionDate}
@@ -209,7 +261,7 @@ export const DcaPlansPage: React.FC = () => {
             />
           </div>
           <div className="form-group">
-            <label>Ngay ket thuc</label>
+            <label>Ngày kết thúc</label>
             <input
               type="date"
               value={form.endDate || ''}
@@ -217,11 +269,11 @@ export const DcaPlansPage: React.FC = () => {
             />
           </div>
           <div className="form-group dca-notes">
-            <label>Ghi chu</label>
+            <label>Ghi chú</label>
             <input
               value={form.notes}
               onChange={e => setForm(prev => ({ ...prev, notes: e.target.value }))}
-              placeholder="VD: uu tien khi allocation thap hon muc tieu"
+              placeholder="VD: ưu tiên khi allocation thấp hơn mục tiêu"
             />
           </div>
         </div>
@@ -229,19 +281,22 @@ export const DcaPlansPage: React.FC = () => {
         <div className="dca-form-footer">
           <div className="dca-estimate">
             {selectedAsset
-              ? `Gia hien tai ${formatCurrency(selectedAsset.currentPrice, form.currency)} - uoc tinh ${(selectedAsset.currentPrice > 0 ? form.amount / selectedAsset.currentPrice : 0).toFixed(6)} don vi`
-              : 'Chon tai san de xem uoc tinh'}
+              ? `Giá hiện tại ${formatCurrency(selectedAsset.currentPrice, form.currency)} - ước tính ${(selectedAsset.currentPrice > 0 ? form.amount / selectedAsset.currentPrice : 0).toFixed(6)} đơn vị`
+              : 'Chọn tài sản để xem ước tính'}
           </div>
           <button className="btn btn-primary" disabled={saving || portfolios.length === 0 || marketAssets.length === 0}>
-            {saving ? 'Dang luu...' : editingId ? 'Cap nhat DCA' : 'Tao DCA plan'}
+            {saving ? 'Đang lưu...' : editingId ? 'Cập nhật DCA' : 'Tạo DCA plan'}
           </button>
         </div>
       </form>
 
       {loading ? (
-        <div className="glass-panel dca-empty">Dang tai du lieu...</div>
+        <div className="glass-panel dca-empty">Đang tải dữ liệu...</div>
       ) : plans.length === 0 ? (
-        <div className="glass-panel dca-empty">Chua co DCA plan nao.</div>
+        <div className="glass-panel dca-empty">
+          <strong>Chưa có DCA plan nào.</strong>
+          <span>Tạo plan đầu tiên để biến chiến lược đầu tư định kỳ thành lịch hành động rõ ràng.</span>
+        </div>
       ) : (
         <div className="dca-plan-grid">
           {plans.map(plan => (
@@ -264,11 +319,11 @@ export const DcaPlansPage: React.FC = () => {
 
               <div className="dca-metrics">
                 <div>
-                  <span>Gia hien tai</span>
+                  <span>Giá hiện tại</span>
                   <strong>{formatCurrency(plan.currentPrice, plan.currency)}</strong>
                 </div>
                 <div>
-                  <span>Uoc tinh mua</span>
+                  <span>Ước tính mua</span>
                   <strong>{plan.estimatedQuantity.toFixed(6)}</strong>
                 </div>
                 <div>
@@ -278,7 +333,7 @@ export const DcaPlansPage: React.FC = () => {
               </div>
 
               <div className="dca-calendar">
-                <span>Lich sap toi</span>
+                <span>Lịch sắp tới</span>
                 <div>
                   {plan.upcomingExecutions.map(date => (
                     <time key={date}>{toDateInput(date)}</time>
@@ -289,8 +344,8 @@ export const DcaPlansPage: React.FC = () => {
               {plan.notes && <p className="dca-note">{plan.notes}</p>}
 
               <div className="dca-actions">
-                <button className="btn btn-outline btn-sm" onClick={() => editPlan(plan)}>Sua</button>
-                <button className="btn btn-outline btn-sm danger" onClick={() => deletePlan(plan.id)}>Xoa</button>
+                <button className="btn btn-outline btn-sm" onClick={() => editPlan(plan)}>Sửa</button>
+                <button className="btn btn-outline btn-sm danger" onClick={() => deletePlan(plan.id)}>Xóa</button>
               </div>
             </article>
           ))}

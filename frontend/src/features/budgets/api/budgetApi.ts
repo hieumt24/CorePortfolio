@@ -8,7 +8,13 @@ export interface BudgetProgress {
   categoryColor: string;
   monthlyLimit: number;
   spentAmount: number;
+  remainingAmount: number;
+  rawProgressPercentage: number;
   progressPercentage: number;
+  isExceeded: boolean;
+  alertLevel: 'Healthy' | 'Warning' | 'Exceeded';
+  year: number;
+  month: number;
 }
 
 export interface SetBudgetRequest {
@@ -16,8 +22,19 @@ export interface SetBudgetRequest {
   monthlyLimit: number;
 }
 
-export const getBudgetsProgress = async (): Promise<BudgetProgress[]> => {
-  return apiClient<BudgetProgress[]>('/budgets/progress');
+export interface BudgetProgressParams {
+  year?: number;
+  month?: number;
+  currency?: string;
+}
+
+export const getBudgetsProgress = async (params?: BudgetProgressParams): Promise<BudgetProgress[]> => {
+  const searchParams = new URLSearchParams();
+  if (params?.year) searchParams.append('year', params.year.toString());
+  if (params?.month) searchParams.append('month', params.month.toString());
+  if (params?.currency) searchParams.append('currency', params.currency);
+  const query = searchParams.toString();
+  return apiClient<BudgetProgress[]>(`/budgets/progress${query ? `?${query}` : ''}`);
 };
 
 export const setBudget = async (request: SetBudgetRequest): Promise<{ id: string }> => {

@@ -1,0 +1,300 @@
+.budgets-page {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.budgets-hero {
+  align-items: flex-end;
+  background:
+    linear-gradient(135deg, rgba(15, 23, 42, 0.9), rgba(17, 24, 39, 0.72)),
+    linear-gradient(90deg, rgba(245, 158, 11, 0.16), rgba(16, 185, 129, 0.08));
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  box-shadow: var(--glass-shadow);
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  padding: 1.5rem;
+}
+
+.budgets-kicker {
+  color: var(--warning-color);
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  margin-bottom: 0.4rem;
+  text-transform: uppercase;
+}
+
+.budgets-hero p,
+.budget-summary-card span,
+.budget-summary-card small,
+.budget-overview-copy p,
+.budget-card-header span,
+.budget-values span,
+.meter-label,
+.budget-modal-header p,
+.budget-empty {
+  color: var(--text-secondary);
+}
+
+.budget-summary-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.budget-month-bar {
+  align-items: center;
+  border-radius: 8px;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  padding: 1rem;
+}
+
+.budget-month-bar span {
+  color: var(--text-secondary);
+  display: block;
+  font-size: 0.82rem;
+  margin-bottom: 0.2rem;
+}
+
+.budget-month-bar strong {
+  font-size: 1.1rem;
+}
+
+.budget-month-bar input {
+  max-width: 220px;
+}
+
+.budget-summary-card,
+.budget-overview,
+.budget-card,
+.budget-modal,
+.budget-empty {
+  border-radius: 8px;
+}
+
+.budget-summary-card {
+  padding: 1rem;
+}
+
+.budget-summary-card strong {
+  display: block;
+  font-size: 1.5rem;
+  margin: 0.35rem 0 0.1rem;
+}
+
+.budget-overview {
+  align-items: center;
+  display: grid;
+  gap: 1.5rem;
+  grid-template-columns: 1fr 1.4fr;
+  padding: 1.25rem;
+}
+
+.budget-overview-copy h2 {
+  font-size: 1.2rem;
+  margin-bottom: 0.25rem;
+}
+
+.budget-overview-meter {
+  min-width: 0;
+}
+
+.meter-label {
+  display: flex;
+  font-size: 0.85rem;
+  justify-content: space-between;
+  margin-bottom: 0.45rem;
+}
+
+.budget-track {
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  height: 10px;
+  overflow: hidden;
+}
+
+.budget-fill {
+  border-radius: inherit;
+  height: 100%;
+  transition: width 0.25s ease;
+}
+
+.budget-fill.healthy {
+  background: linear-gradient(90deg, var(--success-color), var(--accent-color));
+}
+
+.budget-fill.warning {
+  background: linear-gradient(90deg, var(--warning-color), #facc15);
+}
+
+.budget-fill.danger {
+  background: linear-gradient(90deg, var(--danger-color), #fb7185);
+}
+
+.budget-card-grid {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+}
+
+.budget-card {
+  overflow: hidden;
+  padding: 1.25rem;
+  position: relative;
+}
+
+.budget-card::before {
+  content: '';
+  display: block;
+  height: 3px;
+  inset: 0 0 auto 0;
+  position: absolute;
+}
+
+.budget-card.healthy::before {
+  background: linear-gradient(90deg, var(--success-color), var(--accent-color));
+}
+
+.budget-card.warning::before {
+  background: linear-gradient(90deg, var(--warning-color), #facc15);
+}
+
+.budget-card.danger::before {
+  background: linear-gradient(90deg, var(--danger-color), #fb7185);
+}
+
+.budget-card-header {
+  align-items: center;
+  display: grid;
+  gap: 0.85rem;
+  grid-template-columns: auto 1fr auto;
+}
+
+.budget-category-mark {
+  align-items: center;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  display: flex;
+  font-size: 1.35rem;
+  height: 48px;
+  justify-content: center;
+  width: 48px;
+}
+
+.budget-card h2 {
+  font-size: 1.1rem;
+  margin: 0;
+}
+
+.budget-values {
+  display: grid;
+  gap: 0.75rem;
+  grid-template-columns: 1fr 1fr;
+  margin: 1rem 0;
+}
+
+.budget-values div {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  padding: 0.75rem;
+}
+
+.budget-values span {
+  display: block;
+  font-size: 0.78rem;
+  margin-bottom: 0.25rem;
+}
+
+.budget-empty {
+  align-items: center;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 2rem;
+  text-align: center;
+}
+
+.budget-modal-backdrop {
+  align-items: center;
+  background: rgba(0, 0, 0, 0.62);
+  backdrop-filter: blur(6px);
+  display: flex;
+  inset: 0;
+  justify-content: center;
+  padding: 1rem;
+  position: fixed;
+  z-index: 1200;
+}
+
+.budget-modal {
+  max-width: 520px;
+  padding: 1.25rem;
+  width: 100%;
+}
+
+.budget-modal-header {
+  align-items: flex-start;
+  display: flex;
+  gap: 1rem;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.budget-modal-header h2 {
+  font-size: 1.25rem;
+  margin-bottom: 0.25rem;
+}
+
+.modal-close-btn {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid var(--glass-border);
+  border-radius: 8px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  height: 34px;
+  width: 34px;
+}
+
+.budget-modal-actions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+  margin-top: 1rem;
+}
+
+@media (max-width: 900px) {
+  .budgets-hero,
+  .budget-overview,
+  .budget-month-bar {
+    align-items: stretch;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .budget-summary-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 600px) {
+  .budget-card-header,
+  .budget-values,
+  .budget-modal-actions {
+    grid-template-columns: 1fr;
+  }
+
+  .budget-card-header,
+  .budget-modal-actions {
+    align-items: stretch;
+    display: flex;
+    flex-direction: column;
+  }
+}

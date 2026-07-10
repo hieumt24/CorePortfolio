@@ -47,6 +47,18 @@ export const SavingGoalsPage: React.FC = () => {
     [cashAccounts, form.portfolioId, form.currency]
   );
 
+  const goalSummary = useMemo(() => {
+    const activeGoals = goals.filter(goal => !goal.isCompleted);
+    return {
+      activeCount: activeGoals.length,
+      completedCount: goals.length - activeGoals.length,
+      totalTarget: activeGoals.reduce((sum, goal) => sum + goal.targetAmount, 0),
+      totalSaved: activeGoals.reduce((sum, goal) => sum + goal.currentAmount, 0),
+      monthlyRequired: activeGoals.reduce((sum, goal) => sum + goal.monthlyRequiredSaving, 0),
+      currency: activeGoals[0]?.currency || form.currency,
+    };
+  }, [goals, form.currency]);
+
   const fetchData = async () => {
     try {
       setLoading(true);
@@ -123,21 +135,50 @@ export const SavingGoalsPage: React.FC = () => {
 
   return (
     <div className="saving-goals-page container">
-      <div className="saving-goals-header">
+      <div className="saving-goals-header saving-goals-hero">
         <div>
+          <span className="page-kicker">Kế hoạch tiết kiệm</span>
           <h1>Saving Goals</h1>
-          <p>Theo doi quy khan cap, mua nha, du lich va cac muc tieu tiet kiem dai han.</p>
+          <p>Theo dõi quỹ khẩn cấp, mua nhà, du lịch và các mục tiêu dài hạn bằng số dư tiền mặt thực tế.</p>
+        </div>
+        <div className="hero-balance-card">
+          <span>Cần tiết kiệm mỗi tháng</span>
+          <strong>{formatCurrency(goalSummary.monthlyRequired, goalSummary.currency)}</strong>
         </div>
       </div>
 
+      <section className="saving-summary-grid">
+        <div className="saving-summary-card glass-panel">
+          <span>Đang theo đuổi</span>
+          <strong>{goalSummary.activeCount}</strong>
+          <small>{goalSummary.completedCount} mục tiêu đã xong</small>
+        </div>
+        <div className="saving-summary-card glass-panel">
+          <span>Đã tích lũy</span>
+          <strong>{formatCurrency(goalSummary.totalSaved, goalSummary.currency)}</strong>
+          <small>Trên mục tiêu đang mở</small>
+        </div>
+        <div className="saving-summary-card glass-panel">
+          <span>Tổng mục tiêu</span>
+          <strong>{formatCurrency(goalSummary.totalTarget, goalSummary.currency)}</strong>
+          <small>Không tính mục tiêu đã hoàn thành</small>
+        </div>
+      </section>
+
       <form className="saving-goal-form glass-panel" onSubmit={handleSubmit}>
+        <div className="form-section-heading">
+          <div>
+            <h2>Tạo mục tiêu mới</h2>
+            <p>Chọn portfolio, nhóm Saving và tài khoản tiền mặt để app tự tính tiến độ.</p>
+          </div>
+        </div>
         <div className="form-grid">
           <div className="form-group">
-            <label>Ten muc tieu</label>
+            <label>Tên mục tiêu</label>
             <input
               value={form.name}
               onChange={e => setForm(prev => ({ ...prev, name: e.target.value }))}
-              placeholder="Quy khan cap"
+              placeholder="Quỹ khẩn cấp"
             />
           </div>
           <div className="form-group">
@@ -163,12 +204,12 @@ export const SavingGoalsPage: React.FC = () => {
             </select>
           </div>
           <div className="form-group">
-            <label>Cash account</label>
+            <label>Tài khoản tiền mặt</label>
             <select
               value={form.cashAccountId || ''}
               onChange={e => setForm(prev => ({ ...prev, cashAccountId: e.target.value || null }))}
             >
-              <option value="">Tat ca tai khoan {form.currency}</option>
+              <option value="">Tất cả tài khoản {form.currency}</option>
               {selectedCashAccounts.map(account => (
                 <option key={account.id} value={account.id}>
                   {account.currency} - {formatCurrency(account.balance, account.currency)}
@@ -177,7 +218,7 @@ export const SavingGoalsPage: React.FC = () => {
             </select>
           </div>
           <div className="form-group">
-            <label>Muc tieu</label>
+            <label>Số tiền mục tiêu</label>
             <input
               type="number"
               min="0"
@@ -187,7 +228,7 @@ export const SavingGoalsPage: React.FC = () => {
             />
           </div>
           <div className="form-group">
-            <label>Tien te</label>
+            <label>Tiền tệ</label>
             <select
               value={form.currency}
               onChange={e => setForm(prev => ({ ...prev, currency: e.target.value, cashAccountId: null }))}
@@ -205,23 +246,26 @@ export const SavingGoalsPage: React.FC = () => {
             />
           </div>
           <div className="form-group form-group-wide">
-            <label>Mo ta</label>
+            <label>Mô tả</label>
             <input
               value={form.description}
               onChange={e => setForm(prev => ({ ...prev, description: e.target.value }))}
-              placeholder="Vi du: 6 thang chi phi sinh hoat"
+              placeholder="Ví dụ: 6 tháng chi phí sinh hoạt"
             />
           </div>
         </div>
         <button className="btn btn-primary" disabled={saving || portfolios.length === 0 || categories.length === 0}>
-          {saving ? 'Dang luu...' : 'Tao saving goal'}
+          {saving ? 'Đang lưu...' : 'Tạo saving goal'}
         </button>
       </form>
 
       {loading ? (
-        <div className="glass-panel saving-goals-empty">Dang tai du lieu...</div>
+        <div className="glass-panel saving-goals-empty">Đang tải dữ liệu...</div>
       ) : goals.length === 0 ? (
-        <div className="glass-panel saving-goals-empty">Chua co muc tieu tiet kiem nao.</div>
+        <div className="glass-panel saving-goals-empty">
+          <strong>Chưa có mục tiêu tiết kiệm nào.</strong>
+          <span>Tạo mục tiêu đầu tiên như quỹ khẩn cấp hoặc chuyến du lịch để bắt đầu theo dõi tiến độ.</span>
+        </div>
       ) : (
         <div className="saving-goals-grid">
           {goals.map(goal => (
@@ -229,7 +273,7 @@ export const SavingGoalsPage: React.FC = () => {
               <div className="saving-goal-topline">
                 <span className="goal-category">{goal.categoryName}</span>
                 <span className={goal.isCompleted ? 'goal-status done' : 'goal-status'}>
-                  {goal.isCompleted ? 'Completed' : `${goal.daysRemaining} ngay`}
+                  {goal.isCompleted ? 'Hoàn thành' : `${goal.daysRemaining} ngày`}
                 </span>
               </div>
               <h2>{goal.name}</h2>
@@ -244,11 +288,11 @@ export const SavingGoalsPage: React.FC = () => {
               </div>
               <div className="goal-metrics">
                 <div>
-                  <span>Con lai</span>
+                  <span>Còn lại</span>
                   <strong>{formatCurrency(goal.remainingAmount, goal.currency)}</strong>
                 </div>
                 <div>
-                  <span>Can tiet kiem/thang</span>
+                  <span>Cần tiết kiệm/tháng</span>
                   <strong>{formatCurrency(goal.monthlyRequiredSaving, goal.currency)}</strong>
                 </div>
                 <div>
@@ -262,10 +306,10 @@ export const SavingGoalsPage: React.FC = () => {
               </div>
               <div className="goal-actions">
                 <button className="btn btn-outline btn-sm" onClick={() => toggleCompleted(goal)}>
-                  {goal.isCompleted ? 'Mo lai' : 'Danh dau xong'}
+                  {goal.isCompleted ? 'Mở lại' : 'Đánh dấu xong'}
                 </button>
                 <button className="btn btn-outline btn-sm danger" onClick={() => deleteGoal(goal.id)}>
-                  Xoa
+                  Xóa
                 </button>
               </div>
             </article>

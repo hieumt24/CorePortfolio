@@ -1,29 +1,87 @@
-import React, { useState, useEffect } from 'react';
-import { getBudgetsProgress, setBudget } from '../api/budgetApi';
-import type { BudgetProgress } from '../api/budgetApi';
-import { apiClient } from '../../../shared/api/baseClient';
+import React, { useEffect, useMemo, useState } from 'react';
+import { cashflowsApi } from '../../cashflows/api/cashflowsApi';
+import { CashflowType, type CashflowCategory } from '../../cashflows/types/cashflows';
+import { getBudgetsProgress, setBudget, type BudgetProgress } from '../api/budgetApi';
+import './BudgetsPage.css';
+
+type CategoryOption = {
+  id: string;
+  name: string;
+  icon: string;
+  color: string;
+  path: string;
+  depth: number;
+};
+
+const formatVnd = (amount: number) =>
+  new Intl.NumberFormat('vi-VN', {
+    style: 'currency',
+    currency: 'VND',
+    maximumFractionDigits: 0,
+  }).format(amount);
+
+const toMonthInput = (date: Date) =>
+  `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+
+const parseMonthInput = (value: string) => {
+  const [year, month] = value.split('-').map(Number);
+  return { year, month };
+};
+
+const flattenCategories = (categories: CashflowCategory[], parentPath = '', depth = 0): CategoryOption[] =>
+  categories.flatMap(category => {
+    const path = parentPath ? `${parentPath} / ${category.name}` : category.name;
+    return [
+      {
+        id: category.id,
+        name: category.name,
+        icon: category.icon,
+        color: category.color,
+        path,
+        depth,
+      },
+      ...flattenCategories(category.subCategories || [], path, depth + 1),
+    ];
+  });
+
+const getBudgetTone = (percentage: number) => {
+  if (percentage >= 100) return 'danger';
+  if (percentage >= 80) return 'warning';
+  return 'healthy';
+};
 
 export const BudgetsPage: React.FC = () => {
   const [budgets, setBudgets] = useState<BudgetProgress[]>([]);
   const [loading, setLoading] = useState(true);
-  const [categories, setCategories] = useState<any[]>([]);
+  const [categories, setCategories] = useState<CategoryOption[]>([]);
   const [isModalOpen, setIsModalOpen] = useState(false);
-
-  // Form state
   const [selectedCategory, setSelectedCategory] = useState('');
   const [monthlyLimit, setMonthlyLimit] = useState<number | ''>('');
+  const [selectedMonth, setSelectedMonth] = useState(toMonthInput(new Date()));
+
+  const summary = useMemo(() => {
+    const totalLimit = budgets.reduce((sum, budget) => sum + budget.monthlyLimit, 0);
+    const totalSpent = budgets.reduce((sum, budget) => sum + budget.spentAmount, 0);
+    const remaining = Math.max(totalLimit - totalSpent, 0);
+    const progress = totalLimit > 0 ? Math.min((totalSpent / totalLimit) * 100, 100) : 0;
+    const overBudgetCount = budgets.filter(budget => budget.progressPercentage >= 100).length;
+
+    return { totalLimit, totalSpent, remaining, progress, overBudgetCount };
+  }, [budgets]);
 
   const fetchData = async () => {
     try {
       setLoading(true);
+      const { year, month } = parseMonthInput(selectedMonth);
       const [budgetsData, categoriesData] = await Promise.all([
-        getBudgetsProgress(),
-        apiClient<any[]>('/cashflows/categories')
+        getBudgetsProgress({ year, month, currency: 'VND' }),
+        cashflowsApi.getCategories(),
       ]);
+
       setBudgets(budgetsData);
-      setCategories(categoriesData.filter((c: any) => c.type === 'Expense'));
+      setCategories(flattenCategories(categoriesData.filter(category => category.type === CashflowType.Expense)));
     } catch (error) {
-      console.error('Failed to fetch data', error);
+      console.error('Failed to fetch budget data', error);
     } finally {
       setLoading(false);
     }
@@ -31,125 +89,178 @@ export const BudgetsPage: React.FC = () => {
 
   useEffect(() => {
     fetchData();
-  }, []);
+  }, [selectedMonth]);
+
+  const openBudgetForm = (budget?: BudgetProgress) => {
+    setSelectedCategory(budget?.categoryId || categories[0]?.id || '');
+    setMonthlyLimit(budget?.monthlyLimit || '');
+    setIsModalOpen(true);
+  };
 
   const handleSaveBudget = async () => {
     if (!selectedCategory || !monthlyLimit) return;
+
     try {
       await setBudget({ categoryId: selectedCategory, monthlyLimit: Number(monthlyLimit) });
       setIsModalOpen(false);
-      fetchData();
+      await fetchData();
     } catch (error) {
       console.error('Failed to save budget', error);
     }
   };
 
-  const getProgressColor = (percentage: number) => {
-    if (percentage < 50) return 'bg-green-500';
-    if (percentage < 80) return 'bg-yellow-500';
-    return 'bg-red-500';
-  };
-
   return (
-    <div className="container mx-auto p-4 max-w-4xl">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Ngân sách hàng tháng</h1>
-        <button 
-          onClick={() => setIsModalOpen(true)}
-          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium"
-        >
-          + Thêm/Sửa Ngân sách
+    <div className="budgets-page container">
+      <section className="budgets-hero">
+        <div>
+          <span className="budgets-kicker">Kiểm soát chi tiêu</span>
+          <h1>Ngân sách hằng tháng</h1>
+          <p>Thiết lập hạn mức theo danh mục cha/con và theo dõi mức sử dụng trong tháng hiện tại.</p>
+        </div>
+        <button onClick={() => openBudgetForm()} className="btn btn-primary">
+          Thêm ngân sách
         </button>
-      </div>
+      </section>
+
+      <section className="budget-month-bar glass-panel">
+        <div>
+          <span>Tháng đang theo dõi</span>
+          <strong>{selectedMonth}</strong>
+        </div>
+        <input
+          type="month"
+          value={selectedMonth}
+          onChange={event => setSelectedMonth(event.target.value)}
+        />
+      </section>
+
+      <section className="budget-summary-grid">
+        <div className="budget-summary-card glass-panel">
+          <span>Tổng ngân sách</span>
+          <strong>{formatVnd(summary.totalLimit)}</strong>
+          <small>{budgets.length} danh mục đang theo dõi</small>
+        </div>
+        <div className="budget-summary-card glass-panel">
+          <span>Đã chi</span>
+          <strong>{formatVnd(summary.totalSpent)}</strong>
+          <small>{summary.progress.toFixed(1)}% tổng hạn mức</small>
+        </div>
+        <div className="budget-summary-card glass-panel">
+          <span>Còn lại</span>
+          <strong>{formatVnd(summary.remaining)}</strong>
+          <small>{summary.overBudgetCount} danh mục vượt hạn mức</small>
+        </div>
+      </section>
+
+      <section className="budget-overview glass-panel">
+        <div className="budget-overview-copy">
+          <h2>Tổng quan tháng này</h2>
+          <p>Màu trạng thái đổi theo tiến độ: an toàn dưới 80%, cần chú ý từ 80%, và vượt mức khi đạt 100%.</p>
+        </div>
+        <div className="budget-overview-meter">
+          <div className="meter-label">
+            <span>{formatVnd(summary.totalSpent)}</span>
+            <span>{formatVnd(summary.totalLimit)}</span>
+          </div>
+          <div className="budget-track">
+            <div className={`budget-fill ${getBudgetTone(summary.progress)}`} style={{ width: `${summary.progress}%` }} />
+          </div>
+        </div>
+      </section>
 
       {loading ? (
-        <div className="text-center py-10">Đang tải dữ liệu...</div>
-      ) : (
-        <div className="grid gap-4">
-          {budgets.length === 0 ? (
-            <div className="text-center py-10 text-gray-500 bg-gray-50 dark:bg-gray-800 rounded-lg">
-              Bạn chưa thiết lập ngân sách nào.
-            </div>
-          ) : (
-            budgets.map(budget => (
-              <div key={budget.id} className="bg-white dark:bg-gray-800 p-4 rounded-lg shadow-sm border border-gray-100 dark:border-gray-700">
-                <div className="flex justify-between items-center mb-2">
-                  <div className="flex items-center gap-2">
-                    <span className="text-2xl">{budget.categoryIcon}</span>
-                    <span className="font-medium text-gray-800 dark:text-gray-100">{budget.categoryName}</span>
-                  </div>
-                  <div className="text-sm">
-                    <span className="font-semibold text-gray-800 dark:text-gray-100">
-                      {budget.spentAmount.toLocaleString()} đ
-                    </span>
-                    <span className="text-gray-500 dark:text-gray-400 mx-1">/</span>
-                    <span className="text-gray-500 dark:text-gray-400">
-                      {budget.monthlyLimit.toLocaleString()} đ
-                    </span>
-                  </div>
-                </div>
-                
-                <div className="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700 mt-2">
-                  <div 
-                    className={`h-2.5 rounded-full ${getProgressColor(budget.progressPercentage)}`} 
-                    style={{ width: `${budget.progressPercentage}%` }}
-                  ></div>
-                </div>
-                
-                <div className="text-xs text-right mt-1 text-gray-500">
-                  {budget.progressPercentage.toFixed(1)}%
-                </div>
-              </div>
-            ))
-          )}
+        <div className="budget-empty glass-panel">Đang tải dữ liệu...</div>
+      ) : budgets.length === 0 ? (
+        <div className="budget-empty glass-panel">
+          <strong>Chưa có ngân sách nào.</strong>
+          <span>Thêm hạn mức cho các danh mục chi tiêu quan trọng để bắt đầu theo dõi.</span>
         </div>
+      ) : (
+        <section className="budget-card-grid">
+          {budgets.map(budget => {
+            const tone = getBudgetTone(budget.progressPercentage);
+            const remaining = Math.max(budget.monthlyLimit - budget.spentAmount, 0);
+
+            return (
+              <article key={budget.id} className={`budget-card glass-panel ${tone}`}>
+                <div className="budget-card-header">
+                  <div className="budget-category-mark" style={{ borderColor: budget.categoryColor, color: budget.categoryColor }}>
+                    {budget.categoryIcon || budget.categoryName.slice(0, 1)}
+                  </div>
+                  <div>
+                    <h2>{budget.categoryName}</h2>
+                    <span>{tone === 'danger' ? 'Vượt hạn mức' : tone === 'warning' ? 'Cần chú ý' : 'Đang ổn'}</span>
+                  </div>
+                  <button className="btn btn-outline btn-sm" onClick={() => openBudgetForm(budget)}>
+                    Sửa
+                  </button>
+                </div>
+
+                <div className="budget-values">
+                  <div>
+                    <span>Đã chi</span>
+                    <strong>{formatVnd(budget.spentAmount)}</strong>
+                  </div>
+                  <div>
+                    <span>Còn lại</span>
+                    <strong>{formatVnd(remaining)}</strong>
+                  </div>
+                </div>
+
+                <div className="meter-label">
+                  <span>{budget.progressPercentage.toFixed(1)}%</span>
+                  <span>{formatVnd(budget.monthlyLimit)}</span>
+                </div>
+                <div className="budget-track">
+                  <div className={`budget-fill ${tone}`} style={{ width: `${Math.min(budget.progressPercentage, 100)}%` }} />
+                </div>
+              </article>
+            );
+          })}
+        </section>
       )}
 
       {isModalOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
-          <div className="bg-white dark:bg-gray-800 rounded-lg max-w-md w-full p-6 shadow-xl">
-            <h2 className="text-xl font-bold mb-4">Thiết lập Ngân sách</h2>
-            
-            <div className="mb-4">
-              <label className="block text-sm font-medium mb-1">Danh mục chi tiêu</label>
-              <select 
-                value={selectedCategory} 
-                onChange={(e) => setSelectedCategory(e.target.value)}
-                className="w-full border rounded p-2 dark:bg-gray-700 dark:border-gray-600"
-              >
-                <option value="">-- Chọn danh mục --</option>
-                {categories.map(c => (
-                  <option key={c.id} value={c.id}>
-                    {c.icon} {c.name}
+        <div className="budget-modal-backdrop" role="presentation" onClick={() => setIsModalOpen(false)}>
+          <div className="budget-modal glass-panel" role="dialog" aria-modal="true" onClick={event => event.stopPropagation()}>
+            <div className="budget-modal-header">
+              <div>
+                <h2>Thiết lập ngân sách</h2>
+                <p>Chọn danh mục chi tiêu, có thể là category cha hoặc category con.</p>
+              </div>
+              <button className="modal-close-btn" onClick={() => setIsModalOpen(false)} aria-label="Đóng">
+                X
+              </button>
+            </div>
+
+            <div className="form-group">
+              <label>Danh mục chi tiêu</label>
+              <select value={selectedCategory} onChange={e => setSelectedCategory(e.target.value)}>
+                <option value="">Chọn danh mục</option>
+                {categories.map(category => (
+                  <option key={category.id} value={category.id}>
+                    {`${'-- '.repeat(category.depth)}${category.icon ? `${category.icon} ` : ''}${category.path}`}
                   </option>
                 ))}
               </select>
             </div>
-            
-            <div className="mb-6">
-              <label className="block text-sm font-medium mb-1">Hạn mức / tháng (VND)</label>
-              <input 
-                type="number" 
-                value={monthlyLimit} 
-                onChange={(e) => setMonthlyLimit(e.target.value ? Number(e.target.value) : '')}
-                className="w-full border rounded p-2 dark:bg-gray-700 dark:border-gray-600"
+
+            <div className="form-group">
+              <label>Hạn mức mỗi tháng</label>
+              <input
+                type="number"
+                value={monthlyLimit}
+                onChange={e => setMonthlyLimit(e.target.value ? Number(e.target.value) : '')}
                 placeholder="VD: 5000000"
               />
             </div>
-            
-            <div className="flex justify-end gap-2">
-              <button 
-                onClick={() => setIsModalOpen(false)}
-                className="px-4 py-2 border rounded text-gray-600 hover:bg-gray-50 dark:border-gray-600 dark:text-gray-300 dark:hover:bg-gray-700"
-              >
+
+            <div className="budget-modal-actions">
+              <button onClick={() => setIsModalOpen(false)} className="btn btn-outline">
                 Hủy
               </button>
-              <button 
-                onClick={handleSaveBudget}
-                disabled={!selectedCategory || !monthlyLimit}
-                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 disabled:opacity-50"
-              >
-                Lưu
+              <button onClick={handleSaveBudget} disabled={!selectedCategory || !monthlyLimit} className="btn btn-primary">
+                Lưu ngân sách
               </button>
             </div>
           </div>

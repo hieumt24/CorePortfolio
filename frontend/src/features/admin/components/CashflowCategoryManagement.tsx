@@ -1,35 +1,101 @@
-import { useState, useEffect } from 'react';
-import { cashflowsApi } from '../../cashflows/api/cashflowsApi';
-import type { CashflowCategory } from '../../cashflows/types/cashflows';
-import { CashflowType } from '../../cashflows/types/cashflows';
+import { useEffect, useMemo, useState } from 'react';
 import { useNotification } from '../../../context/NotificationContext';
+import { cashflowsApi } from '../../cashflows/api/cashflowsApi';
+import { CashflowType, type CashflowCategory } from '../../cashflows/types/cashflows';
 import './CashflowCategoryManagement.css';
 
 const COMMON_EMOJIS = [
-  '💰', '💵', '💳', '🧾', '📈', '📉', '🏦', '🛍️', 
-  '🍔', '☕', '🛒', '🚗', '✈️', '🏠', '🎮', '👗', 
-  '🏥', '💊', '📚', '🎓', '🎁', '🐶', '💡', '💧'
+  '💰', '💵', '💳', '🧾', '📈', '📉', '🏦', '🛍️',
+  '🍔', '☕', '🛒', '🚗', '✈️', '🏠', '🎮', '👕',
+  '🏥', '💊', '📚', '🎓', '🎁', '💡', '💧', '🛡️',
 ];
+
+const TYPE_META: Record<CashflowType, { label: string; description: string; className: string }> = {
+  [CashflowType.Income]: {
+    label: 'Thu nhập',
+    description: 'Lương, thưởng và các nguồn tiền đi vào.',
+    className: 'income',
+  },
+  [CashflowType.Expense]: {
+    label: 'Chi tiêu',
+    description: 'Chi phí sinh hoạt, hóa đơn và mua sắm.',
+    className: 'expense',
+  },
+  [CashflowType.Investment]: {
+    label: 'Đầu tư',
+    description: 'Dòng tiền dành cho cổ phiếu, crypto, quỹ.',
+    className: 'investment',
+  },
+  [CashflowType.Saving]: {
+    label: 'Tiết kiệm',
+    description: 'Quỹ khẩn cấp, mục tiêu tích lũy và dự phòng.',
+    className: 'saving',
+  },
+};
+
+const CASHFLOW_TYPES: CashflowType[] = [
+  CashflowType.Income,
+  CashflowType.Expense,
+  CashflowType.Investment,
+  CashflowType.Saving,
+];
+
+const rootCategories = (categories: CashflowCategory[]) =>
+  categories.filter(category => category.parentCategoryId === null);
+
+const flattenCategories = (categories: CashflowCategory[]): CashflowCategory[] =>
+  categories.flatMap(category => [category, ...flattenCategories(category.subCategories || [])]);
 
 export function CashflowCategoryManagement() {
   const { showNotification } = useNotification();
   const [categories, setCategories] = useState<CashflowCategory[]>([]);
+  const [activeType, setActiveType] = useState<CashflowType>(CashflowType.Expense);
   const [editingCategoryId, setEditingCategoryId] = useState<string | null>(null);
-  
   const [newCatName, setNewCatName] = useState('');
   const [newCatType, setNewCatType] = useState<CashflowType>(CashflowType.Expense);
   const [newCatIcon, setNewCatIcon] = useState('💰');
   const [newCatColor, setNewCatColor] = useState('#60a5fa');
+  const [newCatParentId, setNewCatParentId] = useState<string>('');
+  const [newCatSortOrder, setNewCatSortOrder] = useState<number>(0);
 
   useEffect(() => {
     loadCategories();
   }, []);
 
+  const flatCategories = useMemo(() => flattenCategories(categories), [categories]);
+  const visibleRoots = useMemo(
+    () => rootCategories(categories).filter(category => category.type === activeType),
+    [categories, activeType]
+  );
+  const parentCandidates = useMemo(
+    () => rootCategories(categories).filter(category => category.type === newCatType && category.id !== editingCategoryId),
+    [categories, newCatType, editingCategoryId]
+  );
+  const editingCategory = useMemo(
+    () => flatCategories.find(category => category.id === editingCategoryId) || null,
+    [flatCategories, editingCategoryId]
+  );
+  const editingHasChildren = Boolean(editingCategory?.subCategories?.length);
+
+  const typeCounts = useMemo(() => {
+    const counts = {
+      [CashflowType.Income]: 0,
+      [CashflowType.Expense]: 0,
+      [CashflowType.Investment]: 0,
+      [CashflowType.Saving]: 0,
+    } as Record<CashflowType, number>;
+
+    flatCategories.forEach(category => {
+      counts[category.type] += 1;
+    });
+    return counts;
+  }, [flatCategories]);
+
   const loadCategories = async () => {
     try {
       const categoriesRes = await cashflowsApi.getCategories();
-      setCategories(categoriesRes?.filter(c => c.isGlobal) || []);
-    } catch (err: any) {
+      setCategories(categoriesRes?.filter(category => category.isGlobal) || []);
+    } catch (err) {
       console.error('Failed to load categories', err);
     }
   };
@@ -38,12 +104,13 @@ export function CashflowCategoryManagement() {
     e.preventDefault();
     try {
       const command = {
-        name: newCatName,
+        name: newCatName.trim(),
         type: newCatType,
         icon: newCatIcon,
         color: newCatColor,
         isGlobal: true,
-        sortOrder: 0
+        sortOrder: newCatSortOrder,
+        parentCategoryId: newCatParentId || null,
       };
 
       if (editingCategoryId) {
@@ -51,85 +118,186 @@ export function CashflowCategoryManagement() {
       } else {
         await cashflowsApi.createCategory(command);
       }
+
       resetCategoryForm();
-      loadCategories();
-      showNotification('Cashflow Category saved', 'success');
+      await loadCategories();
+      showNotification('Đã lưu category', 'success');
     } catch (error) {
       console.error('Failed to save category', error);
-      showNotification('Error saving Category', 'error');
+      showNotification('Không thể lưu category. Kiểm tra parent/type và thử lại.', 'error');
     }
   };
 
-  const handleEditCategory = (c: CashflowCategory) => {
-    setEditingCategoryId(c.id);
-    setNewCatName(c.name);
-    setNewCatType(c.type);
-    setNewCatIcon(c.icon);
-    setNewCatColor(c.color);
+  const handleEditCategory = (category: CashflowCategory) => {
+    setEditingCategoryId(category.id);
+    setNewCatName(category.name);
+    setNewCatType(category.type);
+    setNewCatIcon(category.icon);
+    setNewCatColor(category.color);
+    setNewCatParentId(category.parentCategoryId || '');
+    setNewCatSortOrder(category.sortOrder);
+    setActiveType(category.type);
   };
 
   const handleDeleteCategory = async (id: string) => {
-    if (!window.confirm('Are you sure you want to delete this Category?')) return;
+    if (!window.confirm('Bạn chắc chắn muốn xóa category này?')) return;
     try {
       await cashflowsApi.deleteCategory(id);
-      showNotification('Category deleted', 'success');
-      loadCategories();
-    } catch (error: any) {
+      showNotification('Đã xóa category', 'success');
+      await loadCategories();
+    } catch (error) {
       console.error('Failed to delete category', error);
-      showNotification('Cannot delete Category because it is in use!', 'error');
+      showNotification('Không thể xóa category vì đang được sử dụng hoặc có child.', 'error');
     }
   };
 
   const resetCategoryForm = () => {
     setEditingCategoryId(null);
     setNewCatName('');
-    setNewCatType(CashflowType.Expense);
+    setNewCatType(activeType);
     setNewCatIcon('💰');
     setNewCatColor('#60a5fa');
+    setNewCatParentId('');
+    setNewCatSortOrder(0);
+  };
+
+  const changeType = (type: CashflowType) => {
+    setNewCatType(type);
+    setNewCatParentId('');
+    setActiveType(type);
+  };
+
+  const renderCategoryNode = (category: CashflowCategory) => {
+    const meta = TYPE_META[category.type];
+    const isParent = category.parentCategoryId === null;
+
+    return (
+      <div key={category.id} className={`category-tree-node ${isParent ? 'parent' : 'child'} ${meta.className}`}>
+        <div className="category-node-main">
+          <div className="category-node-icon" style={{ color: category.color, borderColor: `${category.color}70` }}>
+            {category.icon}
+          </div>
+          <div className="category-node-copy">
+            <div className="category-node-title">
+              <h4>{category.name}</h4>
+              <span>{isParent ? 'Parent' : 'Child'}</span>
+            </div>
+            <p>{meta.label} · sort {category.sortOrder} · {category.subCategories?.length || 0} child</p>
+          </div>
+        </div>
+
+        <div className="category-node-actions">
+          <button onClick={() => handleEditCategory(category)} className="btn btn-outline btn-sm">Sửa</button>
+          <button onClick={() => handleDeleteCategory(category.id)} className="btn btn-outline btn-sm danger">Xóa</button>
+        </div>
+
+        {category.subCategories?.length > 0 && (
+          <div className="category-child-list">
+            {category.subCategories.map(child => renderCategoryNode(child))}
+          </div>
+        )}
+      </div>
+    );
   };
 
   return (
-    <div className="admin-page-container">
-      <div className="admin-page-header">
-        <h2>Cashflow Categories</h2>
-        <p className="admin-page-subtitle">Manage categories for income and expenses</p>
+    <div className="admin-page-container cashflow-admin-page">
+      <div className="cashflow-admin-hero">
+        <div>
+          <span className="admin-kicker">Category pattern</span>
+          <h2>Cashflow Categories</h2>
+          <p>Quản lý category cha/con cho thu nhập, chi tiêu, đầu tư và tiết kiệm. Mỗi parent chỉ có một cấp child để báo cáo luôn gọn.</p>
+        </div>
       </div>
-      
+
+      <section className="category-pattern-grid">
+        {CASHFLOW_TYPES.map(type => {
+          const meta = TYPE_META[type];
+          return (
+            <button
+              key={type}
+              type="button"
+              className={`category-pattern-card glass-panel ${meta.className} ${activeType === type ? 'active' : ''}`}
+              onClick={() => changeType(type)}
+            >
+              <span>{meta.label}</span>
+              <strong>{typeCounts[type]}</strong>
+              <small>{meta.description}</small>
+            </button>
+          );
+        })}
+      </section>
+
       <div className="cashflow-category-layout">
-        
-        {/* Left Side: Form */}
-        <div className="glass-panel form-section">
-          <div className="glass-panel-header">
-            <h3>{editingCategoryId ? 'Edit Category' : 'Create New Category'}</h3>
+        <div className="glass-panel form-section category-builder">
+          <div className="builder-header">
+            <div>
+              <h3>{editingCategoryId ? 'Sửa category' : 'Tạo category mới'}</h3>
+              <p>{newCatParentId ? 'Category này sẽ là child của parent đã chọn.' : 'Để trống parent nếu muốn tạo category cha.'}</p>
+            </div>
+            {editingCategoryId && (
+              <button type="button" onClick={resetCategoryForm} className="btn btn-outline btn-sm">Hủy sửa</button>
+            )}
           </div>
 
           <form onSubmit={handleSaveCategory} className="glass-form">
             <div className="form-group">
-              <label>Category Name</label>
+              <label>Tên category</label>
               <input
                 type="text"
                 required
                 value={newCatName}
                 onChange={e => setNewCatName(e.target.value)}
-                className="modern-input"
-                placeholder="e.g. Salary, Food, Entertainment..."
+                placeholder="VD: Ăn uống, Lương chính, Quỹ khẩn cấp"
               />
             </div>
-            
-            <div className="form-group">
-              <label>Type</label>
-              <select
-                value={newCatType}
-                onChange={e => setNewCatType(Number(e.target.value) as CashflowType)}
-                className="modern-select"
-              >
-                <option value={CashflowType.Income}>Income (Thu nhập)</option>
-                <option value={CashflowType.Expense}>Expense (Chi tiêu)</option>
-              </select>
+
+            <div className="form-row compact">
+              <div className="form-group">
+                <label>Pattern</label>
+                <select
+                  value={newCatType}
+                  onChange={e => {
+                    setNewCatType(Number(e.target.value) as CashflowType);
+                    setNewCatParentId('');
+                  }}
+                  disabled={editingHasChildren}
+                >
+                  <option value={CashflowType.Income}>Thu nhập</option>
+                  <option value={CashflowType.Expense}>Chi tiêu</option>
+                  <option value={CashflowType.Investment}>Đầu tư</option>
+                  <option value={CashflowType.Saving}>Tiết kiệm</option>
+                </select>
+              </div>
+              <div className="form-group">
+                <label>Sort order</label>
+                <input
+                  type="number"
+                  value={newCatSortOrder}
+                  onChange={e => setNewCatSortOrder(Number(e.target.value))}
+                />
+              </div>
             </div>
 
             <div className="form-group">
-              <label>Icon / Emoji</label>
+              <label>Parent category</label>
+              <select
+                value={newCatParentId}
+                onChange={e => setNewCatParentId(e.target.value)}
+                disabled={editingHasChildren}
+              >
+                <option value="">Không có parent - tạo category cha</option>
+                {parentCandidates.map(category => (
+                  <option key={category.id} value={category.id}>
+                    {category.icon} {category.name}
+                  </option>
+                ))}
+              </select>
+              {editingHasChildren && <small className="field-hint">Category đang có child nên không thể đổi type hoặc chuyển thành child.</small>}
+            </div>
+
+            <div className="form-group">
+              <label>Icon</label>
               <div className="emoji-picker-container">
                 <div className="emoji-grid">
                   {COMMON_EMOJIS.map(emoji => (
@@ -143,22 +311,18 @@ export function CashflowCategoryManagement() {
                     </button>
                   ))}
                 </div>
-                <div className="emoji-custom-input">
-                  <input
-                    type="text"
-                    value={newCatIcon}
-                    onChange={e => setNewCatIcon(e.target.value)}
-                    className="modern-input"
-                    placeholder="Custom 🍔"
-                    maxLength={2}
-                    title="Paste a custom emoji here"
-                  />
-                </div>
+                <input
+                  type="text"
+                  value={newCatIcon}
+                  onChange={e => setNewCatIcon(e.target.value)}
+                  placeholder="Icon"
+                  maxLength={4}
+                />
               </div>
             </div>
 
             <div className="form-group">
-              <label>Theme Color</label>
+              <label>Màu theme</label>
               <div className="color-picker-wrapper">
                 <input
                   type="color"
@@ -170,66 +334,31 @@ export function CashflowCategoryManagement() {
               </div>
             </div>
 
-            <div className="form-actions" style={{ marginTop: '1rem' }}>
-              <button type="submit" className="btn-primary glow-effect" style={{ flex: 1 }}>
-                {editingCategoryId ? '💾 Save Changes' : '✨ Add Category'}
-              </button>
-              {editingCategoryId && (
-                 <button type="button" onClick={resetCategoryForm} className="btn-secondary">
-                  Cancel
-                </button>
-              )}
-            </div>
+            <button type="submit" className="btn btn-primary">
+              {editingCategoryId ? 'Lưu thay đổi' : 'Thêm category'}
+            </button>
           </form>
         </div>
 
-        {/* Right Side: List/Grid */}
-        <div className="list-section">
-          <div className="glass-panel" style={{ padding: '1.5rem', marginBottom: '1.5rem' }}>
-             <p style={{ margin: 0, fontWeight: 500, color: 'rgba(255,255,255,0.7)' }}>
-                Managing {categories.length} Global Categories
-             </p>
+        <div className="category-tree-section">
+          <div className="tree-section-header glass-panel">
+            <div>
+              <h3>{TYPE_META[activeType].label}</h3>
+              <p>{visibleRoots.length} parent category · {typeCounts[activeType]} category tổng cộng</p>
+            </div>
           </div>
 
-          <div className="category-grid">
-            {categories.map(c => (
-              <div key={c.id} className={`cf-category-card ${c.type === CashflowType.Income ? 'income' : 'expense'}`}>
-                <div className="cf-card-top">
-                  <div 
-                    className="cf-icon"
-                    style={{ 
-                      backgroundColor: `${c.color}20`,
-                      color: c.color,
-                      boxShadow: `0 0 15px ${c.color}30`
-                    }}
-                  >
-                    {c.icon}
-                  </div>
-                </div>
-                
-                <div className="cf-info">
-                  <h4 className="cf-name">{c.name}</h4>
-                  <span className={`cf-type-badge ${c.type === CashflowType.Income ? 'income' : 'expense'}`}>
-                    {c.type === CashflowType.Income ? 'INCOME' : 'EXPENSE'}
-                  </span>
-                </div>
-
-                <div className="cf-actions">
-                  <button onClick={() => handleEditCategory(c)} className="btn-outline-small">Edit</button>
-                  <button onClick={() => handleDeleteCategory(c.id)} className="btn-outline-small danger">Delete</button>
-                </div>
+          <div className="category-tree-list">
+            {visibleRoots.length === 0 ? (
+              <div className="empty-state glass-panel">
+                <strong>Chưa có category cho pattern này.</strong>
+                <span>Tạo parent category trước, sau đó thêm child bên dưới parent đó.</span>
               </div>
-            ))}
-            
-            {categories.length === 0 && (
-              <div className="empty-state">
-                <div className="empty-icon">📁</div>
-                <p>No categories yet. Create your first one on the left!</p>
-              </div>
+            ) : (
+              visibleRoots.map(category => renderCategoryNode(category))
             )}
           </div>
         </div>
-
       </div>
     </div>
   );

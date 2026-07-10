@@ -93,7 +93,7 @@ export const Navbar: React.FC = () => {
                   className={location.pathname.startsWith('/saving-goals') ? "nav-link active" : "nav-link"}
                   onClick={closeMenu}
                 >
-                  Saving Goals
+                  Mục tiêu tiết kiệm
                 </NavLink>
                 <NavLink 
                   to="/analytics" 
@@ -107,14 +107,14 @@ export const Navbar: React.FC = () => {
                   className={location.pathname.startsWith('/rebalancing') ? "nav-link active" : "nav-link"}
                   onClick={closeMenu}
                 >
-                  Rebalancing
+                  Tái cân bằng
                 </NavLink>
                 <NavLink 
                   to="/dca-plans" 
                   className={location.pathname.startsWith('/dca-plans') ? "nav-link active" : "nav-link"}
                   onClick={closeMenu}
                 >
-                  DCA Plans
+                  Lịch DCA
                 </NavLink>
               </div>
             )}
