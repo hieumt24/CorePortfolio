@@ -1,4 +1,5 @@
 using System.Globalization;
+using System.Net;
 using System.Security.Cryptography;
 using System.Text;
 using System.Text.Json;
@@ -28,7 +29,7 @@ public class DnseStockPriceService : IStockPriceService
         if (!DnseConfiguration.TryGetCredentials(_configuration, out var apiKey, out var secretKey, out var missingSetting))
         {
             _logger.LogWarning("DNSE stock price request skipped because the following configuration is missing: {MissingSetting}.", missingSetting);
-            return null;
+            throw new InvalidOperationException($"DNSE chưa được cấu hình trên server. Thiếu: {missingSetting}. Hãy set Azure App Settings DNSE__ApiKey và DNSE__SecretKey rồi restart App Service.");
         }
 
         string method = "GET";
@@ -62,7 +63,10 @@ public class DnseStockPriceService : IStockPriceService
             if (!response.IsSuccessStatusCode)
             {
                 _logger.LogWarning("DNSE price API returned {StatusCode} for {Symbol}: {ResponseBody}", response.StatusCode, symbol, responseBody);
-                return null;
+                throw new HttpRequestException(
+                    $"DNSE trả về HTTP {(int)response.StatusCode} ({response.StatusCode}) cho mã {symbol.ToUpperInvariant()}. {GetSafeResponseMessage(responseBody)}",
+                    null,
+                    response.StatusCode);
             }
 
             using var document = JsonDocument.Parse(responseBody);
@@ -83,11 +87,37 @@ public class DnseStockPriceService : IStockPriceService
 
             return null;
         }
+        catch (OperationCanceledException)
+        {
+            throw;
+        }
+        catch (InvalidOperationException)
+        {
+            throw;
+        }
+        catch (HttpRequestException)
+        {
+            throw;
+        }
+        catch (JsonException ex)
+        {
+            _logger.LogError(ex, "Invalid DNSE price response for {Symbol}.", symbol);
+            throw new HttpRequestException($"DNSE trả về dữ liệu không hợp lệ cho mã {symbol.ToUpperInvariant()}.", ex, HttpStatusCode.BadGateway);
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Exception while getting stock price for {Symbol} from DNSE.", symbol);
-            return null;
+            throw new HttpRequestException($"Không gọi được DNSE cho mã {symbol.ToUpperInvariant()}.", ex, HttpStatusCode.BadGateway);
         }
+    }
+
+    private static string GetSafeResponseMessage(string responseBody)
+    {
+        if (string.IsNullOrWhiteSpace(responseBody))
+            return "DNSE không trả về nội dung lỗi.";
+
+        var trimmedBody = responseBody.Trim();
+        return trimmedBody.Length <= 300 ? trimmedBody : $"{trimmedBody[..300]}...";
     }
 
     private static string GenerateSignature(string secret, string signingString)

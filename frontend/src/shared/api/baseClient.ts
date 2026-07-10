@@ -17,7 +17,16 @@ export const apiClient = async <T>(endpoint: string, options?: RequestInit): Pro
   });
 
   if (!response.ok) {
-    throw new Error(`API Error: ${response.statusText}`);
+    let message = `API Error: ${response.statusText}`;
+
+    try {
+      const errorBody = await response.json();
+      message = errorBody.detail || errorBody.message || errorBody.title || message;
+    } catch {
+      // Keep the HTTP status text when the server returns an empty or non-JSON error body.
+    }
+
+    throw new Error(message);
   }
 
   if (response.status === 204) {

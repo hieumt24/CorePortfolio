@@ -105,7 +105,7 @@ export function MarketAssetModal({ isOpen, onClose, onSaved, assetToEdit, catego
       const coinId = name.trim().toLowerCase().replace(/\s+/g, '-');
       const data = await marketAssetsApi.fetchCoinGeckoPrice(coinId);
       
-      if (data && data.price) {
+      if (data && typeof data.price === 'number' && data.price > 0) {
         setPrice(data.price.toString());
         showNotification(`Đã lấy giá CoinGecko: $${data.price}`, 'success');
       } else {
@@ -152,7 +152,7 @@ export function MarketAssetModal({ isOpen, onClose, onSaved, assetToEdit, catego
       }
     } catch (error) {
       console.error('DNSE API error', error);
-      showNotification('Lỗi kết nối tới Backend để lấy giá DNSE', 'error');
+      showNotification(error instanceof Error ? error.message : 'Lỗi kết nối tới Backend để lấy giá DNSE', 'error');
     } finally {
       setIsFetchingPrice(false);
     }
