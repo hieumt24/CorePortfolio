@@ -21,7 +21,7 @@ public class CreateCashflowRecordHandler : IRequestHandler<CreateCashflowRecordC
 
     public async Task<Guid> Handle(CreateCashflowRecordCommand request, CancellationToken cancellationToken)
     {
-        var userId = _currentUserService.UserId.Value;
+        var userId = _currentUserService.UserId ?? throw new UnauthorizedAccessException();
 
         // Verify Portfolio belongs to User
         var portfolio = await _dbContext.Portfolios
@@ -53,7 +53,7 @@ public class CreateCashflowRecordHandler : IRequestHandler<CreateCashflowRecordC
         // Find if user already has a Fiat Asset in this currency
         var fiatCategory = await _dbContext.AssetCategories.FirstOrDefaultAsync(c => c.Name == "Fiat", cancellationToken);
         var marketAsset = await _dbContext.MarketAssets
-            .FirstOrDefaultAsync(ma => ma.CategoryId == fiatCategory.Id && ma.Symbol == request.Currency, cancellationToken);
+            .FirstOrDefaultAsync(ma => fiatCategory != null && ma.CategoryId == fiatCategory.Id && ma.Symbol == request.Currency, cancellationToken);
 
         if (marketAsset != null)
         {

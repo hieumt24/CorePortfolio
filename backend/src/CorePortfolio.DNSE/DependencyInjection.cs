@@ -8,9 +8,9 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddDnseInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
-        services.AddHttpClient("DNSE", client =>
+        services.AddHttpClient(DnseConfiguration.HttpClientName, client =>
         {
-            client.BaseAddress = new Uri("https://openapi.dnse.com.vn");
+            client.BaseAddress = new Uri(DnseConfiguration.GetBaseUrl(configuration));
             client.Timeout = TimeSpan.FromSeconds(30);
         });
 

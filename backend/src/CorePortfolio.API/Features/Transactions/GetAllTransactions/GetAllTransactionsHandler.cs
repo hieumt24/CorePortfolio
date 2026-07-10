@@ -22,8 +22,8 @@ public class GetAllTransactionsHandler : IRequestHandler<GetAllTransactionsQuery
         var query = _dbContext.Transactions
             .Include(t => t.Portfolio)
             .Include(t => t.Asset)
-                .ThenInclude(a => a.MarketAsset)
-                    .ThenInclude(ma => ma.Category)
+                .ThenInclude(a => a!.MarketAsset)
+                    .ThenInclude(ma => ma!.Category)
             .AsNoTracking()
             .Where(t => t.Portfolio != null && t.Portfolio.UserId == _currentUserService.UserId);
 

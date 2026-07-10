@@ -41,16 +41,18 @@ public class GetMonthlyCashflowReportHandler : IRequestHandler<GetMonthlyCashflo
 
     public async Task<MonthlyCashflowReportDto> Handle(GetMonthlyCashflowReportQuery request, CancellationToken cancellationToken)
     {
-        var userId = _currentUserService.UserId.Value;
+        var userId = _currentUserService.UserId ?? throw new UnauthorizedAccessException();
 
         var startDate = new DateTime(request.Year, 1, 1);
         var endDate = new DateTime(request.Year, 12, 31);
 
-        var records = await _dbContext.CashflowRecords
+        var records = (await _dbContext.CashflowRecords
             .Include(c => c.Category)
             .ThenInclude(c => c!.ParentCategory)
             .Where(c => c.UserId == userId && c.Currency == request.Currency && c.Date >= startDate && c.Date <= endDate)
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken))
+            .Where(c => c.Category != null)
+            .ToList();
 
         var months = new List<MonthSummaryDto>();
 

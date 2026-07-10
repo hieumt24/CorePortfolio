@@ -28,15 +28,12 @@ public class GetDividendAnalyticsHandler : IRequestHandler<GetDividendAnalyticsQ
 
     public async Task<List<DividendMonthlyAnalyticsDto>> Handle(GetDividendAnalyticsQuery request, CancellationToken cancellationToken)
     {
-        var userId = _currentUserService.UserId;
-        if (userId == Guid.Empty) throw new UnauthorizedAccessException();
+        var userId = _currentUserService.UserId ?? throw new UnauthorizedAccessException();
 
         var startDate = DateTime.UtcNow.AddMonths(-request.Months);
 
         var transactions = await _dbContext.Transactions
-            .Include(t => t.Asset)
-                .ThenInclude(a => a.Portfolio)
-            .Where(t => t.Portfolio!.UserId == userId && t.Type == TransactionType.Dividend && t.Date >= startDate)
+            .Where(t => t.Portfolio != null && t.Portfolio.UserId == userId && t.Type == TransactionType.Dividend && t.Date >= startDate)
             .ToListAsync(cancellationToken);
 
         var grouped = transactions

@@ -25,12 +25,9 @@ public class DnseStockPriceService : IStockPriceService
     {
         if (string.IsNullOrWhiteSpace(symbol)) return null;
 
-        var apiKey = _configuration["DNSE:ApiKey"];
-        var secretKey = _configuration["DNSE:SecretKey"];
-
-        if (string.IsNullOrEmpty(apiKey) || string.IsNullOrEmpty(secretKey))
+        if (!DnseConfiguration.TryGetCredentials(_configuration, out var apiKey, out var secretKey, out var missingSetting))
         {
-            _logger.LogWarning("DNSE API Key or Secret Key is not configured.");
+            _logger.LogWarning("DNSE stock price request skipped because the following configuration is missing: {MissingSetting}.", missingSetting);
             return null;
         }
 
@@ -41,20 +38,20 @@ public class DnseStockPriceService : IStockPriceService
         string dateStr = now.ToString("ddd, dd MMM yyyy HH:mm:ss +0000", CultureInfo.InvariantCulture);
         string nonce = Guid.NewGuid().ToString("N").ToLower();
 
-        string signingString = $"(request-target): {method.ToLower()} {path}\ndate: {dateStr}\nnonce: {nonce}";
+        string signingString = $"(request-target): {method.ToLower()} {path}\nx-aux-date: {dateStr}\nnonce: {nonce}";
         string encodedSignature = GenerateSignature(secretKey.Trim(), signingString);
 
-        string xSignature = $"Signature keyId=\"{apiKey.Trim()}\",algorithm=\"hmac-sha256\",headers=\"(request-target) date\",signature=\"{encodedSignature}\",nonce=\"{nonce}\"";
+        string xSignature = $"Signature keyId=\"{apiKey.Trim()}\",algorithm=\"hmac-sha256\",headers=\"(request-target) x-aux-date\",signature=\"{encodedSignature}\",nonce=\"{nonce}\"";
 
-        var client = _httpClientFactory.CreateClient("DNSE");
-        var request = new HttpRequestMessage(HttpMethod.Get, $"https://openapi.dnse.com.vn{path}");
+        var client = _httpClientFactory.CreateClient(DnseConfiguration.HttpClientName);
+        var request = new HttpRequestMessage(HttpMethod.Get, path);
 
         request.Headers.Clear();
         request.Headers.TryAddWithoutValidation("Accept", "application/json");
-        request.Headers.TryAddWithoutValidation("x-api-key", apiKey.Trim());
-        request.Headers.TryAddWithoutValidation("x-Signature", xSignature);
-        request.Headers.TryAddWithoutValidation("Date", dateStr);
-        request.Headers.TryAddWithoutValidation("version", "2026-05-07");
+        request.Headers.TryAddWithoutValidation("X-API-Key", apiKey.Trim());
+        request.Headers.TryAddWithoutValidation("X-Signature", xSignature);
+        request.Headers.TryAddWithoutValidation("X-Aux-Date", dateStr);
+        request.Headers.TryAddWithoutValidation("version", DnseConfiguration.GetApiVersion(_configuration));
 
         try
         {
@@ -64,7 +61,7 @@ public class DnseStockPriceService : IStockPriceService
             
             if (!response.IsSuccessStatusCode)
             {
-                _logger.LogWarning("DNSE API returned {StatusCode}: {ResponseBody}", response.StatusCode, responseBody);
+                _logger.LogWarning("DNSE price API returned {StatusCode} for {Symbol}: {ResponseBody}", response.StatusCode, symbol, responseBody);
                 return null;
             }
 

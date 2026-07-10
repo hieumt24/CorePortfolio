@@ -32,7 +32,7 @@ public class GetCashflowSummaryHandler : IRequestHandler<GetCashflowSummaryQuery
 
     public async Task<CashflowSummaryDto> Handle(GetCashflowSummaryQuery request, CancellationToken cancellationToken)
     {
-        var userId = _currentUserService.UserId.Value;
+        var userId = _currentUserService.UserId ?? throw new UnauthorizedAccessException();
 
         var query = _dbContext.CashflowRecords
             .Include(c => c.Category)
@@ -49,7 +49,9 @@ public class GetCashflowSummaryHandler : IRequestHandler<GetCashflowSummaryQuery
             query = query.Where(c => c.Date <= request.EndDate.Value);
         }
 
-        var records = await query.ToListAsync(cancellationToken);
+        var records = (await query.ToListAsync(cancellationToken))
+            .Where(c => c.Category != null)
+            .ToList();
 
         var totalIncome = records.Where(c => c.Category!.Type == CashflowType.Income).Sum(c => c.Amount);
         var totalExpense = records.Where(c => c.Category!.Type == CashflowType.Expense).Sum(c => c.Amount);

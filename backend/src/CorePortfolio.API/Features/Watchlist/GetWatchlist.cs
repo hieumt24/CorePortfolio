@@ -28,18 +28,18 @@ public class GetWatchlistHandler : IRequestHandler<GetWatchlistQuery, List<Watch
 
         return await _dbContext.WatchlistItems
             .Include(w => w.MarketAsset)
-                .ThenInclude(m => m.Category)
+                .ThenInclude(m => m!.Category)
             .Where(w => w.UserId == userId)
             .OrderByDescending(w => w.AddedAt)
             .Select(w => new WatchlistDto(
                 w.Id,
                 w.MarketAssetId,
-                w.MarketAsset!.Symbol,
-                w.MarketAsset.Name,
-                w.MarketAsset.CurrentPrice,
+                w.MarketAsset != null ? w.MarketAsset.Symbol : "",
+                w.MarketAsset != null ? w.MarketAsset.Name : "",
+                w.MarketAsset != null ? w.MarketAsset.CurrentPrice : 0,
                 w.TargetPrice,
                 w.AddedAt,
-                w.MarketAsset.Category!.Name
+                w.MarketAsset != null && w.MarketAsset.Category != null ? w.MarketAsset.Category.Name : ""
             ))
             .ToListAsync(cancellationToken);
     }

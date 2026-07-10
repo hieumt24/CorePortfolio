@@ -26,7 +26,7 @@ public class CreateCashflowCategoryHandler : IRequestHandler<CreateCashflowCateg
             throw new UnauthorizedAccessException("Only admins can create global categories.");
         }
 
-        var userId = _currentUserService.UserId.Value;
+        var userId = _currentUserService.UserId ?? throw new UnauthorizedAccessException();
 
         if (request.ParentCategoryId.HasValue)
         {
@@ -50,7 +50,7 @@ public class CreateCashflowCategoryHandler : IRequestHandler<CreateCashflowCateg
             IsGlobal = request.IsGlobal,
             SortOrder = request.SortOrder,
             ParentCategoryId = request.ParentCategoryId,
-            UserId = request.IsGlobal ? null : _currentUserService.UserId
+            UserId = request.IsGlobal ? null : userId
         };
 
         _dbContext.CashflowCategories.Add(category);

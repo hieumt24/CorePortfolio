@@ -1,7 +1,6 @@
 using CorePortfolio.API.Features.Reports.GetGlobalHistory;
 using CorePortfolio.Infrastructure.Data;
 using MediatR;
-using MediatR;
 using Microsoft.EntityFrameworkCore;
 using CorePortfolio.API.Services;
 

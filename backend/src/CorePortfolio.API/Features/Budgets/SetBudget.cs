@@ -21,7 +21,7 @@ public class SetBudgetHandler : IRequestHandler<SetBudgetCommand, Guid>
 
     public async Task<Guid> Handle(SetBudgetCommand request, CancellationToken cancellationToken)
     {
-        var userId = _currentUserService.UserId.Value;
+        var userId = _currentUserService.UserId ?? throw new UnauthorizedAccessException();
 
         var budget = await _dbContext.Budgets
             .FirstOrDefaultAsync(b => b.UserId == userId && b.CategoryId == request.CategoryId, cancellationToken);

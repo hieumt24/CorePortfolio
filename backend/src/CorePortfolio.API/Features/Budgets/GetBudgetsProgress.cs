@@ -38,7 +38,7 @@ public class GetBudgetsProgressHandler : IRequestHandler<GetBudgetsProgressQuery
 
     public async Task<List<BudgetProgressDto>> Handle(GetBudgetsProgressQuery request, CancellationToken cancellationToken)
     {
-        var userId = _currentUserService.UserId.Value;
+        var userId = _currentUserService.UserId ?? throw new UnauthorizedAccessException();
         var now = DateTime.UtcNow;
         var year = request.Year ?? now.Year;
         var month = request.Month ?? now.Month;
@@ -79,9 +79,9 @@ public class GetBudgetsProgressHandler : IRequestHandler<GetBudgetsProgressQuery
         {
             Id = b.Id,
             CategoryId = b.CategoryId,
-            CategoryName = b.Category.Name,
-            CategoryIcon = b.Category.Icon ?? "",
-            CategoryColor = b.Category.Color ?? "",
+            CategoryName = b.Category?.Name ?? "Unknown",
+            CategoryIcon = b.Category?.Icon ?? "",
+            CategoryColor = b.Category?.Color ?? "",
             MonthlyLimit = b.MonthlyLimit,
             SpentAmount = GetCategoryAndChildrenIds(b.CategoryId, allCategories).Sum(id => spentAmounts.GetValueOrDefault(id, 0m)),
             Year = year,

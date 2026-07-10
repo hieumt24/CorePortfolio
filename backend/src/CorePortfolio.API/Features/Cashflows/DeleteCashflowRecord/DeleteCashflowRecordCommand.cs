@@ -20,7 +20,7 @@ public class DeleteCashflowRecordHandler : IRequestHandler<DeleteCashflowRecordC
 
     public async Task Handle(DeleteCashflowRecordCommand request, CancellationToken cancellationToken)
     {
-        var userId = _currentUserService.UserId.Value;
+        var userId = _currentUserService.UserId ?? throw new UnauthorizedAccessException();
 
         var cashflow = await _dbContext.CashflowRecords
             .Include(c => c.Transaction)

@@ -23,7 +23,7 @@ public class GetCashflowCategoriesHandler : IRequestHandler<GetCashflowCategorie
 
     public async Task<List<CashflowCategoryDto>> Handle(GetCashflowCategoriesQuery request, CancellationToken cancellationToken)
     {
-        var userId = _currentUserService.UserId.Value;
+        var userId = _currentUserService.UserId ?? throw new UnauthorizedAccessException();
 
         var allCategories = await _dbContext.CashflowCategories
             .Where(c => c.IsGlobal || c.UserId == userId)

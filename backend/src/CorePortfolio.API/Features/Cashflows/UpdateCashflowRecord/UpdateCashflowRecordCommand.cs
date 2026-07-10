@@ -21,7 +21,7 @@ public class UpdateCashflowRecordHandler : IRequestHandler<UpdateCashflowRecordC
 
     public async Task Handle(UpdateCashflowRecordCommand request, CancellationToken cancellationToken)
     {
-        var userId = _currentUserService.UserId.Value;
+        var userId = _currentUserService.UserId ?? throw new UnauthorizedAccessException();
 
         var cashflow = await _dbContext.CashflowRecords
             .Include(c => c.Transaction)

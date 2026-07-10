@@ -39,7 +39,7 @@ public class GetDailyCashflowSummaryHandler : IRequestHandler<GetDailyCashflowSu
 
     public async Task<DailyCashflowSummaryDto> Handle(GetDailyCashflowSummaryQuery request, CancellationToken cancellationToken)
     {
-        var userId = _currentUserService.UserId.Value;
+        var userId = _currentUserService.UserId ?? throw new UnauthorizedAccessException();
 
         if (!DateTime.TryParse(request.Month + "-01", out var startDate))
         {
@@ -48,11 +48,13 @@ public class GetDailyCashflowSummaryHandler : IRequestHandler<GetDailyCashflowSu
 
         var endDate = startDate.AddMonths(1).AddDays(-1);
 
-        var records = await _dbContext.CashflowRecords
+        var records = (await _dbContext.CashflowRecords
             .Include(c => c.Category)
             .ThenInclude(c => c!.ParentCategory)
             .Where(c => c.UserId == userId && c.Currency == request.Currency && c.Date >= startDate && c.Date <= endDate)
-            .ToListAsync(cancellationToken);
+            .ToListAsync(cancellationToken))
+            .Where(c => c.Category != null)
+            .ToList();
 
         var daysInMonth = DateTime.DaysInMonth(startDate.Year, startDate.Month);
         var days = new List<DaySummaryDto>();

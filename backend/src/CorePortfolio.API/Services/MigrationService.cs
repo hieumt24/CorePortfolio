@@ -30,7 +30,7 @@ public class MigrationService
         // Fetch all transactions ordered by Date
         var transactions = await _dbContext.Transactions
             .Include(t => t.Asset)
-            .ThenInclude(a => a.MarketAsset)
+            .ThenInclude(a => a!.MarketAsset)
             .ThenInclude(m => m!.Category)
             .OrderBy(t => t.Date)
             .ThenBy(t => t.Id)

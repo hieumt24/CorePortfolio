@@ -24,12 +24,9 @@ public class DnseStockInstrumentService : IStockInstrumentService
 
     public async Task<IEnumerable<StockInstrument>> SearchInstrumentsAsync(string query, int limit = 10, CancellationToken cancellationToken = default)
     {
-        var apiKey = _configuration["DNSE:ApiKey"];
-        var secretKey = _configuration["DNSE:SecretKey"];
-
-        if (string.IsNullOrEmpty(apiKey) || string.IsNullOrEmpty(secretKey))
+        if (!DnseConfiguration.TryGetCredentials(_configuration, out var apiKey, out var secretKey, out var missingSetting))
         {
-            _logger.LogWarning("DNSE API Key or Secret Key is not configured.");
+            _logger.LogWarning("DNSE instruments request skipped because the following configuration is missing: {MissingSetting}.", missingSetting);
             return Enumerable.Empty<StockInstrument>();
         }
 
@@ -50,15 +47,15 @@ public class DnseStockInstrumentService : IStockInstrumentService
 
         string xSignature = $"Signature keyId=\"{apiKey.Trim()}\",algorithm=\"hmac-sha256\",headers=\"(request-target) x-aux-date\",signature=\"{encodedSignature}\",nonce=\"{nonce}\"";
 
-        var client = _httpClientFactory.CreateClient("DNSE");
-        var request = new HttpRequestMessage(HttpMethod.Get, $"https://openapi.dnse.com.vn{path}");
+        var client = _httpClientFactory.CreateClient(DnseConfiguration.HttpClientName);
+        var request = new HttpRequestMessage(HttpMethod.Get, path);
 
         request.Headers.Clear();
         request.Headers.TryAddWithoutValidation("Accept", "application/json");
         request.Headers.TryAddWithoutValidation("X-API-Key", apiKey.Trim());
         request.Headers.TryAddWithoutValidation("X-Signature", xSignature);
         request.Headers.TryAddWithoutValidation("X-Aux-Date", dateStr);
-        request.Headers.TryAddWithoutValidation("version", "2026-05-07");
+        request.Headers.TryAddWithoutValidation("version", DnseConfiguration.GetApiVersion(_configuration));
 
         try
         {

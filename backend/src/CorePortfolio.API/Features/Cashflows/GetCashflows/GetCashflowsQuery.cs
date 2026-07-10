@@ -23,7 +23,7 @@ public class GetCashflowsHandler : IRequestHandler<GetCashflowsQuery, List<Cashf
 
     public async Task<List<CashflowRecordDto>> Handle(GetCashflowsQuery request, CancellationToken cancellationToken)
     {
-        var userId = _currentUserService.UserId.Value;
+        var userId = _currentUserService.UserId ?? throw new UnauthorizedAccessException();
 
         var query = _dbContext.CashflowRecords
             .Include(c => c.Category)
@@ -37,7 +37,7 @@ public class GetCashflowsHandler : IRequestHandler<GetCashflowsQuery, List<Cashf
 
         if (request.Type.HasValue)
         {
-            query = query.Where(c => (int)c.Category.Type == request.Type.Value);
+            query = query.Where(c => c.Category != null && (int)c.Category.Type == request.Type.Value);
         }
 
         if (request.StartDate.HasValue)
