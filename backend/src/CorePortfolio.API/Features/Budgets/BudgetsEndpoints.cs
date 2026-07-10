@@ -16,9 +16,9 @@ public static class BudgetsEndpoints
             return Results.Ok(new { Id = id });
         });
 
-        group.MapGet("/progress", async (IMediator mediator) =>
+        group.MapGet("/progress", async (IMediator mediator, [FromQuery] int? year, [FromQuery] int? month, [FromQuery] string? currency) =>
         {
-            var result = await mediator.Send(new GetBudgetsProgressQuery());
+            var result = await mediator.Send(new GetBudgetsProgressQuery(year, month, currency ?? "VND"));
             return Results.Ok(result);
         });
     }
