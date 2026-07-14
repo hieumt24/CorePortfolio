@@ -37,7 +37,7 @@ export const InvestedCapitalChart: React.FC<InvestedCapitalChartProps> = ({ tota
   const renderTooltip = ({ active, payload }: any) => {
     if (active && payload && payload.length) {
       return (
-        <div className="custom-tooltip glass-panel" style={{ padding: '10px', fontSize: '14px', backgroundColor: '#1e293b', border: '1px solid #334155', borderRadius: '8px' }}>
+        <div className="custom-tooltip">
           {payload.map((entry: any, index: number) => (
             <p key={`item-${index}`} style={{ margin: '4px 0', color: entry.color, fontWeight: 'bold' }}>
               {entry.name}: {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(entry.value)}
@@ -59,7 +59,7 @@ export const InvestedCapitalChart: React.FC<InvestedCapitalChartProps> = ({ tota
             margin={{ top: 20, right: 30, left: 40, bottom: 5 }}
             barSize={60}
           >
-            <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
             <XAxis dataKey="name" stroke="#94a3b8" tick={{ fill: '#94a3b8' }} />
             <YAxis tickFormatter={formatCurrency} stroke="#94a3b8" tick={{ fill: '#94a3b8' }} />
             <Tooltip content={renderTooltip} cursor={{ fill: 'rgba(255,255,255,0.05)' }} />

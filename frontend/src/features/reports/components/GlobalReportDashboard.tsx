@@ -153,23 +153,14 @@ export const GlobalReportDashboard: React.FC = () => {
   const renderPerfCard = (title: string, data: { profit: number, percentage: number }) => {
     const isPositive = data.profit >= 0;
     return (
-      <div className="summary-card glass-panel">
+      <div className="rep-pnl-card glass-panel">
         <h3>{title}</h3>
-        <p className={`summary-value ${isPositive ? 'positive' : 'negative'}`}>
+        <p className={`rep-pnl-value ${isPositive ? 'positive' : 'negative'}`}>
           {isPositive ? '+' : ''}{formatterVnd.format(data.profit)}
         </p>
-        <p className={`perf-badge ${isPositive ? 'positive-bg' : 'negative-bg'}`} style={{ 
-          display: 'inline-block', 
-          padding: '4px 10px', 
-          borderRadius: '12px', 
-          fontSize: '0.85rem',
-          fontWeight: 'bold',
-          marginTop: '0.5rem',
-          background: isPositive ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)',
-          color: isPositive ? '#10b981' : '#ef4444'
-        }}>
+        <span className={`rep-perf-badge ${isPositive ? 'positive' : 'negative'}`}>
           {isPositive ? '▲' : '▼'} {Math.abs(data.percentage).toFixed(2)}%
-        </p>
+        </span>
       </div>
     );
   };
@@ -192,14 +183,14 @@ export const GlobalReportDashboard: React.FC = () => {
         </button>
       </div>
       
-      <div className="report-summary-cards" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '1rem' }}>
-        <div className="summary-card glass-panel" style={{ gridColumn: 'span 2' }}>
+      <div className="rep-primary-stats">
+        <div className="rep-main-card invested glass-panel">
           <h3>Total Invested</h3>
-          <p className="summary-value" style={{ fontSize: '2rem' }}>{formatterVnd.format(totalInvestedVND)}</p>
+          <p className="rep-main-value">{formatterVnd.format(totalInvestedVND)}</p>
         </div>
-        <div className="summary-card glass-panel" style={{ gridColumn: 'span 2' }}>
+        <div className="rep-main-card current glass-panel">
           <h3>Current Value</h3>
-          <p className="summary-value" style={{ fontSize: '2rem' }}>{formatterVnd.format(totalValueVND)}</p>
+          <p className="rep-main-value">{formatterVnd.format(totalValueVND)}</p>
         </div>
       </div>
       
@@ -207,7 +198,7 @@ export const GlobalReportDashboard: React.FC = () => {
         <InvestedCapitalChart totalInvested={totalInvestedVND} currentValue={totalValueVND} />
       </div>
       
-      <div className="report-summary-cards" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
+      <div className="rep-pnl-stats">
         {renderPerfCard('1 Week PnL', perf1W)}
         {renderPerfCard('1 Month PnL', perf1M)}
         {renderPerfCard('1 Year PnL', perf1Y)}

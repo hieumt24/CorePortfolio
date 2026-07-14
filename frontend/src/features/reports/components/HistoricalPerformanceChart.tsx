@@ -61,7 +61,7 @@ export const HistoricalPerformanceChart: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="glass-card" style={{ padding: '1.5rem', marginTop: '2rem' }}>
+      <div className="chart-wrapper glass-panel" style={{ marginTop: '2rem' }}>
         <h2>Historical Performance</h2>
         <p>Loading chart data...</p>
       </div>
@@ -69,11 +69,11 @@ export const HistoricalPerformanceChart: React.FC = () => {
   }
 
   return (
-    <div className="glass-card" style={{ padding: '1.5rem', marginTop: '2rem' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
-        <h2 style={{ fontSize: '1.25rem', fontWeight: 'bold' }}>Historical Performance</h2>
+    <div className="chart-wrapper glass-panel" style={{ marginTop: '2rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
+        <h2>Historical Performance</h2>
         {data.length === 0 && (
-          <button className="btn btn-primary" onClick={handleGenerateMock}>
+          <button className="btn-secondary" style={{ padding: '0.5rem 1rem' }} onClick={handleGenerateMock}>
             Generate Mock Data (30 days)
           </button>
         )}
@@ -88,7 +88,7 @@ export const HistoricalPerformanceChart: React.FC = () => {
               data={data}
               margin={{ top: 20, right: 30, left: 40, bottom: 10 }}
             >
-              <CartesianGrid strokeDasharray="3 3" stroke="#334155" vertical={false} />
+              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
               <XAxis 
                 dataKey="date" 
                 tickFormatter={formatDate}
@@ -108,12 +108,11 @@ export const HistoricalPerformanceChart: React.FC = () => {
                 formatter={(value: any) => [formatCurrency(Number(value) || 0), '']}
                 labelFormatter={(label) => new Date(label).toLocaleDateString('vi-VN')}
                 contentStyle={{ 
-                  backgroundColor: '#1e293b', 
-                  border: '1px solid #334155',
-                  borderRadius: '8px',
-                  color: '#f8fafc'
+                  backgroundColor: 'transparent',
+                  border: 'none'
                 }}
-                itemStyle={{ color: '#f8fafc' }}
+                wrapperClassName="custom-tooltip"
+                itemStyle={{ color: '#ffffff' }}
               />
               <Legend />
               <Line 
