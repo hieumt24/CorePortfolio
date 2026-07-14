@@ -30,6 +30,7 @@ public class UpdateTransactionHandler : IRequestHandler<UpdateTransactionCommand
         if (transaction == null)
             throw new ResourceNotFoundException("Không tìm thấy giao dịch.");
 
+
         transaction.Type = request.Type;
         transaction.Quantity = request.Quantity;
         transaction.Price = request.Price;
@@ -41,10 +42,12 @@ public class UpdateTransactionHandler : IRequestHandler<UpdateTransactionCommand
             transaction.Date = request.Timestamp.Value;
         }
 
-
         await _ledgerService.ValidateHoldingAsync(transaction, _currentUserService.UserId!.Value, cancellationToken);
         await using var dbTransaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
+        
+        _dbContext.Transactions.Update(transaction);
         await _ledgerService.SyncLedgerEntryAsync(transaction, cancellationToken);
+        
         await _dbContext.SaveChangesAsync(cancellationToken);
         await dbTransaction.CommitAsync(cancellationToken);
     }
