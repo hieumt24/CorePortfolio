@@ -133,7 +133,7 @@ app.UseExceptionHandler(errorApp => errorApp.Run(async context =>
     };
     if (status == 500) app.Logger.LogError(exception, "Unhandled API exception");
     await Results.Problem(statusCode: status, title: title,
-        detail: status == 500 ? null : exception?.Message).ExecuteAsync(context);
+        detail: exception?.ToString()).ExecuteAsync(context);
 }));
 
 using (var scope = app.Services.CreateScope())
@@ -173,6 +173,12 @@ app.MapGet("/health", async (AppDbContext db, CancellationToken cancellationToke
         ? Results.Ok(new { status = "healthy", database = "healthy" })
         : Results.Problem(statusCode: 503, title: "Database unavailable"))
     .AllowAnonymous();
+
+app.MapGet("/api/test-db", async (AppDbContext db, CancellationToken cancellationToken) =>
+{
+    var settings = await db.SystemSettings.ToListAsync(cancellationToken);
+    return Results.Ok(settings);
+}).AllowAnonymous();
 
 // Map Endpoints
 app.MapAuthEndpoints();
