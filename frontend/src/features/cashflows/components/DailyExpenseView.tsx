@@ -59,19 +59,19 @@ export const DailyExpenseView: React.FC = () => {
       ) : (
         <>
           <div className="summary-cards">
-            <div className="card income-card">
+            <div className="cf-card income-card">
               <div className="card-content">
                 <h3>Tổng Thu Tháng</h3>
                 <p className="amount">{formatCurrency(summary?.monthTotalIncome || 0)}</p>
               </div>
             </div>
-            <div className="card expense-card">
+            <div className="cf-card expense-card">
               <div className="card-content">
                 <h3>Tổng Chi Tháng</h3>
                 <p className="amount">{formatCurrency(summary?.monthTotalExpense || 0)}</p>
               </div>
             </div>
-            <div className="card saving-card">
+            <div className="cf-card saving-card">
               <div className="card-content">
                 <h3>Trung bình Chi/Ngày</h3>
                 <p className="amount">{formatCurrency(summary?.dailyAverage || 0)}</p>

@@ -11,34 +11,50 @@ export const PortfolioDashboard: React.FC = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
 
   return (
-    <div className="container">
+    <div className="container dashboard-layout">
+      {/* Decorative blurred blobs for premium aesthetic */}
+      <div className="mesh-blob blob-1"></div>
+      <div className="mesh-blob blob-2"></div>
+
       <header className="dashboard-header">
-        <h1>My Portfolios</h1>
-        <button 
-          className="btn btn-primary glass-panel"
-          onClick={() => setIsModalOpen(true)}
-        >
-          <span className="plus-icon">+</span> New Portfolio
-        </button>
+        <div className="header-titles">
+          <h1 className="gradient-text">Portfolios</h1>
+          <p className="subtitle">Manage and track your financial assets</p>
+        </div>
+        <div className="header-actions">
+          <button 
+            className="btn btn-primary"
+            onClick={() => setIsModalOpen(true)}
+          >
+            New Portfolio
+          </button>
+        </div>
       </header>
 
       {loading && (
-        <div className="loading-state glass-panel">
+        <div className="state-panel glass-panel">
           <div className="spinner"></div>
-          <p>Loading your portfolios...</p>
+          <p>Loading portfolios...</p>
         </div>
       )}
 
       {error && (
-        <div className="error-state glass-panel">
+        <div className="state-panel glass-panel error-state">
           <h3>Oops! Something went wrong</h3>
           <p>{error.message}</p>
         </div>
       )}
 
       {!loading && !error && portfolios.length === 0 && (
-        <div className="empty-state glass-panel">
-          <p>You don't have any portfolios yet. Create one to get started!</p>
+        <div className="state-panel glass-panel empty-state">
+          <p>You don't have any portfolios yet. Create one to get started.</p>
+          <button 
+            className="btn btn-outline"
+            onClick={() => setIsModalOpen(true)}
+            style={{ marginTop: '1rem' }}
+          >
+            Create Portfolio
+          </button>
         </div>
       )}
 

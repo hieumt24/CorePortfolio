@@ -8,15 +8,16 @@ import { NumericFormat } from 'react-number-format';
 import './GlobalCreateTransactionModal.css';
 
 interface GlobalCreateTransactionModalProps {
+  initialPortfolioId?: string;
   onClose: () => void;
   onSuccess: () => void;
 }
 
-export const GlobalCreateTransactionModal: React.FC<GlobalCreateTransactionModalProps> = ({ onClose, onSuccess }) => {
+export const GlobalCreateTransactionModal: React.FC<GlobalCreateTransactionModalProps> = ({ initialPortfolioId, onClose, onSuccess }) => {
   const [portfolios, setPortfolios] = useState<PortfolioDto[]>([]);
   const [assets, setAssets] = useState<AssetSummaryDto[]>([]);
   
-  const [selectedPortfolioId, setSelectedPortfolioId] = useState('');
+  const [selectedPortfolioId, setSelectedPortfolioId] = useState(initialPortfolioId || '');
   const [selectedCategoryName, setSelectedCategoryName] = useState('');
   const [selectedAssetId, setSelectedAssetId] = useState('');
   
@@ -106,6 +107,7 @@ export const GlobalCreateTransactionModal: React.FC<GlobalCreateTransactionModal
               onChange={e => setSelectedPortfolioId(e.target.value)}
               required
               className="glass-input"
+              disabled={!!initialPortfolioId}
             >
               <option value="">Select Portfolio</option>
               {portfolios.map(p => (

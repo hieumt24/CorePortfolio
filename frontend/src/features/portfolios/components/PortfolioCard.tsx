@@ -10,25 +10,35 @@ interface Props {
 export const PortfolioCard: React.FC<Props> = ({ portfolio }) => {
   const navigate = useNavigate();
 
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter' || e.key === ' ') {
+      e.preventDefault();
+      navigate(`/portfolios/${portfolio.id}`);
+    }
+  };
+
   return (
-    <div 
+    <article 
       className="portfolio-card glass-panel" 
       onClick={() => navigate(`/portfolios/${portfolio.id}`)}
-      style={{ cursor: 'pointer' }}
+      onKeyDown={handleKeyDown}
+      role="button"
+      tabIndex={0}
+      aria-label={`View details for portfolio ${portfolio.name}`}
     >
-      <div className="portfolio-card-header">
-        <h3 className="portfolio-name">{portfolio.name}</h3>
+      <div className="card-header">
+        <h3 className="card-title">{portfolio.name}</h3>
       </div>
-      <div className="portfolio-card-body">
-        <p className="portfolio-description">
+      <div className="card-body">
+        <p className="card-desc">
           {portfolio.description || 'No description provided.'}
         </p>
       </div>
-      <div className="portfolio-card-footer">
-        <span className="portfolio-date">
-          Created: {new Date(portfolio.createdAt).toLocaleDateString()}
+      <div className="card-footer">
+        <span className="card-meta">
+          Created {new Date(portfolio.createdAt).toLocaleDateString()}
         </span>
       </div>
-    </div>
+    </article>
   );
 };

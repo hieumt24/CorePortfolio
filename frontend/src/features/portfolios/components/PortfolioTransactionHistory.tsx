@@ -1,12 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { getAllTransactions, deleteTransaction } from '../api/transactionApi';
-import type { GlobalTransactionDto, PaginatedResult } from '../types';
-import { TransactionType } from '../types';
+import { getAllTransactions, deleteTransaction } from '../../transactions/api/transactionApi';
+import type { GlobalTransactionDto, PaginatedResult } from '../../transactions/types';
+import { TransactionType } from '../../transactions/types';
 import { useNotification } from '../../../context/NotificationContext';
-import { GlobalCreateTransactionModal } from './GlobalCreateTransactionModal';
-import './TransactionsDashboard.css';
+import './PortfolioTransactionHistory.css';
 
-export const TransactionsDashboard: React.FC = () => {
+interface Props {
+  portfolioId: string;
+}
+
+export const PortfolioTransactionHistory: React.FC<Props> = ({ portfolioId }) => {
   const [data, setData] = useState<PaginatedResult<GlobalTransactionDto> | null>(null);
   const [loading, setLoading] = useState(true);
   
@@ -14,19 +17,14 @@ export const TransactionsDashboard: React.FC = () => {
   const [page, setPage] = useState(1);
   const [pageSize] = useState(10);
   const [typeFilter, setTypeFilter] = useState<number | ''>('');
-  const [startDate, setStartDate] = useState('');
-  const [endDate, setEndDate] = useState('');
 
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const { showNotification } = useNotification();
 
   const fetchTransactions = async () => {
     try {
       setLoading(true);
-      const params: any = { page, pageSize };
+      const params: any = { portfolioId, page, pageSize };
       if (typeFilter !== '') params.type = typeFilter;
-      if (startDate) params.startDate = new Date(startDate).toISOString();
-      if (endDate) params.endDate = new Date(endDate).toISOString();
 
       const result = await getAllTransactions(params);
       setData(result);
@@ -39,7 +37,7 @@ export const TransactionsDashboard: React.FC = () => {
 
   useEffect(() => {
     fetchTransactions();
-  }, [page, pageSize, typeFilter, startDate, endDate]);
+  }, [portfolioId, page, pageSize, typeFilter]);
 
   const handleDelete = async (id: string) => {
     if (window.confirm('Are you sure you want to delete this transaction?')) {
@@ -78,28 +76,12 @@ export const TransactionsDashboard: React.FC = () => {
   };
 
   return (
-    <div className="container dashboard-layout">
-      {/* Decorative blurred blobs */}
-      <div className="mesh-blob blob-1"></div>
-      <div className="mesh-blob blob-2" style={{ left: '60%', top: '40%' }}></div>
-
-      <header className="dashboard-header">
-        <div className="header-titles">
-          <h1 className="gradient-text">Transactions Ledger</h1>
-          <p className="subtitle">View and filter your global transaction history</p>
-        </div>
-        <div className="header-actions">
-          <button className="btn btn-primary" onClick={() => setIsCreateModalOpen(true)}>
-            Record Transaction
-          </button>
-        </div>
-      </header>
-
-      <div className="filters-toolbar glass-panel">
+    <div className="portfolio-transactions-section">
+      <div className="filters-toolbar glass-panel" style={{ marginBottom: '1rem', padding: '1rem' }}>
         <div className="toolbar-group">
-          <label htmlFor="typeFilter" className="sr-only">Type</label>
+          <label htmlFor="ptTypeFilter" className="sr-only">Type</label>
           <select 
-            id="typeFilter"
+            id="ptTypeFilter"
             className="filter-select"
             value={typeFilter} 
             onChange={(e) => {
@@ -115,38 +97,16 @@ export const TransactionsDashboard: React.FC = () => {
             <option value={TransactionType.Dividend}>Dividend</option>
           </select>
         </div>
-
-        <div className="toolbar-group">
-          <label htmlFor="startDate" className="sr-only">Start Date</label>
-          <input 
-            id="startDate"
-            type="date" 
-            className="filter-input"
-            value={startDate}
-            onChange={(e) => { setStartDate(e.target.value); setPage(1); }}
-            title="Start Date"
-          />
-          <span className="toolbar-sep">to</span>
-          <label htmlFor="endDate" className="sr-only">End Date</label>
-          <input 
-            id="endDate"
-            type="date" 
-            className="filter-input"
-            value={endDate}
-            onChange={(e) => { setEndDate(e.target.value); setPage(1); }}
-            title="End Date"
-          />
-        </div>
       </div>
 
       <div className="table-container glass-panel">
         {loading ? (
-          <div className="state-panel">
+          <div className="state-panel" style={{ minHeight: '200px' }}>
             <div className="spinner"></div>
           </div>
         ) : !data || data.items.length === 0 ? (
-          <div className="state-panel empty-state">
-            <p>No transactions match your filters.</p>
+          <div className="state-panel empty-state" style={{ minHeight: '200px' }}>
+            <p>No transactions found for this portfolio.</p>
           </div>
         ) : (
           <div className="table-scroll">
@@ -154,20 +114,18 @@ export const TransactionsDashboard: React.FC = () => {
               <thead>
                 <tr>
                   <th>Date</th>
-                  <th>Portfolio</th>
                   <th>Asset</th>
                   <th>Type</th>
                   <th className="num-col">Quantity</th>
                   <th className="num-col">Price</th>
                   <th className="num-col">Total</th>
-                  <th className="action-col">Actions</th>
+                  <th className="action-col"></th>
                 </tr>
               </thead>
               <tbody>
                 {data.items.map(t => (
                   <tr key={t.id}>
                     <td className="date-cell">{new Date(t.date).toLocaleDateString()}</td>
-                    <td>{t.portfolioName}</td>
                     <td className="asset-cell">
                       <span className="asset-name">{t.assetName}</span>
                       <span className="asset-sym">{t.symbol}</span>
@@ -203,7 +161,7 @@ export const TransactionsDashboard: React.FC = () => {
             ← Prev
           </button>
           <span className="page-info">
-            {page} / {Math.ceil(data.totalCount / data.pageSize)} <span className="page-total">({data.totalCount} total)</span>
+            {page} / {Math.ceil(data.totalCount / data.pageSize)}
           </span>
           <button 
             className="btn btn-outline"
@@ -213,17 +171,6 @@ export const TransactionsDashboard: React.FC = () => {
             Next →
           </button>
         </div>
-      )}
-
-      {isCreateModalOpen && (
-        <GlobalCreateTransactionModal 
-          onClose={() => setIsCreateModalOpen(false)}
-          onSuccess={() => {
-            setIsCreateModalOpen(false);
-            showNotification('Transaction recorded successfully', 'success');
-            fetchTransactions();
-          }}
-        />
       )}
     </div>
   );

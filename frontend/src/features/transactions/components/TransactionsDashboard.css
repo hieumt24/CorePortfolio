@@ -1,144 +1,206 @@
-.transactions-dashboard {
-  padding: 2rem;
-  max-width: 1200px;
-  margin: 0 auto;
-}
-
-.transactions-header {
+/* Filters Toolbar */
+.filters-toolbar {
   display: flex;
-  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  padding: 1.25rem 1.5rem;
   align-items: center;
   margin-bottom: 2rem;
 }
 
-.transactions-header h1 {
-  margin: 0;
-  font-size: 2rem;
-  background: linear-gradient(135deg, #fff 0%, #a5b4fc 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
+.toolbar-group {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
 }
 
-.filters-container {
-  display: flex;
-  gap: 1rem;
-  margin-bottom: 1.5rem;
-  flex-wrap: wrap;
+.toolbar-sep {
+  color: var(--text-muted);
+  font-size: 0.9rem;
 }
 
 .filter-select,
 .filter-input {
-  background: rgba(30, 41, 59, 0.6);
+  background: rgba(11, 14, 23, 0.4);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  color: #fff;
-  padding: 0.5rem 1rem;
-  border-radius: 8px;
+  color: var(--text-primary);
+  padding: 0.6rem 1rem;
+  border-radius: var(--radius-sm);
   font-size: 0.9rem;
+  font-family: var(--font-family);
   outline: none;
   transition: all 0.3s ease;
 }
 
+.filter-select:hover,
+.filter-input:hover {
+  background: rgba(15, 23, 42, 0.6);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
 .filter-select:focus,
 .filter-input:focus {
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+  border-color: var(--primary-color);
+  background: rgba(15, 23, 42, 0.8);
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
 }
 
-.transactions-table-container {
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border-width: 0;
+}
+
+/* Ledger Table */
+.table-container {
+  overflow: hidden;
+  padding: 0;
+}
+
+.table-scroll {
   overflow-x: auto;
-  border-radius: 12px;
+  -webkit-overflow-scrolling: touch;
 }
 
-.transactions-table {
+.ledger-table {
   width: 100%;
   border-collapse: collapse;
   text-align: left;
 }
 
-.transactions-table th {
-  background: rgba(15, 23, 42, 0.6);
-  padding: 1rem;
-  font-weight: 600;
-  color: #94a3b8;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.transactions-table td {
-  padding: 1rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
-  color: #e2e8f0;
-}
-
-.transactions-table tr:hover {
-  background: rgba(255, 255, 255, 0.02);
-}
-
-.type-badge {
-  padding: 0.25rem 0.75rem;
-  border-radius: 9999px;
+.ledger-table th {
+  background: rgba(15, 23, 42, 0.4);
+  padding: 1.25rem 1.5rem;
+  font-weight: 500;
+  color: var(--text-secondary);
   font-size: 0.85rem;
-  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  border-bottom: 1px solid var(--glass-border);
+  white-space: nowrap;
 }
 
-.type-badge.buy {
-  background: rgba(16, 185, 129, 0.1);
-  color: #10b981;
+.ledger-table td {
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  vertical-align: middle;
 }
 
-.type-badge.sell {
-  background: rgba(239, 68, 68, 0.1);
-  color: #ef4444;
+.ledger-table tbody tr {
+  transition: background 0.2s ease;
 }
 
-.type-badge.deposit {
-  background: rgba(59, 130, 246, 0.1);
-  color: #3b82f6;
+.ledger-table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.03);
 }
 
-.type-badge.withdrawal {
-  background: rgba(245, 158, 11, 0.1);
-  color: #f59e0b;
+.num-col {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
 }
 
-.type-badge.dividend {
-  background: rgba(139, 92, 246, 0.1);
-  color: #8b5cf6;
+.action-col {
+  text-align: right;
+  width: 60px;
 }
 
-.action-buttons {
+.strong {
+  font-weight: 500;
+}
+
+.date-cell {
+  color: var(--text-secondary);
+}
+
+.asset-cell {
   display: flex;
-  gap: 0.5rem;
+  align-items: center;
+  gap: 0.75rem;
 }
 
+.asset-sym {
+  font-size: 0.75rem;
+  padding: 2px 8px;
+  border-radius: 99px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-secondary);
+}
+
+/* Badges for Transactions (Vibrant) */
+.badge.buy { background: rgba(16, 185, 129, 0.15); color: #34d399; border-color: rgba(16, 185, 129, 0.3); }
+.badge.deposit { background: rgba(16, 185, 129, 0.15); color: #34d399; border-color: rgba(16, 185, 129, 0.3); }
+.badge.sell { background: rgba(239, 68, 68, 0.15); color: #f87171; border-color: rgba(239, 68, 68, 0.3); }
+.badge.withdrawal { background: rgba(239, 68, 68, 0.15); color: #f87171; border-color: rgba(239, 68, 68, 0.3); }
+.badge.dividend { background: rgba(139, 92, 246, 0.15); color: #a78bfa; border-color: rgba(139, 92, 246, 0.3); }
+
+/* Buttons */
 .btn-icon {
-  background: none;
-  border: none;
-  color: #94a3b8;
+  background: transparent;
+  border: 1px solid transparent;
+  color: var(--text-muted);
   cursor: pointer;
-  padding: 0.25rem;
-  border-radius: 4px;
-  transition: all 0.2s ease;
+  width: 32px;
+  height: 32px;
+  border-radius: var(--radius-sm);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.25rem;
+  line-height: 1;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .btn-icon:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: #fff;
-}
-
-.btn-icon.delete:hover {
   background: rgba(239, 68, 68, 0.1);
-  color: #ef4444;
+  color: var(--danger-color);
+  transform: scale(1.1);
 }
 
+/* Pagination */
 .pagination {
   display: flex;
   justify-content: center;
   align-items: center;
-  gap: 1rem;
-  margin-top: 2rem;
+  gap: 1.5rem;
+  padding: 2rem 0;
 }
 
 .page-info {
-  color: #94a3b8;
-  font-size: 0.9rem;
+  color: var(--text-primary);
+  font-size: 0.95rem;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.page-total {
+  color: var(--text-muted);
+  font-weight: normal;
+  font-size: 0.85rem;
+}
+
+@media (max-width: 768px) {
+  .filters-toolbar {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .toolbar-group {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .toolbar-sep {
+    display: none;
+  }
 }

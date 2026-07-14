@@ -80,23 +80,24 @@ export const AddCashflowModal: React.FC<AddCashflowModalProps> = ({ onClose, def
 
   const getButtonClass = () => {
     switch (type) {
-      case CashflowType.Income: return 'income-btn';
-      case CashflowType.Expense: return 'expense-btn';
-      case CashflowType.Investment: return 'investment-btn';
-      case CashflowType.Saving: return 'saving-btn';
-      default: return 'income-btn';
+      case CashflowType.Income: return 'tx-btn-income';
+      case CashflowType.Expense: return 'tx-btn-expense';
+      case CashflowType.Investment: return 'tx-btn-investment';
+      case CashflowType.Saving: return 'tx-btn-saving';
+      default: return 'tx-btn-income';
     }
   };
 
   return (
-    <div className="modal-overlay">
-      <div className="cashflow-modal">
-        <div className="modal-header">
-          <h2>Ghi chép Thu / Chi</h2>
-          <button className="close-btn" onClick={onClose}>&times;</button>
+    <div className="tx-modal-overlay" onClick={onClose}>
+      <div className="tx-modal-content cf-modal" onClick={e => e.stopPropagation()}>
+        <div className="tx-modal-header">
+          <h2 className="tx-modal-title">Ghi chép Thu / Chi</h2>
+          <button className="tx-close-btn" onClick={onClose}>&times;</button>
         </div>
-        <div className="modal-body">
-          <div className="type-toggle" style={{ gridTemplateColumns: 'repeat(4, 1fr)' }}>
+        
+        <div className="tx-modal-form">
+          <div className="cf-type-toggle">
             <button
               className={type === CashflowType.Income ? 'active income' : ''}
               onClick={() => setType(CashflowType.Income)}
@@ -123,12 +124,13 @@ export const AddCashflowModal: React.FC<AddCashflowModalProps> = ({ onClose, def
             </button>
           </div>
 
-          <form onSubmit={handleSubmit}>
-            <div className="form-group">
+          <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+            <div className="tx-form-group">
               <label>Số tiền</label>
-              <div className="amount-input-group">
+              <div style={{ display: 'flex', gap: '10px' }}>
                 <NumericFormat
-                  className="glass-input-light"
+                  className="tx-solid-input"
+                  style={{ flex: 1 }}
                   value={amount}
                   onValueChange={(values) => {
                     setAmount(values.value);
@@ -140,7 +142,8 @@ export const AddCashflowModal: React.FC<AddCashflowModalProps> = ({ onClose, def
                   required
                 />
                 <select
-                  className="glass-input-light currency-select"
+                  className="tx-solid-input tx-select"
+                  style={{ width: '100px' }}
                   value={currency}
                   onChange={(e) => setCurrency(e.target.value)}
                 >
@@ -150,10 +153,10 @@ export const AddCashflowModal: React.FC<AddCashflowModalProps> = ({ onClose, def
               </div>
             </div>
 
-            <div className="form-group">
+            <div className="tx-form-group">
               <label>Danh mục Đầu tư (Portfolio)</label>
               <select
-                className="glass-input-light"
+                className="tx-solid-input tx-select"
                 value={portfolioId}
                 onChange={(e) => setPortfolioId(e.target.value)}
                 required
@@ -165,7 +168,7 @@ export const AddCashflowModal: React.FC<AddCashflowModalProps> = ({ onClose, def
                   </option>
                 ))}
               </select>
-              <small className="help-text">
+              <small className="cf-help-text">
                 {type === CashflowType.Income 
                   ? 'Khoản tiền này sẽ được Nạp (Deposit) vào Tiền mặt của Portfolio đã chọn.' 
                   : 'Khoản tiền này sẽ được Rút (Withdraw) khỏi Tiền mặt của Portfolio đã chọn.'}
@@ -173,10 +176,10 @@ export const AddCashflowModal: React.FC<AddCashflowModalProps> = ({ onClose, def
               </small>
             </div>
 
-            <div className="form-group">
+            <div className="tx-form-group">
               <label>Nhóm phân loại (Category)</label>
               <select
-                className="glass-input-light"
+                className="tx-solid-input tx-select"
                 value={categoryId}
                 onChange={(e) => setCategoryId(e.target.value)}
                 required
@@ -203,39 +206,52 @@ export const AddCashflowModal: React.FC<AddCashflowModalProps> = ({ onClose, def
               </select>
             </div>
 
-            <div className="form-group">
+            <div className="tx-form-group">
               <label>Ngày giao dịch</label>
-              <DatePicker
-                selected={date}
-                onChange={(d: Date | null) => setDate(d || new Date())}
-                showTimeSelect
-                timeFormat="HH:mm"
-                timeIntervals={15}
-                timeCaption="Giờ"
-                dateFormat="dd/MM/yyyy HH:mm"
-                className="glass-input-light w-full"
-                required
-              />
+              <div className="cf-datepicker-wrapper">
+                <DatePicker
+                  selected={date}
+                  onChange={(d: Date | null) => setDate(d || new Date())}
+                  showTimeSelect
+                  timeFormat="HH:mm"
+                  timeIntervals={15}
+                  timeCaption="Giờ"
+                  dateFormat="dd/MM/yyyy HH:mm"
+                  className="tx-solid-input"
+                  required
+                />
+              </div>
             </div>
 
-            <div className="form-group">
+            <div className="tx-form-group">
               <label>Mô tả / Ghi chú</label>
               <textarea
-                className="glass-input-light"
+                className="tx-solid-input"
                 value={description}
                 onChange={(e) => setDescription(e.target.value)}
                 placeholder="Nhập ghi chú (không bắt buộc)..."
                 rows={2}
+                style={{ resize: 'vertical' }}
               ></textarea>
             </div>
 
-            <button
-              type="submit"
-              className={`submit-btn ${getButtonClass()}`}
-              disabled={createCashflow.isPending || isUpdating}
-            >
-              {createCashflow.isPending || isUpdating ? 'Đang lưu...' : (cashflowToEdit ? 'Cập Nhật Giao Dịch' : 'Lưu Giao Dịch')}
-            </button>
+            <div className="tx-modal-footer">
+              <button
+                type="button"
+                className="tx-btn tx-btn-secondary"
+                onClick={onClose}
+                disabled={createCashflow.isPending || isUpdating}
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                className={`tx-btn ${getButtonClass()}`}
+                disabled={createCashflow.isPending || isUpdating}
+              >
+                {createCashflow.isPending || isUpdating ? 'Đang lưu...' : (cashflowToEdit ? 'Cập Nhật' : 'Lưu Giao Dịch')}
+              </button>
+            </div>
           </form>
         </div>
       </div>

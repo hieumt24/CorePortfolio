@@ -3,7 +3,7 @@ import { createTransaction } from '../api/transactionApi';
 import { TransactionType } from '../types';
 import type { AssetSummaryDto } from '../../portfolios/types';
 import { NumericFormat } from 'react-number-format';
-import '../../portfolios/components/CreatePortfolioModal.css';
+import './CreateTransactionModal.css';
 import { calculateCashImpact } from '../utils/transactionImpact';
 
 interface CreateTransactionModalProps {
@@ -54,38 +54,38 @@ export const CreateTransactionModal: React.FC<CreateTransactionModalProps> = ({ 
   };
 
   return (
-    <div className="modal-overlay" onClick={onClose} style={{ zIndex: 1001 }}>
-      <div className="modal-content glass-panel" onClick={e => e.stopPropagation()}>
-        <div className="modal-header">
-          <h2>New Transaction: {asset.symbol}</h2>
-          <button className="close-btn" onClick={onClose}>&times;</button>
+    <div className="tx-modal-overlay" onClick={onClose}>
+      <div className="tx-modal-content" onClick={e => e.stopPropagation()}>
+        <div className="tx-modal-header">
+          <h2 className="tx-modal-title">New Transaction: {asset.symbol}</h2>
+          <button className="tx-close-btn" onClick={onClose}>&times;</button>
         </div>
         
-        {error && <div className="error-alert">{error}</div>}
+        {error && <div className="tx-error-alert">{error}</div>}
 
-        <form onSubmit={handleSubmit} className="modal-form">
-          <div className="form-group">
+        <form onSubmit={handleSubmit} className="tx-modal-form">
+          <div className="tx-form-group">
             <label htmlFor="type">Transaction Type</label>
             <select
               id="type"
               value={type}
               onChange={e => setType(Number(e.target.value) as TransactionType)}
               disabled={loading}
-              className="glass-input glass-select"
+              className="tx-solid-input tx-select"
             >
               <option value={TransactionType.Buy}>Buy</option>
               <option value={TransactionType.Sell}>Sell</option>
             </select>
           </div>
 
-          <div className="form-group">
+          <div className="tx-form-group">
             <label htmlFor="quantity">Quantity</label>
             <NumericFormat
               id="quantity"
               value={quantity}
               onValueChange={(values) => setQuantity(values.value)}
               placeholder="e.g. 1.5"
-              className="glass-input"
+              className="tx-solid-input"
               disabled={loading}
               thousandSeparator="."
               decimalSeparator=","
@@ -94,7 +94,7 @@ export const CreateTransactionModal: React.FC<CreateTransactionModalProps> = ({ 
             />
           </div>
 
-          <div className="form-group">
+          <div className="tx-form-group">
             <label htmlFor="price">
               {type === TransactionType.Dividend ? 'Dividend per Unit/Share' : 'Price Per Unit'}
             </label>
@@ -104,7 +104,7 @@ export const CreateTransactionModal: React.FC<CreateTransactionModalProps> = ({ 
                 value={price}
                 onValueChange={(values) => setPrice(values.value)}
                 placeholder="e.g. 150.00"
-                className="glass-input"
+                className="tx-solid-input"
                 style={{ flex: 1 }}
                 disabled={loading}
                 thousandSeparator="."
@@ -114,7 +114,7 @@ export const CreateTransactionModal: React.FC<CreateTransactionModalProps> = ({ 
               <select
                 value={currency}
                 onChange={e => setCurrency(e.target.value)}
-                className="glass-input glass-select"
+                className="tx-solid-input tx-select"
                 disabled={loading}
                 style={{ width: '100px' }}
               >
@@ -124,13 +124,13 @@ export const CreateTransactionModal: React.FC<CreateTransactionModalProps> = ({ 
             </div>
           </div>
 
-          <div className="form-group">
+          <div className="tx-form-group">
             <label htmlFor="fee">Phí giao dịch</label>
             <NumericFormat
               id="fee"
               value={fee}
               onValueChange={(values) => setFee(values.value)}
-              className="glass-input"
+              className="tx-solid-input"
               thousandSeparator="."
               decimalSeparator=","
               allowNegative={false}
@@ -138,37 +138,43 @@ export const CreateTransactionModal: React.FC<CreateTransactionModalProps> = ({ 
             />
           </div>
 
-          <div className="form-group">
+          <div className="tx-form-group">
             <label htmlFor="notes">Ghi chú</label>
-            <input id="notes" value={notes} onChange={e => setNotes(e.target.value)}
-              className="glass-input" maxLength={500} disabled={loading} />
+            <input 
+              id="notes" 
+              value={notes} 
+              onChange={e => setNotes(e.target.value)}
+              className="tx-solid-input" 
+              maxLength={500} 
+              disabled={loading} 
+            />
           </div>
 
-          <div className="form-group">
+          <div className="tx-form-group">
             <label htmlFor="timestamp">Date</label>
             <input
               id="timestamp"
               type="datetime-local"
               value={timestamp}
               onChange={e => setTimestamp(e.target.value)}
-              className="glass-input"
+              className="tx-solid-input"
               disabled={loading}
             />
           </div>
 
           {quantity && price && (
-            <div className="glass-panel" style={{ padding: '0.75rem', marginBottom: '1rem' }}>
+            <div className="tx-cash-impact">
               Tác động tiền mặt: <strong>{new Intl.NumberFormat(currency === 'VND' ? 'vi-VN' : 'en-US', {
                 style: 'currency', currency,
               }).format(calculateCashImpact(type, Number(quantity), Number(price), Number(fee)))}</strong>
             </div>
           )}
 
-          <div className="modal-footer">
-            <button type="button" className="btn btn-secondary" onClick={onClose} disabled={loading}>
+          <div className="tx-modal-footer">
+            <button type="button" className="tx-btn tx-btn-secondary" onClick={onClose} disabled={loading}>
               Cancel
             </button>
-            <button type="submit" className={`btn ${type === TransactionType.Buy ? 'btn-primary' : 'btn-outline'}`} disabled={loading}>
+            <button type="submit" className="tx-btn tx-btn-primary" disabled={loading}>
               {loading ? 'Processing...' : 'Confirm'}
             </button>
           </div>

@@ -87,16 +87,15 @@ export const AssetDetailsModal: React.FC<AssetDetailsModalProps> = ({ asset, por
   return (
     <div className="modal-overlay" onClick={onClose}>
       <div className="asset-details-content glass-panel" onClick={e => e.stopPropagation()}>
-        <div className="modal-header">
+        <div className="modal-header asset-modal-header">
           <div className="header-info">
-            <h2>{asset.name} ({asset.symbol})</h2>
+            <h2 className="asset-modal-title">{asset.name} ({asset.symbol})</h2>
             <div className="asset-badges">
-              <span className="badge">{asset.categoryName}</span>
+              <span className="badge glass-badge">{asset.categoryName}</span>
               <span className="badge value-badge">Total Value: {formatCurrency(asset.currentValue, asset.currency)}</span>
               {isAdmin && (
                 <button 
-                  className="btn btn-sm btn-outline" 
-                  style={{ marginLeft: '10px', padding: '2px 8px', fontSize: '12px' }}
+                  className="btn btn-sm btn-outline btn-pill" 
                   onClick={() => setIsUpdatePriceModalOpen(true)}
                 >
                   ✎ Update Price
@@ -107,13 +106,12 @@ export const AssetDetailsModal: React.FC<AssetDetailsModalProps> = ({ asset, por
           <button className="close-btn" onClick={onClose}>&times;</button>
         </div>
 
-        <div className="actions-bar" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-          <button className="btn btn-primary glass-panel" onClick={() => setIsTxModalOpen(true)}>
+        <div className="actions-bar">
+          <button className="btn btn-outline btn-pill add-tx-btn" onClick={() => setIsTxModalOpen(true)}>
             + Add Transaction
           </button>
           <button 
-            className="btn glass-panel" 
-            style={{ backgroundColor: 'var(--sell-color)' }}
+            className="btn btn-outline btn-pill delete-asset-btn" 
             disabled={isDeletingAsset}
             onClick={handleDeleteAsset}
           >
@@ -122,35 +120,37 @@ export const AssetDetailsModal: React.FC<AssetDetailsModalProps> = ({ asset, por
         </div>
 
         <div className="transactions-list">
-          <h3>Transaction History</h3>
+          <h3 className="tx-history-title">Transaction History</h3>
           {loading ? (
-            <p>Loading transactions...</p>
+            <div className="state-panel"><div className="spinner"></div></div>
           ) : error ? (
             <p className="error">{error}</p>
           ) : transactions.length === 0 ? (
-            <p className="empty">No transactions found for this asset.</p>
+            <div className="state-panel empty-state">No transactions found for this asset.</div>
           ) : (
             <div className="table-responsive">
-              <table className="glass-table">
+              <table className="ledger-table asset-tx-table">
                 <thead>
                   <tr>
                     <th>Date</th>
                     <th>Type</th>
-                    <th>Quantity</th>
-                    <th>Price</th>
-                    <th>Total</th>
-                    <th>Actions</th>
+                    <th className="num-col">Quantity</th>
+                    <th className="num-col">Price</th>
+                    <th className="num-col">Total</th>
+                    <th className="action-col">Actions</th>
                   </tr>
                 </thead>
                 <tbody>
                   {transactions.map(tx => (
                     <tr key={tx.id}>
-                      <td>{new Date(tx.timestamp).toLocaleString()}</td>
+                      <td className="date-cell">{new Date(tx.timestamp).toLocaleString()}</td>
                       <td>
-                        <span className={`tx-type ${
+                        <span className={`badge ${
                           tx.type === TransactionType.Buy ? 'buy' : 
                           tx.type === TransactionType.Sell ? 'sell' :
-                          tx.type === TransactionType.Dividend ? 'dividend' : ''
+                          tx.type === TransactionType.Dividend ? 'dividend' :
+                          tx.type === TransactionType.Deposit ? 'deposit' :
+                          tx.type === TransactionType.Withdrawal ? 'withdrawal' : ''
                         }`}>
                           {tx.type === TransactionType.Buy ? 'Buy' : 
                            tx.type === TransactionType.Sell ? 'Sell' : 
@@ -159,14 +159,16 @@ export const AssetDetailsModal: React.FC<AssetDetailsModalProps> = ({ asset, por
                            tx.type === TransactionType.Withdrawal ? 'Withdrawal' : 'Unknown'}
                         </span>
                       </td>
-                      <td>{tx.quantity.toLocaleString(undefined, { maximumFractionDigits: 8 })}</td>
-                      <td>{formatCurrency(tx.price, asset.currency)}</td>
-                      <td>{formatCurrency(tx.quantity * tx.price, asset.currency)}</td>
-                      <td>
-                        <button className="btn btn-sm btn-outline" style={{marginRight: '8px', padding: '4px 8px'}} onClick={() => setEditingTx(tx)}>Edit</button>
-                        <button className="btn btn-sm" style={{padding: '4px 8px', backgroundColor: 'var(--sell-color)'}} disabled={deletingTxId === tx.id} onClick={() => handleDelete(tx.id)}>
-                          {deletingTxId === tx.id ? '...' : 'Del'}
-                        </button>
+                      <td className="num-col">{tx.quantity.toLocaleString(undefined, { maximumFractionDigits: 8 })}</td>
+                      <td className="num-col">{formatCurrency(tx.price, asset.currency)}</td>
+                      <td className="num-col strong">{formatCurrency(tx.quantity * tx.price, asset.currency)}</td>
+                      <td className="action-col">
+                        <div className="row-actions">
+                          <button className="btn-text" onClick={() => setEditingTx(tx)}>Edit</button>
+                          <button className="btn-text danger" disabled={deletingTxId === tx.id} onClick={() => handleDelete(tx.id)}>
+                            {deletingTxId === tx.id ? '...' : 'Del'}
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}

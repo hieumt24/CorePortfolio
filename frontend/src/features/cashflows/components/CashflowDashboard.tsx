@@ -232,35 +232,35 @@ export const CashflowDashboard: React.FC = () => {
         <>
           {/* Summary Cards Area */}
           <div className="summary-cards">
-            <div className="card income-card">
+            <div className="cf-card income-card">
               <div className="card-icon">↓</div>
               <div className="card-content">
                 <h3>Tổng Thu Nhập</h3>
                 <p className="amount">{isSummaryLoading ? '...' : formatCurrency(summary?.totalIncome || 0)}</p>
               </div>
             </div>
-            <div className="card expense-card">
+            <div className="cf-card expense-card">
               <div className="card-icon">↑</div>
               <div className="card-content">
                 <h3>Tổng Chi Tiêu</h3>
                 <p className="amount">{isSummaryLoading ? '...' : formatCurrency(summary?.totalExpense || 0)}</p>
               </div>
             </div>
-            <div className="card investment-card">
+            <div className="cf-card investment-card">
               <div className="card-icon">📈</div>
               <div className="card-content">
                 <h3>Tổng Đầu Tư</h3>
                 <p className="amount">{isSummaryLoading ? '...' : formatCurrency(summary?.totalInvestment || 0)}</p>
               </div>
             </div>
-            <div className="card saving-card">
+            <div className="cf-card saving-card">
               <div className="card-icon">🏦</div>
               <div className="card-content">
                 <h3>Tổng Tiết Kiệm</h3>
                 <p className="amount">{isSummaryLoading ? '...' : formatCurrency(summary?.totalSaving || 0)}</p>
               </div>
             </div>
-            <div className="card net-card">
+            <div className="cf-card net-card">
               <div className="card-icon">≈</div>
               <div className="card-content">
                 <h3>Dòng Tiền Thuần</h3>
@@ -269,7 +269,7 @@ export const CashflowDashboard: React.FC = () => {
                 </p>
               </div>
             </div>
-            <div className="card cash-card">
+            <div className="cf-card cash-card">
               <div className="card-icon">💵</div>
               <div className="card-content">
                 <h3>Tiền mặt</h3>
@@ -341,45 +341,45 @@ export const CashflowDashboard: React.FC = () => {
 
           <div className="main-content-area">
             {/* Advanced Filters Bar */}
-            <div className="advanced-filters-bar glass-panel">
-              <div className="filter-group">
-                <select className="modern-select" value={dateFilter} onChange={(e) => setDateFilter(e.target.value)}>
+            <div className="cf-filters-bar glass-panel">
+              <div className="cf-filter-group">
+                <select className="cf-select" value={dateFilter} onChange={(e) => setDateFilter(e.target.value)}>
                   <option value="all">Tất cả thời gian</option>
                   <option value="thisMonth">Tháng này</option>
                   <option value="lastMonth">Tháng trước</option>
                   <option value="thisYear">Năm nay</option>
                 </select>
-                <select className="modern-select" value={currency} onChange={(e) => setCurrency(e.target.value)}>
+                <select className="cf-select" value={currency} onChange={(e) => setCurrency(e.target.value)}>
                   <option value="VND">VND</option>
                   <option value="USD">USD</option>
                 </select>
               </div>
-              <div className="filter-group search-group">
-                <span className="filter-icon">🔍</span>
+              <div className="cf-filter-group cf-search-group">
+                <span className="cf-filter-icon">🔍</span>
                 <input 
                   type="text" 
-                  placeholder="Tìm kiếm giao dịch (Mô tả, Danh mục, Ví)..." 
-                  className="search-input"
+                  placeholder="Tìm kiếm giao dịch..." 
+                  className="cf-search-input"
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
                 />
               </div>
-              <div className="filter-group">
-                <select className="filter-select" value={typeFilter} onChange={e => setTypeFilter(e.target.value)}>
+              <div className="cf-filter-group">
+                <select className="cf-select" value={typeFilter} onChange={e => setTypeFilter(e.target.value)}>
                   <option value="all">Tất cả loại giao dịch</option>
                   <option value="income">Thu nhập</option>
                   <option value="expense">Chi tiêu</option>
                 </select>
               </div>
-              <div className="filter-group">
-                <select className="filter-select" value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)}>
+              <div className="cf-filter-group">
+                <select className="cf-select" value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)}>
                   <option value="all">Tất cả danh mục</option>
                   {availableCategories.map(c => (
                     <option key={c} value={c}>{c}</option>
                   ))}
                 </select>
               </div>
-              <div className="filter-group">
+              <div className="cf-filter-group">
                 <button className={`btn-toggle-charts ${showCharts ? 'active' : ''}`} onClick={() => setShowCharts(!showCharts)}>
                   {showCharts ? 'Ẩn Biểu đồ' : '📊 Xem Biểu đồ'}
                 </button>
@@ -389,7 +389,7 @@ export const CashflowDashboard: React.FC = () => {
             <div className={`dashboard-body ${showCharts ? 'with-charts' : 'list-only'}`}>
               {/* History List */}
               <div className="history-section glass-panel">
-                <div className="section-header border-bottom">
+                <div className="section-header">
                   <h2>Lịch sử Giao dịch ({filteredCashflows.length})</h2>
                 </div>
                 {isCashflowsLoading ? (
@@ -398,7 +398,7 @@ export const CashflowDashboard: React.FC = () => {
                      <p>Đang tải dữ liệu...</p>
                   </div>
                 ) : (
-                  <div className="transactions-list ledger-view">
+                  <div className="cf-ledger-view">
                     {filteredCashflows.length === 0 && (
                       <div className="empty-state">
                         <div className="empty-icon">📝</div>
@@ -408,18 +408,18 @@ export const CashflowDashboard: React.FC = () => {
                     {filteredCashflows.map((record) => {
                       const recordBudget = budgetByCategoryName.get(record.categoryName);
                       return (
-                      <div key={record.id} className={`ledger-item ${recordBudget?.isExceeded ? 'budget-exceeded' : recordBudget && recordBudget.rawProgressPercentage >= 80 ? 'budget-warning' : ''}`}>
-                        <div className="ledger-date">
+                      <div key={record.id} className={`cf-ledger-item ${recordBudget?.isExceeded ? 'budget-exceeded' : recordBudget && recordBudget.rawProgressPercentage >= 80 ? 'budget-warning' : ''}`}>
+                        <div className="cf-ledger-date">
                           <div className="date-main">{new Date(record.date).toLocaleDateString('vi-VN', { day: '2-digit', month: 'short' })}</div>
                           <div className="time-sub">{new Date(record.date).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</div>
                         </div>
                         
-                        <div className="ledger-icon" style={{ backgroundColor: `${record.categoryColor}20`, color: record.categoryColor }}>
+                        <div className="cf-ledger-icon" style={{ backgroundColor: `${record.categoryColor}15`, color: record.categoryColor }}>
                           {record.categoryIcon}
                         </div>
                         
-                        <div className="ledger-details">
-                          <div className="ledger-title-row">
+                        <div className="cf-ledger-details">
+                          <div className="cf-ledger-title-row">
                             <h4>{record.categoryName}</h4>
                             <span className="portfolio-badge">{record.portfolioName}</span>
                             {recordBudget && (
@@ -428,16 +428,16 @@ export const CashflowDashboard: React.FC = () => {
                               </span>
                             )}
                           </div>
-                          {record.description && <p className="ledger-desc">{record.description}</p>}
+                          {record.description && <p className="cf-ledger-desc">{record.description}</p>}
                         </div>
                         
-                        <div className={`ledger-amount ${record.type === CashflowType.Income ? 'positive' : 'negative'}`}>
+                        <div className={`cf-ledger-amount ${record.type === CashflowType.Income ? 'positive' : 'negative'}`}>
                           {record.type === CashflowType.Income ? '+' : '-'} {formatCurrency(record.amount)}
                         </div>
                         
-                        <div className="ledger-actions">
-                          <button className="icon-action-btn edit" onClick={() => handleEdit(record)} title="Sửa">✏️</button>
-                          <button className="icon-action-btn delete" onClick={() => handleDelete(record.id)} title="Xóa">🗑️</button>
+                        <div className="cf-ledger-actions">
+                          <button className="cf-btn-text" onClick={() => handleEdit(record)} title="Sửa">Edit</button>
+                          <button className="cf-btn-text danger" onClick={() => handleDelete(record.id)} title="Xóa">Del</button>
                         </div>
                       </div>
                       );

@@ -1,230 +1,100 @@
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background: rgba(0, 0, 0, 0.6);
-  backdrop-filter: blur(4px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1000;
+/* AddCashflowModal using the Solid Dark Theme from CreateTransactionModal */
+@import '../../transactions/components/CreateTransactionModal.css';
+
+.cf-modal {
+  max-width: 550px;
 }
 
-.cashflow-modal {
-  background: rgba(30, 41, 59, 0.85);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 20px;
-  width: 90%;
-  max-width: 500px;
-  max-height: 90vh;
-  overflow-y: auto;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5), 0 0 0 1px rgba(255, 255, 255, 0.05) inset;
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  animation: modalPop 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+/* Toggle buttons for Income/Expense/Investment/Saving */
+.cf-type-toggle {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 0.5rem;
+  background: #0f1117;
+  padding: 0.4rem;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  margin-bottom: 0.5rem;
 }
 
-@keyframes modalPop {
-  from { opacity: 0; transform: scale(0.95) translateY(10px); }
-  to { opacity: 1; transform: scale(1) translateY(0); }
-}
-
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 1.5rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.modal-header h2 {
-  margin: 0;
-  font-size: 1.4rem;
-  font-weight: 700;
-  color: white;
-  background: linear-gradient(135deg, #60a5fa, #a78bfa);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-}
-
-.close-btn {
-  background: none;
-  border: none;
-  color: rgba(255, 255, 255, 0.6);
-  font-size: 1.5rem;
-  cursor: pointer;
-  transition: color 0.2s;
-}
-
-.close-btn:hover {
-  color: white;
-}
-
-.modal-body {
-  padding: 1.5rem;
-}
-
-.type-toggle {
-  display: flex;
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 8px;
-  padding: 4px;
-  margin-bottom: 1.5rem;
-}
-
-.type-toggle button {
-  flex: 1;
-  padding: 0.5rem;
-  border: none;
+.cf-type-toggle button {
   background: transparent;
-  color: rgba(255, 255, 255, 0.6);
+  border: none;
+  color: #94a3b8;
+  padding: 0.5rem;
   border-radius: 6px;
-  font-weight: 500;
+  font-weight: 600;
+  font-size: 0.85rem;
   cursor: pointer;
   transition: all 0.2s;
+  font-family: var(--font-family);
 }
 
-.type-toggle button.active.income {
-  background: linear-gradient(135deg, #10B981, #059669);
-  color: white;
-  box-shadow: 0 4px 10px rgba(16, 185, 129, 0.3);
+.cf-type-toggle button:hover {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.05);
 }
 
-.type-toggle button.active.expense {
-  background: linear-gradient(135deg, #EF4444, #DC2626);
-  color: white;
-  box-shadow: 0 4px 10px rgba(239, 68, 68, 0.3);
+.cf-type-toggle button.active {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
-.type-toggle button.active.investment {
-  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
-  color: white;
-  box-shadow: 0 4px 10px rgba(139, 92, 246, 0.3);
+.cf-type-toggle button.active.income {
+  background: #10b981;
+  color: #fff;
 }
 
-.type-toggle button.active.saving {
-  background: linear-gradient(135deg, #f59e0b, #d97706);
-  color: white;
-  box-shadow: 0 4px 10px rgba(245, 158, 11, 0.3);
+.cf-type-toggle button.active.expense {
+  background: #ef4444;
+  color: #fff;
 }
 
-.form-group {
-  margin-bottom: 1.25rem;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
+.cf-type-toggle button.active.investment {
+  background: #8b5cf6;
+  color: #fff;
 }
 
-.form-group label {
-  color: rgba(255, 255, 255, 0.8);
-  font-size: 0.875rem;
-  font-weight: 500;
+.cf-type-toggle button.active.saving {
+  background: #f59e0b;
+  color: #fff;
 }
 
-.glass-input-light {
-  background: rgba(15, 23, 42, 0.6);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  padding: 0.75rem 1rem;
-  color: #ffffff;
-  font-family: inherit;
-  font-size: 1rem;
-  transition: all 0.2s;
-  outline: none;
-  width: 100%;
-}
-
-.glass-input-light:focus {
-  border-color: #3b82f6;
-  box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
-  background: rgba(15, 23, 42, 0.8);
-  color: #ffffff;
-}
-
-.amount-input-group {
-  display: flex;
-  gap: 0.5rem;
-}
-
-.currency-select {
-  width: 100px;
-}
-
-.help-text {
-  color: rgba(255, 255, 255, 0.5);
+.cf-help-text {
   font-size: 0.75rem;
+  color: #64748b;
+  line-height: 1.4;
   margin-top: 0.25rem;
 }
 
-.submit-btn {
-  width: 100%;
-  padding: 0.875rem;
-  border: none;
-  border-radius: 8px;
-  color: white;
-  font-weight: 600;
-  font-size: 1rem;
-  cursor: pointer;
-  transition: opacity 0.2s;
-  margin-top: 1rem;
-}
-
-.submit-btn:hover {
-  opacity: 0.9;
-}
-
-.submit-btn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-.income-btn {
-  background: linear-gradient(135deg, #10B981, #059669);
-  box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3);
-}
-
-.income-btn:hover:not(:disabled) {
-  box-shadow: 0 6px 20px rgba(16, 185, 129, 0.4);
-  transform: translateY(-1px);
-}
-
-.expense-btn {
-  background: linear-gradient(135deg, #EF4444, #DC2626);
-  box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3);
-}
-
-.expense-btn:hover:not(:disabled) {
-  box-shadow: 0 6px 20px rgba(239, 68, 68, 0.4);
-  transform: translateY(-1px);
-}
-
-.investment-btn {
-  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
-  box-shadow: 0 4px 15px rgba(139, 92, 246, 0.3);
-}
-
-.investment-btn:hover:not(:disabled) {
-  box-shadow: 0 6px 20px rgba(139, 92, 246, 0.4);
-  transform: translateY(-1px);
-}
-
-.saving-btn {
-  background: linear-gradient(135deg, #f59e0b, #d97706);
-  box-shadow: 0 4px 15px rgba(245, 158, 11, 0.3);
-}
-
-.saving-btn:hover:not(:disabled) {
-  box-shadow: 0 6px 20px rgba(245, 158, 11, 0.4);
-  transform: translateY(-1px);
-}
-
-/* Fix for react-datepicker wrapper width */
-.react-datepicker-wrapper {
+.cf-datepicker-wrapper {
   width: 100%;
 }
 
-.react-datepicker__input-container {
+.cf-datepicker-wrapper .react-datepicker-wrapper {
   width: 100%;
 }
+
+/* Button colors matching transaction modal structure */
+.tx-btn-income {
+  background: #10b981;
+  color: #fff;
+}
+.tx-btn-income:hover:not(:disabled) { background: #059669; }
+
+.tx-btn-expense {
+  background: #ef4444;
+  color: #fff;
+}
+.tx-btn-expense:hover:not(:disabled) { background: #dc2626; }
+
+.tx-btn-investment {
+  background: #8b5cf6;
+  color: #fff;
+}
+.tx-btn-investment:hover:not(:disabled) { background: #7c3aed; }
+
+.tx-btn-saving {
+  background: #f59e0b;
+  color: #fff;
+}
+.tx-btn-saving:hover:not(:disabled) { background: #d97706; }
