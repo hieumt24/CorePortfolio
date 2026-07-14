@@ -65,7 +65,11 @@ var connectionString = builder.Configuration.GetConnectionString("DefaultConnect
     ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
 
 builder.Services.AddDbContext<AppDbContext>(options =>
-    options.UseSqlite(connectionString));
+{
+    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection"));
+    options.EnableSensitiveDataLogging();
+    options.LogTo(Console.WriteLine, Microsoft.Extensions.Logging.LogLevel.Information);
+});
 
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
 builder.Services.AddHttpContextAccessor();
@@ -122,7 +126,7 @@ app.Use(async (context, next) =>
 
 app.UseExceptionHandler(errorApp => errorApp.Run(async context =>
 {
-    var exception = context.Features.Get<IExceptionHandlerFeature>()?.Error;
+    var exception = context.Features.Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerFeature>()?.Error;
     var (status, title) = exception switch
     {
         AccountingValidationException => (StatusCodes.Status400BadRequest, "Dữ liệu giao dịch không hợp lệ"),
@@ -131,9 +135,22 @@ app.UseExceptionHandler(errorApp => errorApp.Run(async context =>
         UnauthorizedAccessException => (StatusCodes.Status401Unauthorized, "Chưa xác thực"),
         _ => (StatusCodes.Status500InternalServerError, "Đã xảy ra lỗi hệ thống")
     };
-    if (status == 500) app.Logger.LogError(exception, "Unhandled API exception");
+    if (status == 500 && app.Logger != null) app.Logger.LogError(exception, "Unhandled API exception");
+
+    string? detailMessage = exception?.ToString();
+    if (exception is Microsoft.EntityFrameworkCore.DbUpdateConcurrencyException dbEx && dbEx.Entries.Any())
+    {
+        var entry = dbEx.Entries.First();
+        detailMessage = $"Concurrency Error on {entry.Metadata.Name}. State: {entry.State}. Primary Keys: ";
+        foreach (var prop in entry.Metadata.FindPrimaryKey()!.Properties)
+        {
+            detailMessage += $"{prop.Name}={entry.CurrentValues[prop]} ";
+        }
+        detailMessage += $"\n\nFull Stack:\n{exception}";
+    }
+
     await Results.Problem(statusCode: status, title: title,
-        detail: exception?.ToString()).ExecuteAsync(context);
+        detail: detailMessage).ExecuteAsync(context);
 }));
 
 using (var scope = app.Services.CreateScope())
