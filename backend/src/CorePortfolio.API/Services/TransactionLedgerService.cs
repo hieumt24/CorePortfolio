@@ -34,7 +34,7 @@ public sealed class TransactionLedgerService
         PortfolioAccountingCalculator.Calculate(remaining, 0);
     }
 
-    public async Task SyncLedgerEntryAsync(Transaction transaction, CancellationToken cancellationToken, bool allowNegativeBalance = false)
+    public async Task SyncLedgerEntryAsync(Transaction transaction, CancellationToken cancellationToken)
     {
         var currency = await _dbContext.Assets
             .Where(a => a.Id == transaction.AssetId)
@@ -81,26 +81,8 @@ public sealed class TransactionLedgerService
             TransactionType.Withdrawal => -gross,
             _ => 0
         };
-        if (!allowNegativeBalance && entry.Amount < 0)
-        {
-            var balanceWithoutEntry = await _dbContext.CashLedgerEntries.AsNoTracking()
-                .Where(e => e.CashAccountId == account.Id && e.TransactionId != transaction.Id)
-                .SumAsync(e => e.Amount, cancellationToken);
-            if (balanceWithoutEntry + entry.Amount < 0)
-                throw new AccountingValidationException("Số dư tiền không đủ. Hãy nạp tiền hoặc điều chỉnh số dư đầu kỳ trước.");
-        }
         entry.Description = string.IsNullOrWhiteSpace(transaction.Notes)
             ? $"{transaction.Type} transaction"
             : transaction.Notes;
-
-        // Calculate and validate the resulting balance
-        var currentBalance = await _dbContext.CashLedgerEntries
-            .Where(e => e.CashAccountId == account.Id && e.Id != entry.Id)
-            .SumAsync(e => e.Amount, cancellationToken);
-        
-        if (currentBalance + entry.Amount < 0)
-        {
-            throw new AccountingValidationException($"Số dư tiền mặt ({currency}) không đủ để thực hiện giao dịch này. Vui lòng nạp thêm tiền.");
-        }
     }
 }

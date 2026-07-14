@@ -63,7 +63,7 @@ public class MigrationService
         {
             if (transaction.Asset?.MarketAsset?.Category != null)
             {
-                await _ledgerService.SyncLedgerEntryAsync(transaction, cancellationToken, allowNegativeBalance: true);
+                await _ledgerService.SyncLedgerEntryAsync(transaction, cancellationToken);
             }
         }
         
