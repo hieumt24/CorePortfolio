@@ -20,6 +20,7 @@ CorePortfolio is a personal portfolio and cashflow application. It combines inve
 - Use UTC dates and explicit VND/USD conversion through `ExchangeRateService`.
 - CORS is configured by `Cors:AllowedOrigins`; production also permits HTTPS Vercel preview origins. Redeploy the API after changing this policy.
 - Health checks: `/health/live` only verifies the process, while `/health/ready` (also exposed through `/health`) verifies database connectivity. Azure Linux should persist SQLite at `/home/data/CorePortfolio.db` or set `ConnectionStrings__DefaultConnection` explicitly.
+- Database migration failures are logged as critical startup diagnostics but do not terminate the process; liveness remains reachable and readiness reports the database failure.
 - Add entities to `AppDbContext`, configure relationships/indexes in `OnModelCreating`, and create an EF migration for schema changes.
 - Preserve the vertical-slice + MediatR pattern; do not introduce MVC controllers.
 
@@ -51,7 +52,7 @@ npm run build
 
 - `.github/workflows/backend-ci.yml` restores and builds the API project directly, runs domain tests, and verifies the EF snapshot.
 - `.github/workflows/frontend-ci.yml` runs blocking `npm ci`, Vitest, and the production build; ESLint runs as an advisory step while legacy lint violations are migrated.
-- `.github/workflows/main_coreportfolio-api.yml` restores the API with the `linux-x64` runtime target, builds/tests it, publishes a self-contained Linux artifact, deploys to Azure, checks `/health/live` as a blocking smoke test, and logs `/health/ready` database status.
+- `.github/workflows/main_coreportfolio-api.yml` restores the API with the `linux-x64` runtime target, builds/tests it, publishes a self-contained Linux artifact, transfers it as a tar archive to preserve executable permissions, checks `/health/live` as a blocking smoke test, and logs `/health/ready` database status.
 - Production deployment requires the Azure publish-profile secret and the API App Service CORS configuration described above. Vercel frontend deployment remains managed by Vercel; frontend CI is the merge gate.
 
 If an environment prevents backend restore/build, report the exact limitation; do not claim the backend is verified.

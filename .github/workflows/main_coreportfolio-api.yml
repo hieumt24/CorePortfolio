@@ -41,11 +41,17 @@ jobs:
       - name: dotnet publish
         run: dotnet publish backend/src/CorePortfolio.API/CorePortfolio.API.csproj -c Release -r linux-x64 --self-contained true --no-restore -o ${{env.DOTNET_ROOT}}/myapp
 
+      - name: Package Linux artifact with executable permissions
+        shell: bash
+        run: |
+          chmod +x ${{env.DOTNET_ROOT}}/myapp/CorePortfolio.API
+          tar -C ${{env.DOTNET_ROOT}}/myapp -czf ${{env.DOTNET_ROOT}}/coreportfolio-api.tar.gz .
+
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
         with:
           name: .net-app
-          path: ${{env.DOTNET_ROOT}}/myapp
+          path: ${{env.DOTNET_ROOT}}/coreportfolio-api.tar.gz
 
   deploy:
     runs-on: ubuntu-latest
@@ -56,6 +62,13 @@ jobs:
         uses: actions/download-artifact@v4
         with:
           name: .net-app
+
+      - name: Extract Linux deployment artifact
+        shell: bash
+        run: |
+          mkdir deployment
+          tar -xzf coreportfolio-api.tar.gz -C deployment
+          chmod +x deployment/CorePortfolio.API
       
       - name: Deploy to Azure Web App
         id: deploy-to-webapp
@@ -63,12 +76,15 @@ jobs:
         with:
           app-name: 'coreportfolio-api'
           slot-name: 'Production'
-          package: .
+          package: deployment
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_9F0199D64EEA4451A26E9E22CEA11884 }}
 
       - name: Smoke test production API liveness
         shell: bash
-        run: curl --fail --silent --show-error --retry 12 --retry-delay 5 --retry-connrefused https://coreportfolio-api-cdbchffjhtg2hgda.southeastasia-01.azurewebsites.net/health/live
+        run: |
+          curl --fail --silent --show-error \
+            --retry 18 --retry-delay 10 --retry-all-errors \
+            https://coreportfolio-api-cdbchffjhtg2hgda.southeastasia-01.azurewebsites.net/health/live
 
       - name: Check production API readiness
         shell: bash
