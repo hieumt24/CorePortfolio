@@ -27,6 +27,9 @@ using CorePortfolio.API.Features.Budgets;
 using CorePortfolio.API.Features.CashAccounts;
 using CorePortfolio.API.Features.DcaPlans;
 using CorePortfolio.API.Features.SavingGoals;
+using CorePortfolio.API.Features.Dashboard;
+using CorePortfolio.API.Features.RecurringCashflows;
+using CorePortfolio.API.Features.Notifications;
 using CorePortfolio.API.Services;
 using CorePortfolio.API.Features.Auth;
 using CorePortfolio.Infrastructure.Data;
@@ -215,6 +218,9 @@ app.MapGetRebalanceSuggestionsEndpoint();
 app.MapRebalanceExecutionPlansEndpoints();
 app.MapSavingGoalsEndpoints();
 app.MapDcaPlansEndpoints();
+app.MapDashboardEndpoints();
+app.MapRecurringCashflowsEndpoints();
+app.MapNotificationsEndpoints();
 
 // Map fallback to index.html for SPA routing
 app.MapFallbackToFile("index.html");

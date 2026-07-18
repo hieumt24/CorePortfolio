@@ -29,6 +29,8 @@ public class AppDbContext : DbContext
     public DbSet<DcaPlan> DcaPlans => Set<DcaPlan>();
     public DbSet<RebalanceExecutionPlan> RebalanceExecutionPlans => Set<RebalanceExecutionPlan>();
     public DbSet<RebalanceExecutionPlanItem> RebalanceExecutionPlanItems => Set<RebalanceExecutionPlanItem>();
+    public DbSet<RecurringCashflowRule> RecurringCashflowRules => Set<RecurringCashflowRule>();
+    public DbSet<Notification> Notifications => Set<Notification>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -192,6 +194,13 @@ public class AppDbContext : DbContext
             .WithMany()
             .HasForeignKey(i => i.CategoryId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<RecurringCashflowRule>().HasIndex(r => new { r.UserId, r.NextOccurrence });
+        modelBuilder.Entity<RecurringCashflowRule>().HasOne(r => r.User).WithMany().HasForeignKey(r => r.UserId).OnDelete(DeleteBehavior.Cascade);
+        modelBuilder.Entity<RecurringCashflowRule>().HasOne(r => r.Portfolio).WithMany().HasForeignKey(r => r.PortfolioId).OnDelete(DeleteBehavior.Cascade);
+        modelBuilder.Entity<RecurringCashflowRule>().HasOne(r => r.Category).WithMany().HasForeignKey(r => r.CategoryId).OnDelete(DeleteBehavior.Restrict);
+        modelBuilder.Entity<Notification>().HasIndex(n => new { n.UserId, n.CreatedAt });
+        modelBuilder.Entity<Notification>().HasIndex(n => new { n.UserId, n.DedupeKey }).IsUnique();
 
         modelBuilder.Entity<WatchlistItem>()
             .HasOne(w => w.MarketAsset)

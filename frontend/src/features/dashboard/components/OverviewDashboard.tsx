@@ -11,6 +11,7 @@ import type { DcaPlan } from '../../dcaPlans/types';
 import { rebalancingPlansApi } from '../../rebalancing/api/rebalancingPlansApi';
 import { RebalanceExecutionPlanStatus, type RebalanceExecutionPlan } from '../../rebalancing/types';
 import './OverviewDashboard.css';
+import { financialHealthApi, type FinancialHealth } from '../api/financialHealthApi';
 
 const formatVnd = (amount: number) =>
   new Intl.NumberFormat('vi-VN', {
@@ -39,6 +40,7 @@ type DashboardData = {
   goals: SavingGoal[];
   dcaPlans: DcaPlan[];
   rebalancePlans: RebalanceExecutionPlan[];
+  health: FinancialHealth | null;
 };
 
 export function OverviewDashboard() {
@@ -49,6 +51,7 @@ export function OverviewDashboard() {
     goals: [],
     dcaPlans: [],
     rebalancePlans: [],
+    health: null,
   });
   const [loading, setLoading] = useState(true);
 
@@ -58,6 +61,7 @@ export function OverviewDashboard() {
       try {
         const { year, month } = getCurrentMonth();
         const portfolios = await getPortfolios();
+        const healthResult = await financialHealthApi.get('VND').catch(() => null);
         const summaryResults = await Promise.allSettled(portfolios.map(portfolio => getPortfolioSummary(portfolio.id)));
         const summaries = summaryResults
           .filter((result): result is PromiseFulfilledResult<PortfolioSummaryDto> => result.status === 'fulfilled')
@@ -78,6 +82,7 @@ export function OverviewDashboard() {
           goals: goalsResult.status === 'fulfilled' ? goalsResult.value : [],
           dcaPlans: dcaResult.status === 'fulfilled' ? dcaResult.value : [],
           rebalancePlans: rebalanceResult.status === 'fulfilled' ? rebalanceResult.value : [],
+          health: healthResult,
         });
       } catch (error) {
         console.error('Failed to load dashboard', error);
@@ -90,15 +95,15 @@ export function OverviewDashboard() {
   }, []);
 
   const metrics = useMemo(() => {
-    const invested = data.summaries.reduce((sum, item) => sum + item.totalInvested, 0);
-    const portfolioValue = data.summaries.reduce((sum, item) => sum + item.currentTotalValue, 0);
-    const cashBalance = data.summaries.reduce((sum, item) => {
+    const invested = data.health?.investedValue ?? data.summaries.reduce((sum, item) => sum + item.totalInvested, 0);
+    const portfolioValue = data.health?.investedValue ? data.health.investedValue + (data.health.unrealizedPnl || 0) : data.summaries.reduce((sum, item) => sum + item.currentTotalValue, 0);
+    const cashBalance = data.health?.cashBalance ?? data.summaries.reduce((sum, item) => {
       return sum + item.cashBalances.filter(balance => balance.currency === 'VND').reduce((cash, balance) => cash + balance.balance, 0);
     }, 0);
-    const unrealizedPnl = data.summaries.reduce((sum, item) => sum + item.unrealizedPnl, 0);
+    const unrealizedPnl = data.health?.unrealizedPnl ?? data.summaries.reduce((sum, item) => sum + item.unrealizedPnl, 0);
     const netWorth = portfolioValue + cashBalance;
-    const budgetLimit = data.budgets.reduce((sum, budget) => sum + budget.monthlyLimit, 0);
-    const budgetSpent = data.budgets.reduce((sum, budget) => sum + budget.spentAmount, 0);
+    const budgetLimit = data.health?.budgetLimit ?? data.budgets.reduce((sum, budget) => sum + budget.monthlyLimit, 0);
+    const budgetSpent = data.health?.budgetSpent ?? data.budgets.reduce((sum, budget) => sum + budget.spentAmount, 0);
     const budgetProgress = budgetLimit > 0 ? (budgetSpent / budgetLimit) * 100 : 0;
 
     return { invested, portfolioValue, cashBalance, unrealizedPnl, netWorth, budgetLimit, budgetSpent, budgetProgress };

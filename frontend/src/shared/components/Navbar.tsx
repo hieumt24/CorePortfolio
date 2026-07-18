@@ -1,13 +1,21 @@
-import React, { useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import './Navbar.css';
+import { notificationsApi, type NotificationItem } from '../../features/notifications/api/notificationsApi';
 
 export const Navbar: React.FC = () => {
   const location = useLocation();
   const navigate = useNavigate();
   const { isAuthenticated, isAdmin, user, logout } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [showNotifications, setShowNotifications] = useState(false);
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    notificationsApi.list(true).then(setNotifications).catch(() => setNotifications([]));
+  }, [isAuthenticated]);
 
   const handleLogout = () => {
     logout();
@@ -53,6 +61,9 @@ export const Navbar: React.FC = () => {
                 >
                   Dashboard
                 </NavLink>
+                <button className="nav-link notification-trigger" onClick={() => setShowNotifications(value => !value)} aria-label="Notifications">
+                  🔔{notifications.length > 0 && <span className="notification-badge">{notifications.length}</span>}
+                </button>
                 <NavLink 
                   to="/portfolios" 
                   className={location.pathname.startsWith('/portfolios') ? "nav-link active" : "nav-link"}
@@ -145,6 +156,12 @@ export const Navbar: React.FC = () => {
               )}
             </div>
           </div>
+          {showNotifications && (
+            <div className="notification-popover">
+              <div className="notification-popover-header"><strong>Notifications</strong><button onClick={() => notificationsApi.markAllRead().then(() => setNotifications([]))}>Mark all read</button></div>
+              {notifications.length === 0 ? <span className="notification-empty">No new alerts</span> : notifications.map(item => <button key={item.id} className="notification-item" onClick={() => notificationsApi.markRead(item.id).then(() => setNotifications(current => current.filter(n => n.id !== item.id)))}><strong>{item.title}</strong><small>{item.message}</small></button>)}
+            </div>
+          )}
         </div>
       </nav>
     </>
