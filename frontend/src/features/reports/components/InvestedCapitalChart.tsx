@@ -1,74 +1,78 @@
-import React from 'react';
-import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  Legend,
-  ResponsiveContainer
-} from 'recharts';
+import { Bar, BarChart, CartesianGrid, Cell, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 
-interface InvestedCapitalChartProps {
+type InvestedCapitalChartProps = {
   totalInvested: number;
   currentValue: number;
-}
+};
 
-export const InvestedCapitalChart: React.FC<InvestedCapitalChartProps> = ({ totalInvested, currentValue }) => {
+const formatCurrency = (value: number) =>
+  new Intl.NumberFormat('vi-VN', {
+    style: 'currency',
+    currency: 'VND',
+    maximumFractionDigits: 0,
+  }).format(value);
+
+const formatAxisValue = (value: number) =>
+  new Intl.NumberFormat('vi-VN', {
+    notation: 'compact',
+    maximumFractionDigits: 1,
+  }).format(value);
+
+export function InvestedCapitalChart({ totalInvested, currentValue }: InvestedCapitalChartProps) {
+  const difference = currentValue - totalInvested;
   const data = [
-    {
-      name: 'Portfolio Value',
-      'Total Invested': totalInvested,
-      'Current Value': currentValue,
-    }
+    { name: 'Vốn đầu tư', value: totalInvested, color: 'var(--report-chart-3)' },
+    { name: 'Giá trị hiện tại', value: currentValue, color: 'var(--report-chart-2)' },
   ];
 
-  const formatCurrency = (value: number) => {
-    if (value >= 1000000000) return (value / 1000000000).toFixed(1) + 'B';
-    if (value >= 1000000) return (value / 1000000).toFixed(0) + 'M';
-    return new Intl.NumberFormat('vi-VN', {
-      style: 'currency',
-      currency: 'VND',
-      maximumFractionDigits: 0
-    }).format(value);
-  };
-
-  const renderTooltip = ({ active, payload }: any) => {
-    if (active && payload && payload.length) {
-      return (
-        <div className="custom-tooltip">
-          {payload.map((entry: any, index: number) => (
-            <p key={`item-${index}`} style={{ margin: '4px 0', color: entry.color, fontWeight: 'bold' }}>
-              {entry.name}: {new Intl.NumberFormat('vi-VN', { style: 'currency', currency: 'VND' }).format(entry.value)}
-            </p>
-          ))}
-        </div>
-      );
-    }
-    return null;
-  };
-
   return (
-    <div className="chart-wrapper glass-panel">
-      <h2>Invested vs Current Value</h2>
-      <div style={{ width: '100%', height: 350 }}>
-        <ResponsiveContainer>
-          <BarChart
-            data={data}
-            margin={{ top: 20, right: 30, left: 40, bottom: 5 }}
-            barSize={60}
-          >
-            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-            <XAxis dataKey="name" stroke="#94a3b8" tick={{ fill: '#94a3b8' }} />
-            <YAxis tickFormatter={formatCurrency} stroke="#94a3b8" tick={{ fill: '#94a3b8' }} />
-            <Tooltip content={renderTooltip} cursor={{ fill: 'rgba(255,255,255,0.05)' }} />
-            <Legend />
-            <Bar dataKey="Total Invested" fill="#10b981" radius={[4, 4, 0, 0]} />
-            <Bar dataKey="Current Value" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+    <section className="report-capital-card glass-panel" aria-labelledby="capital-chart-title">
+      <div className="report-section-heading">
+        <div>
+          <h2 id="capital-chart-title">Vốn và giá trị hiện tại</h2>
+          <p>Khoảng cách giữa chi phí tích lũy và giá trị thị trường.</p>
+        </div>
+        <span className={difference >= 0 ? 'positive' : 'negative'}>
+          {difference >= 0 ? '+' : ''}{formatCurrency(difference)}
+        </span>
+      </div>
+      <div
+        className="report-capital-chart"
+        role="img"
+        aria-label={`Vốn đầu tư ${formatCurrency(totalInvested)}, giá trị hiện tại ${formatCurrency(currentValue)}`}
+      >
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={data} layout="vertical" margin={{ top: 4, right: 24, left: 8, bottom: 0 }} barSize={28}>
+            <CartesianGrid strokeDasharray="3 6" stroke="var(--report-grid-line)" horizontal={false} />
+            <XAxis
+              type="number"
+              tickFormatter={formatAxisValue}
+              tick={{ fill: 'var(--text-secondary)', fontSize: 12 }}
+              tickLine={false}
+              axisLine={false}
+            />
+            <YAxis
+              type="category"
+              dataKey="name"
+              width={112}
+              tick={{ fill: 'var(--text-secondary)', fontSize: 12 }}
+              tickLine={false}
+              axisLine={false}
+            />
+            <Tooltip
+              formatter={(value) => [formatCurrency(Number(value) || 0), 'Giá trị']}
+              cursor={{ fill: 'var(--report-hover-surface)' }}
+              contentStyle={{ background: 'var(--report-tooltip-bg)', border: '1px solid var(--glass-border)' }}
+              itemStyle={{ color: 'var(--text-primary)' }}
+              labelStyle={{ color: 'var(--text-secondary)' }}
+              wrapperClassName="report-recharts-tooltip"
+            />
+            <Bar dataKey="value" radius={[0, 8, 8, 0]}>
+              {data.map((item) => <Cell key={item.name} fill={item.color} />)}
+            </Bar>
           </BarChart>
         </ResponsiveContainer>
       </div>
-    </div>
+    </section>
   );
-};
+}

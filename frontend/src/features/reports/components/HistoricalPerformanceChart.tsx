@@ -1,142 +1,116 @@
-import React, { useEffect, useState } from 'react';
-import {
-  LineChart,
-  Line,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Legend
-} from 'recharts';
-import { getGlobalHistory, mockGlobalHistory } from '../api/reportsApi';
+import { CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import type { SnapshotDto } from '../types';
-import { useNotification } from '../../../context/NotificationContext';
 
-export const HistoricalPerformanceChart: React.FC = () => {
-  const [data, setData] = useState<SnapshotDto[]>([]);
-  const [loading, setLoading] = useState(true);
-  const { showNotification } = useNotification();
+type HistoricalPerformanceChartProps = {
+  data: SnapshotDto[];
+  isGeneratingMock: boolean;
+  onGenerateMock: () => void;
+};
 
-  const fetchHistory = async () => {
-    try {
-      setLoading(true);
-      const history = await getGlobalHistory();
-      setData(history);
-    } catch (error) {
-      console.error('Failed to fetch history:', error);
-      showNotification('Failed to fetch history data', 'error');
-    } finally {
-      setLoading(false);
-    }
-  };
+const formatCurrency = (value: number) =>
+  new Intl.NumberFormat('vi-VN', {
+    style: 'currency',
+    currency: 'VND',
+    maximumFractionDigits: 0,
+  }).format(value);
 
-  useEffect(() => {
-    fetchHistory();
-  }, []);
+const formatAxisValue = (value: number) =>
+  new Intl.NumberFormat('vi-VN', {
+    notation: 'compact',
+    maximumFractionDigits: 1,
+  }).format(value);
 
-  const handleGenerateMock = async () => {
-    try {
-      await mockGlobalHistory();
-      showNotification('Mock data generated', 'success');
-      fetchHistory();
-    } catch (error) {
-      console.error('Failed to generate mock data', error);
-      showNotification('Failed to generate mock data', 'error');
-    }
-  };
+const formatDate = (dateValue: string) =>
+  new Intl.DateTimeFormat('vi-VN', { day: '2-digit', month: '2-digit' }).format(new Date(dateValue));
 
-  const formatCurrency = (value: number) => {
-    return new Intl.NumberFormat('vi-VN', {
-      style: 'currency',
-      currency: 'VND',
-      maximumFractionDigits: 0
-    }).format(value);
-  };
-
-  const formatDate = (dateStr: string) => {
-    const d = new Date(dateStr);
-    return `${d.getDate()}/${d.getMonth() + 1}`;
-  };
-
-  if (loading) {
-    return (
-      <div className="chart-wrapper glass-panel" style={{ marginTop: '2rem' }}>
-        <h2>Historical Performance</h2>
-        <p>Loading chart data...</p>
-      </div>
-    );
-  }
-
+export function HistoricalPerformanceChart({
+  data,
+  isGeneratingMock,
+  onGenerateMock,
+}: HistoricalPerformanceChartProps) {
   return (
-    <div className="chart-wrapper glass-panel" style={{ marginTop: '2rem' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
-        <h2>Historical Performance</h2>
-        {data.length === 0 && (
-          <button className="btn-secondary" style={{ padding: '0.5rem 1rem' }} onClick={handleGenerateMock}>
-            Generate Mock Data (30 days)
-          </button>
-        )}
+    <section className="report-history-card glass-panel" aria-labelledby="history-chart-title">
+      <div className="report-section-heading">
+        <div>
+          <h2 id="history-chart-title">Giá trị qua thời gian</h2>
+          <p>So sánh giá trị thị trường và tổng vốn theo từng snapshot.</p>
+        </div>
+        {data.length > 0 && <span>{data.length} snapshots</span>}
       </div>
 
       {data.length === 0 ? (
-        <p>No historical data available yet. Snapshots are taken daily.</p>
+        <div className="report-empty-state report-history-empty">
+          <span aria-hidden="true">⌁</span>
+          <strong>Chưa có lịch sử để so sánh</strong>
+          <p>Snapshot hằng ngày sẽ tạo nên đường xu hướng của danh mục.</p>
+          <button
+            className="btn btn-outline"
+            type="button"
+            onClick={onGenerateMock}
+            disabled={isGeneratingMock}
+            aria-busy={isGeneratingMock}
+          >
+            {isGeneratingMock ? 'Đang tạo…' : 'Tạo 30 ngày dữ liệu mẫu'}
+          </button>
+        </div>
       ) : (
-        <div style={{ height: '400px', width: '100%' }}>
-          <ResponsiveContainer>
-            <LineChart
-              data={data}
-              margin={{ top: 20, right: 30, left: 40, bottom: 10 }}
-            >
-              <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.05)" vertical={false} />
-              <XAxis 
-                dataKey="date" 
+        <div
+          className="report-history-chart"
+          role="img"
+          aria-label="Biểu đồ đường so sánh giá trị hiện tại và vốn đã đầu tư theo thời gian"
+        >
+          <ResponsiveContainer width="100%" height="100%">
+            <LineChart data={data} margin={{ top: 16, right: 12, left: 8, bottom: 0 }}>
+              <CartesianGrid strokeDasharray="3 6" stroke="var(--report-grid-line)" vertical={false} />
+              <XAxis
+                dataKey="date"
                 tickFormatter={formatDate}
-                stroke="#94a3b8"
-                tick={{ fill: '#94a3b8' }}
+                stroke="var(--text-muted)"
+                tick={{ fill: 'var(--text-secondary)', fontSize: 12 }}
+                tickLine={false}
+                axisLine={false}
+                minTickGap={28}
               />
-              <YAxis 
-                tickFormatter={(value) => {
-                  if (value >= 1000000000) return (value / 1000000000).toFixed(1) + 'B';
-                  if (value >= 1000000) return (value / 1000000).toFixed(0) + 'M';
-                  return value.toString();
-                }}
-                stroke="#94a3b8"
-                tick={{ fill: '#94a3b8' }}
+              <YAxis
+                tickFormatter={formatAxisValue}
+                stroke="var(--text-muted)"
+                tick={{ fill: 'var(--text-secondary)', fontSize: 12 }}
+                tickLine={false}
+                axisLine={false}
+                width={54}
               />
-              <Tooltip 
-                formatter={(value: any) => [formatCurrency(Number(value) || 0), '']}
+              <Tooltip
+                formatter={(value, name) => [formatCurrency(Number(value) || 0), name]}
                 labelFormatter={(label) => new Date(label).toLocaleDateString('vi-VN')}
-                contentStyle={{ 
-                  backgroundColor: 'transparent',
-                  border: 'none'
-                }}
-                wrapperClassName="custom-tooltip"
-                itemStyle={{ color: '#ffffff' }}
+                contentStyle={{ background: 'var(--report-tooltip-bg)', border: '1px solid var(--glass-border)' }}
+                itemStyle={{ color: 'var(--text-primary)' }}
+                labelStyle={{ color: 'var(--text-secondary)' }}
+                wrapperClassName="report-recharts-tooltip"
               />
-              <Legend />
-              <Line 
-                type="monotone" 
-                name="Total Value"
-                dataKey="totalValue" 
-                stroke="#3b82f6" 
+              <Legend iconType="circle" iconSize={8} />
+              <Line
+                type="monotone"
+                name="Giá trị hiện tại"
+                dataKey="totalValue"
+                stroke="var(--report-chart-2)"
                 strokeWidth={3}
                 dot={false}
-                activeDot={{ r: 6, fill: '#3b82f6', stroke: '#1e293b', strokeWidth: 2 }}
+                activeDot={{ r: 5, fill: 'var(--report-chart-2)', stroke: 'var(--bg-base)', strokeWidth: 2 }}
               />
-              <Line 
-                type="monotone" 
-                name="Total Invested"
-                dataKey="totalInvested" 
-                stroke="#10b981" 
+              <Line
+                type="monotone"
+                name="Vốn đã đầu tư"
+                dataKey="totalInvested"
+                stroke="var(--report-chart-3)"
                 strokeWidth={2}
-                strokeDasharray="5 5"
+                strokeDasharray="7 7"
                 dot={false}
+                activeDot={{ r: 4, fill: 'var(--report-chart-3)', stroke: 'var(--bg-base)', strokeWidth: 2 }}
               />
             </LineChart>
           </ResponsiveContainer>
         </div>
       )}
-    </div>
+    </section>
   );
-};
+}
