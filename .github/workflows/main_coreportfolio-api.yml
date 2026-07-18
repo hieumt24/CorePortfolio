@@ -29,7 +29,7 @@ jobs:
 
       - name: Restore dependencies
         run: |
-          dotnet restore backend/src/CorePortfolio.API/CorePortfolio.API.csproj
+          dotnet restore backend/src/CorePortfolio.API/CorePortfolio.API.csproj --runtime linux-x64
           dotnet restore backend/src/CorePortfolio.Domain.Tests/CorePortfolio.Domain.Tests.csproj
 
       - name: Build with dotnet

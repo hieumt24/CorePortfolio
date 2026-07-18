@@ -50,7 +50,7 @@ npm run build
 
 - `.github/workflows/backend-ci.yml` restores and builds the API project directly, runs domain tests, and verifies the EF snapshot.
 - `.github/workflows/frontend-ci.yml` runs blocking `npm ci`, Vitest, and the production build; ESLint runs as an advisory step while legacy lint violations are migrated.
-- `.github/workflows/main_coreportfolio-api.yml` builds/tests the API, publishes a Linux artifact, deploys to Azure, and calls `/health` with retries as a post-deploy smoke test.
+- `.github/workflows/main_coreportfolio-api.yml` restores the API with the `linux-x64` runtime target, builds/tests it, publishes a self-contained Linux artifact, deploys to Azure, and calls `/health` with retries as a post-deploy smoke test.
 - Production deployment requires the Azure publish-profile secret and the API App Service CORS configuration described above. Vercel frontend deployment remains managed by Vercel; frontend CI is the merge gate.
 
 If an environment prevents backend restore/build, report the exact limitation; do not claim the backend is verified.
