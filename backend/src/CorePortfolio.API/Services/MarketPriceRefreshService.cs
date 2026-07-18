@@ -35,11 +35,15 @@ public sealed class MarketPriceRefreshService : BackgroundService
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var crypto = scope.ServiceProvider.GetRequiredService<ICryptoPriceService>();
             var assets = await db.MarketAssets
-                .Where(asset => asset.PriceSource == "CoinGecko" && asset.ExternalId != null)
+                .Include(asset => asset.Category)
+                .Where(asset => asset.PriceSource == "CoinGecko" || asset.PriceSource == "")
                 .ToListAsync(cancellationToken);
 
             foreach (var asset in assets)
             {
+                MarketPriceSourceResolver.Normalize(asset);
+                if (!asset.PriceSource.Equals("CoinGecko", StringComparison.OrdinalIgnoreCase) || string.IsNullOrWhiteSpace(asset.ExternalId))
+                    continue;
                 try
                 {
                     var price = await crypto.GetPriceAsync(asset.ExternalId!, cancellationToken);

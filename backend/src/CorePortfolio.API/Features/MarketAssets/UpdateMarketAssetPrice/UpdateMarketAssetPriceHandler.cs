@@ -2,6 +2,7 @@ using CorePortfolio.Infrastructure.Data;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using CorePortfolio.Domain.Interfaces;
+using CorePortfolio.API.Services;
 
 namespace CorePortfolio.API.Features.MarketAssets.UpdateMarketAssetPrice;
 
@@ -44,13 +45,14 @@ public sealed class RefreshMarketAssetPricesHandler : IRequestHandler<RefreshMar
 
     public async Task<List<PriceRefreshResultDto>> Handle(RefreshMarketAssetPricesCommand request, CancellationToken cancellationToken)
     {
-        var query = _db.MarketAssets.AsQueryable();
+        var query = _db.MarketAssets.Include(asset => asset.Category).AsQueryable();
         query = request.MarketAssetId.HasValue ? query.Where(m => m.Id == request.MarketAssetId)
             : query.Where(m => m.PriceSource != "Manual");
         var assets = await query.ToListAsync(cancellationToken);
         var results = new List<PriceRefreshResultDto>();
         foreach (var asset in assets)
         {
+            MarketPriceSourceResolver.Normalize(asset);
             decimal? price = null;
             string? error = null;
             try
