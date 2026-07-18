@@ -1,6 +1,7 @@
 using CorePortfolio.Domain.Interfaces;
 using CorePortfolio.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
+using System.Net;
 
 namespace CorePortfolio.API.Services;
 
@@ -62,7 +63,7 @@ public sealed class MarketPriceRefreshService : BackgroundService
                 }
                 catch (Exception exception)
                 {
-                    asset.PriceStatus = "Error";
+                    asset.PriceStatus = IsTransientProviderError(exception) ? "Stale" : "Error";
                     asset.LastPriceError = exception.Message[..Math.Min(exception.Message.Length, 500)];
                     _logger.LogWarning(exception, "Failed to refresh crypto price for {AssetId}.", asset.Id);
                 }
@@ -77,4 +78,15 @@ public sealed class MarketPriceRefreshService : BackgroundService
             _logger.LogError(exception, "Market price refresh cycle failed.");
         }
     }
+
+    private static bool IsTransientProviderError(Exception exception) =>
+        exception is TimeoutException
+        || exception is OperationCanceledException
+        || exception is HttpRequestException
+        {
+            StatusCode: HttpStatusCode.TooManyRequests
+                or HttpStatusCode.BadGateway
+                or HttpStatusCode.ServiceUnavailable
+                or HttpStatusCode.GatewayTimeout
+        };
 }

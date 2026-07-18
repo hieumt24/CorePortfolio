@@ -13,11 +13,28 @@ public static class MarketPriceSourceResolver
         ["ADA"] = "cardano",
         ["FET"] = "artificial-superintelligence-alliance",
         ["ALLO"] = "allora",
-        ["CMC20"] = "coinmarketcap-20-index"
+        ["CMC20"] = "coinmarketcap-20-index-dtf",
+        ["HYPE"] = "hyperliquid",
+        ["LINK"] = "chainlink",
+        ["NEAR"] = "near",
+        ["NIGHT"] = "midnight-3",
+        ["SOL"] = "solana"
     };
 
     public static bool Normalize(MarketAsset asset)
     {
+        if (asset.PriceSource.Equals("CoinGecko", StringComparison.OrdinalIgnoreCase))
+        {
+            if (CoinGeckoIds.TryGetValue(asset.Symbol, out var mappedId) && !string.Equals(asset.ExternalId, mappedId, StringComparison.OrdinalIgnoreCase))
+            {
+                asset.ExternalId = mappedId;
+                asset.PriceStatus = "Stale";
+                asset.LastPriceError = null;
+                return true;
+            }
+            return false;
+        }
+
         if (!string.IsNullOrWhiteSpace(asset.PriceSource)) return false;
         var category = NormalizeText(asset.Category?.Name ?? string.Empty);
 

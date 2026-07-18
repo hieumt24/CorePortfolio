@@ -3,6 +3,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using CorePortfolio.Domain.Interfaces;
 using CorePortfolio.API.Services;
+using System.Net;
 
 namespace CorePortfolio.API.Features.MarketAssets.UpdateMarketAssetPrice;
 
@@ -77,7 +78,7 @@ public sealed class RefreshMarketAssetPricesHandler : IRequestHandler<RefreshMar
             }
             else
             {
-                asset.PriceStatus = "Error";
+                asset.PriceStatus = IsTransientProviderError(error) ? "Stale" : "Error";
                 asset.LastPriceError = error.Length > 500 ? error[..500] : error;
             }
             results.Add(new(asset.Id, asset.Symbol, asset.PriceStatus, price, error));
@@ -85,4 +86,11 @@ public sealed class RefreshMarketAssetPricesHandler : IRequestHandler<RefreshMar
         await _db.SaveChangesAsync(cancellationToken);
         return results;
     }
+
+    private static bool IsTransientProviderError(string error) =>
+        error.Contains("timeout", StringComparison.OrdinalIgnoreCase)
+        || error.Contains("timed out", StringComparison.OrdinalIgnoreCase)
+        || error.Contains(((int)HttpStatusCode.BadGateway).ToString(), StringComparison.OrdinalIgnoreCase)
+        || error.Contains(((int)HttpStatusCode.GatewayTimeout).ToString(), StringComparison.OrdinalIgnoreCase)
+        || error.Contains(((int)HttpStatusCode.ServiceUnavailable).ToString(), StringComparison.OrdinalIgnoreCase);
 }
