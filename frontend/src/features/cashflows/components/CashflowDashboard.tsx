@@ -49,6 +49,13 @@ const getBudgetMonthFromFilter = (filter: string) => {
 
 type TabType = 'overview' | 'daily' | 'monthly';
 
+const dateFilterLabels: Record<string, string> = {
+  all: 'Tất cả thời gian',
+  thisMonth: 'Tháng này',
+  lastMonth: 'Tháng trước',
+  thisYear: 'Năm nay',
+};
+
 const getBudgetToneLabel = (budget: BudgetProgress) => {
   if (budget.isExceeded) return 'Vượt budget';
   if (budget.rawProgressPercentage >= 80) return 'Gần chạm budget';
@@ -94,8 +101,18 @@ export const CashflowDashboard: React.FC = () => {
   }, [budgetMonth.month, budgetMonth.year, currency]);
 
   useEffect(() => {
-    refetchBudgets();
-  }, [refetchBudgets]);
+    let cancelled = false;
+    void getBudgetsProgress({ year: budgetMonth.year, month: budgetMonth.month, currency })
+      .then((progress) => {
+        if (!cancelled) setBudgetProgress(progress);
+      })
+      .catch((error: unknown) => {
+        if (!cancelled) console.error('Failed to load budget progress', error);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [budgetMonth.month, budgetMonth.year, currency]);
 
   const budgetSummary = useMemo(() => {
     const totalLimit = budgetProgress.reduce((sum, budget) => sum + budget.monthlyLimit, 0);
@@ -205,21 +222,22 @@ export const CashflowDashboard: React.FC = () => {
       {/* Header Area */}
       <div className="dashboard-header-premium">
         <div className="header-info">
+          <span className="cf-kicker">Cashflow workspace</span>
           <h1>Quản lý Thu Chi</h1>
-          <p>Theo dõi dòng tiền thông minh và trực quan</p>
+          <p>Nhìn rõ tiền đi đâu, còn lại bao nhiêu và cần điều chỉnh gì.</p>
         </div>
         <div className="header-actions">
-          <div className="dashboard-tabs">
-            <button className={`tab-btn ${activeTab === 'overview' ? 'active' : ''}`} onClick={() => setActiveTab('overview')}>Tổng quan</button>
-            <button className={`tab-btn ${activeTab === 'daily' ? 'active' : ''}`} onClick={() => setActiveTab('daily')}>Ngày</button>
-            <button className={`tab-btn ${activeTab === 'monthly' ? 'active' : ''}`} onClick={() => setActiveTab('monthly')}>Tháng</button>
+          <div className="dashboard-tabs" role="tablist" aria-label="Các góc nhìn cashflow">
+            <button type="button" role="tab" aria-selected={activeTab === 'overview'} className={`tab-btn ${activeTab === 'overview' ? 'active' : ''}`} onClick={() => setActiveTab('overview')}>Tổng quan</button>
+            <button type="button" role="tab" aria-selected={activeTab === 'daily'} className={`tab-btn ${activeTab === 'daily' ? 'active' : ''}`} onClick={() => setActiveTab('daily')}>Theo ngày</button>
+            <button type="button" role="tab" aria-selected={activeTab === 'monthly'} className={`tab-btn ${activeTab === 'monthly' ? 'active' : ''}`} onClick={() => setActiveTab('monthly')}>Theo tháng</button>
           </div>
           <div className="action-buttons">
-            <button className="btn btn-income glow-effect" onClick={() => handleOpenModal(CashflowType.Income)}>
-              + Thêm Thu
+            <button type="button" className="btn btn-income glow-effect" onClick={() => handleOpenModal(CashflowType.Income)}>
+              <span aria-hidden="true">＋</span> Thêm thu
             </button>
-            <button className="btn btn-expense glow-effect" onClick={() => handleOpenModal(CashflowType.Expense)}>
-              - Thêm Chi
+            <button type="button" className="btn btn-expense glow-effect" onClick={() => handleOpenModal(CashflowType.Expense)}>
+              <span aria-hidden="true">－</span> Thêm chi
             </button>
           </div>
         </div>
@@ -232,7 +250,7 @@ export const CashflowDashboard: React.FC = () => {
         <>
           {/* Summary Cards Area */}
           <div className="summary-cards">
-            <div className="cf-card income-card">
+            <div className="cf-card income-card cf-card-primary">
               <div className="card-icon">↓</div>
               <div className="card-content">
                 <h3>Tổng Thu Nhập</h3>
@@ -278,6 +296,13 @@ export const CashflowDashboard: React.FC = () => {
                 </p>
               </div>
             </div>
+          </div>
+
+          <div className="cashflow-period-context" aria-live="polite">
+            <span className="context-pulse" aria-hidden="true" />
+            <span>Đang xem <strong>{dateFilterLabels[dateFilter]}</strong> · {currency}</span>
+            <span className="context-divider" aria-hidden="true" />
+            <span>{isCashflowsLoading ? 'Đang đồng bộ giao dịch…' : `${filteredCashflows.length} giao dịch phù hợp`}</span>
           </div>
 
           <div className={`cashflow-budget-panel glass-panel ${exceededBudgets.length > 0 ? 'has-alert' : ''}`}>
@@ -343,13 +368,13 @@ export const CashflowDashboard: React.FC = () => {
             {/* Advanced Filters Bar */}
             <div className="cf-filters-bar glass-panel">
               <div className="cf-filter-group">
-                <select className="cf-select" value={dateFilter} onChange={(e) => setDateFilter(e.target.value)}>
+                <select aria-label="Khoảng thời gian" className="cf-select" value={dateFilter} onChange={(e) => setDateFilter(e.target.value)}>
                   <option value="all">Tất cả thời gian</option>
                   <option value="thisMonth">Tháng này</option>
                   <option value="lastMonth">Tháng trước</option>
                   <option value="thisYear">Năm nay</option>
                 </select>
-                <select className="cf-select" value={currency} onChange={(e) => setCurrency(e.target.value)}>
+                <select aria-label="Đơn vị tiền tệ" className="cf-select" value={currency} onChange={(e) => setCurrency(e.target.value)}>
                   <option value="VND">VND</option>
                   <option value="USD">USD</option>
                 </select>
@@ -359,20 +384,21 @@ export const CashflowDashboard: React.FC = () => {
                 <input 
                   type="text" 
                   placeholder="Tìm kiếm giao dịch..." 
+                  aria-label="Tìm kiếm giao dịch"
                   className="cf-search-input"
                   value={searchQuery}
                   onChange={e => setSearchQuery(e.target.value)}
                 />
               </div>
               <div className="cf-filter-group">
-                <select className="cf-select" value={typeFilter} onChange={e => setTypeFilter(e.target.value)}>
+                <select aria-label="Loại giao dịch" className="cf-select" value={typeFilter} onChange={e => setTypeFilter(e.target.value)}>
                   <option value="all">Tất cả loại giao dịch</option>
                   <option value="income">Thu nhập</option>
                   <option value="expense">Chi tiêu</option>
                 </select>
               </div>
               <div className="cf-filter-group">
-                <select className="cf-select" value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)}>
+                <select aria-label="Danh mục giao dịch" className="cf-select" value={categoryFilter} onChange={e => setCategoryFilter(e.target.value)}>
                   <option value="all">Tất cả danh mục</option>
                   {availableCategories.map(c => (
                     <option key={c} value={c}>{c}</option>
@@ -380,7 +406,7 @@ export const CashflowDashboard: React.FC = () => {
                 </select>
               </div>
               <div className="cf-filter-group">
-                <button className={`btn-toggle-charts ${showCharts ? 'active' : ''}`} onClick={() => setShowCharts(!showCharts)}>
+                <button type="button" aria-pressed={showCharts} className={`btn-toggle-charts ${showCharts ? 'active' : ''}`} onClick={() => setShowCharts(!showCharts)}>
                   {showCharts ? 'Ẩn Biểu đồ' : '📊 Xem Biểu đồ'}
                 </button>
               </div>
@@ -436,8 +462,8 @@ export const CashflowDashboard: React.FC = () => {
                         </div>
                         
                         <div className="cf-ledger-actions">
-                          <button className="cf-btn-text" onClick={() => handleEdit(record)} title="Sửa">Edit</button>
-                          <button className="cf-btn-text danger" onClick={() => handleDelete(record.id)} title="Xóa">Del</button>
+                          <button type="button" className="cf-btn-text" onClick={() => handleEdit(record)} title="Sửa giao dịch">Sửa</button>
+                          <button type="button" className="cf-btn-text danger" onClick={() => handleDelete(record.id)} title="Xóa giao dịch">Xóa</button>
                         </div>
                       </div>
                       );
@@ -477,9 +503,10 @@ export const CashflowDashboard: React.FC = () => {
                                   ))}
                                 </Pie>
                                 <Tooltip 
-                                  formatter={(value: any, name: any) => {
-                                    const percentage = summary?.totalExpense ? ((value / summary.totalExpense) * 100).toFixed(1) + '%' : '0%';
-                                    return [`${formatCurrency(value)} (${percentage})`, name];
+                                  formatter={(value: number | string | ReadonlyArray<number | string> | undefined, name: string | number | undefined) => {
+                                    const numericValue = Number(Array.isArray(value) ? value[0] : value) || 0;
+                                    const percentage = summary?.totalExpense ? ((numericValue / summary.totalExpense) * 100).toFixed(1) + '%' : '0%';
+                                    return [`${formatCurrency(numericValue)} (${percentage})`, name ?? ''];
                                   }}
                                   contentStyle={{ backgroundColor: 'rgba(15, 23, 42, 0.9)', border: '1px solid rgba(255,255,255,0.1)', borderRadius: '8px', color: '#fff' }}
                                   itemStyle={{ color: '#e2e8f0' }}
