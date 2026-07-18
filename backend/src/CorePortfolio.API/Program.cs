@@ -73,8 +73,12 @@ builder.Services.AddCors(options =>
         });
 });
 
-var connectionString = builder.Configuration.GetConnectionString("DefaultConnection") 
-    ?? throw new InvalidOperationException("Connection string 'DefaultConnection' not found.");
+var connectionString = builder.Configuration.GetConnectionString("DefaultConnection");
+if (string.IsNullOrWhiteSpace(connectionString))
+{
+    var defaultDatabasePath = OperatingSystem.IsLinux() ? "/home/data/CorePortfolio.db" : "CorePortfolio.db";
+    connectionString = $"Data Source={defaultDatabasePath}";
+}
 
 builder.Services.AddDbContext<AppDbContext>(options =>
 {
@@ -188,9 +192,18 @@ app.MapGet("/api", () => "Welcome to CorePortfolio API")
     .WithName("GetRoot")
     .AllowAnonymous();
 
+app.MapGet("/health/live", () => Results.Ok(new { status = "alive" }))
+    .AllowAnonymous();
+
+app.MapGet("/health/ready", async (AppDbContext db, CancellationToken cancellationToken) =>
+    await db.Database.CanConnectAsync(cancellationToken)
+        ? Results.Ok(new { status = "ready", database = "healthy" })
+        : Results.Problem(statusCode: 503, title: "Database unavailable"))
+    .AllowAnonymous();
+
 app.MapGet("/health", async (AppDbContext db, CancellationToken cancellationToken) =>
     await db.Database.CanConnectAsync(cancellationToken)
-        ? Results.Ok(new { status = "healthy", database = "healthy" })
+        ? Results.Ok(new { status = "ready", database = "healthy" })
         : Results.Problem(statusCode: 503, title: "Database unavailable"))
     .AllowAnonymous();
 

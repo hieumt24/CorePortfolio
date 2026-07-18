@@ -66,6 +66,15 @@ jobs:
           package: .
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_9F0199D64EEA4451A26E9E22CEA11884 }}
 
-      - name: Smoke test production API
+      - name: Smoke test production API liveness
         shell: bash
-        run: curl --fail --silent --show-error --retry 12 --retry-delay 5 --retry-connrefused https://coreportfolio-api-cdbchffjhtg2hgda.southeastasia-01.azurewebsites.net/health
+        run: curl --fail --silent --show-error --retry 12 --retry-delay 5 --retry-connrefused https://coreportfolio-api-cdbchffjhtg2hgda.southeastasia-01.azurewebsites.net/health/live
+
+      - name: Check production API readiness
+        shell: bash
+        run: |
+          status=$(curl --silent --show-error --output /tmp/readiness.json --write-out '%{http_code}' --retry 3 --retry-delay 5 https://coreportfolio-api-cdbchffjhtg2hgda.southeastasia-01.azurewebsites.net/health/ready)
+          cat /tmp/readiness.json
+          if [ "$status" != "200" ]; then
+            echo "Warning: API is alive but database readiness returned HTTP $status. Check Azure ConnectionStrings__DefaultConnection and /home/data persistence."
+          fi
