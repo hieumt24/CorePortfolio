@@ -9,6 +9,10 @@ on:
       - main
   workflow_dispatch:
 
+concurrency:
+  group: api-production
+  cancel-in-progress: false
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -24,13 +28,18 @@ jobs:
           dotnet-version: '10.0.x'
 
       - name: Restore dependencies
-        run: dotnet restore backend/CorePortfolio.slnx
+        run: |
+          dotnet restore backend/src/CorePortfolio.API/CorePortfolio.API.csproj
+          dotnet restore backend/src/CorePortfolio.Domain.Tests/CorePortfolio.Domain.Tests.csproj
 
       - name: Build with dotnet
-        run: dotnet build backend/CorePortfolio.slnx --configuration Release --no-restore
+        run: dotnet build backend/src/CorePortfolio.API/CorePortfolio.API.csproj --configuration Release --no-restore
+
+      - name: Run domain tests
+        run: dotnet test backend/src/CorePortfolio.Domain.Tests/CorePortfolio.Domain.Tests.csproj --configuration Release --no-restore --verbosity normal
 
       - name: dotnet publish
-        run: dotnet publish backend/src/CorePortfolio.API/CorePortfolio.API.csproj -c Release -r linux-x64 --self-contained true -o ${{env.DOTNET_ROOT}}/myapp
+        run: dotnet publish backend/src/CorePortfolio.API/CorePortfolio.API.csproj -c Release -r linux-x64 --self-contained true --no-restore -o ${{env.DOTNET_ROOT}}/myapp
 
       - name: Upload artifact for deployment job
         uses: actions/upload-artifact@v4
@@ -56,3 +65,7 @@ jobs:
           slot-name: 'Production'
           package: .
           publish-profile: ${{ secrets.AZUREAPPSERVICE_PUBLISHPROFILE_9F0199D64EEA4451A26E9E22CEA11884 }}
+
+      - name: Smoke test production API
+        shell: bash
+        run: curl --fail --silent --show-error --retry 12 --retry-delay 5 --retry-connrefused https://coreportfolio-api-cdbchffjhtg2hgda.southeastasia-01.azurewebsites.net/health

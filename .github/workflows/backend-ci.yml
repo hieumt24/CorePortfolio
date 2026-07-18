@@ -12,9 +12,15 @@ on:
       - 'backend/**'
       - '.github/workflows/backend-ci.yml'
 
+concurrency:
+  group: backend-ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
 jobs:
   build:
     runs-on: ubuntu-latest
+    permissions:
+      contents: read
     defaults:
       run:
         working-directory: backend
@@ -26,9 +32,21 @@ jobs:
       uses: actions/setup-dotnet@v4
       with:
         dotnet-version: '10.0.x'
+        cache: true
+        cache-dependency-path: backend/**/*.csproj
         
     - name: Restore dependencies
-      run: dotnet restore CorePortfolio.slnx
+      run: |
+        dotnet restore src/CorePortfolio.API/CorePortfolio.API.csproj
+        dotnet restore src/CorePortfolio.Domain.Tests/CorePortfolio.Domain.Tests.csproj
       
     - name: Build
-      run: dotnet build CorePortfolio.slnx --no-restore
+      run: dotnet build src/CorePortfolio.API/CorePortfolio.API.csproj --configuration Release --no-restore
+
+    - name: Run domain tests
+      run: dotnet test src/CorePortfolio.Domain.Tests/CorePortfolio.Domain.Tests.csproj --configuration Release --no-restore --verbosity normal
+
+    - name: Verify EF migration snapshot exists
+      shell: bash
+      run: |
+        test -f src/CorePortfolio.Infrastructure/Migrations/AppDbContextModelSnapshot.cs
