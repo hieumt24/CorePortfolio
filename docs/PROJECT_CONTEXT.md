@@ -38,6 +38,7 @@ CorePortfolio is a personal portfolio and cashflow application. It combines inve
 - Financial Health Center aggregate: `GET /api/dashboard/financial-health` and the dashboard integration.
 - Recurring cashflow foundation: `RecurringCashflowRule` entity and `/api/recurring-cashflows` list/create/toggle endpoints. Scheduler, idempotent occurrence generation, migration, and management page remain to be completed.
 - Notification Center foundation: `Notification` entity and `/api/notifications` list/read/read-all endpoints, plus Navbar unread popover. Alert evaluation rules, persistence migration, and richer notification UX remain to be completed.
+- Market price foundation: `PriceQuote`/`IPriceProvider` contracts, keyless-capable CoinGecko adapter, and `MarketPriceRefreshService` refreshing `CoinGecko` assets on a configurable 60-second interval. DNSE session scheduling, price history, Fund NAV, and frontend status UI remain in the approved roadmap.
 
 ## Verification commands
 

@@ -5,7 +5,7 @@ using Microsoft.Extensions.Configuration;
 
 namespace CorePortfolio.Coingecko;
 
-public class CoinGeckoService : ICryptoPriceService
+public class CoinGeckoService : ICryptoPriceService, IPriceProvider
 {
     private readonly IHttpClientFactory _httpClientFactory;
     private readonly IConfiguration _configuration;
@@ -16,6 +16,14 @@ public class CoinGeckoService : ICryptoPriceService
         _configuration = configuration;
     }
 
+    public string Source => "CoinGecko";
+
+    public async Task<PriceQuote?> GetQuoteAsync(string symbolOrExternalId, string currency, CancellationToken cancellationToken = default)
+    {
+        var price = await GetPriceAsync(symbolOrExternalId, cancellationToken);
+        return price is null ? null : new PriceQuote(price.Value, currency.ToUpperInvariant(), Source, DateTime.UtcNow, "Fresh");
+    }
+
     public async Task<decimal?> GetPriceAsync(string coinId, CancellationToken cancellationToken = default)
     {
         if (string.IsNullOrWhiteSpace(coinId) || !Regex.IsMatch(coinId, @"^[a-z0-9\-]+$"))
@@ -23,14 +31,11 @@ public class CoinGeckoService : ICryptoPriceService
             return null;
         }
 
-        var apiKey = _configuration["CoinGecko:ApiKey"];
-        if (string.IsNullOrEmpty(apiKey))
-        {
-            return null;
-        }
-
         var client = _httpClientFactory.CreateClient("CoinGecko");
-        var url = $"https://api.coingecko.com/api/v3/simple/price?vs_currencies=usd&ids={coinId}&x_cg_demo_api_key={apiKey}";
+        var apiKey = _configuration["CoinGecko:ApiKey"];
+        var url = $"https://api.coingecko.com/api/v3/simple/price?vs_currencies=usd&ids={coinId}";
+        if (!string.IsNullOrWhiteSpace(apiKey))
+            url += $"&x_cg_demo_api_key={Uri.EscapeDataString(apiKey)}";
 
         try
         {

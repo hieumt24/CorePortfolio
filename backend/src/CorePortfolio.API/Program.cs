@@ -30,6 +30,7 @@ using CorePortfolio.API.Features.SavingGoals;
 using CorePortfolio.API.Features.Dashboard;
 using CorePortfolio.API.Features.RecurringCashflows;
 using CorePortfolio.API.Features.Notifications;
+using CorePortfolio.API.Features.MarketPrices;
 using CorePortfolio.API.Services;
 using CorePortfolio.API.Features.Auth;
 using CorePortfolio.Infrastructure.Data;
@@ -82,7 +83,7 @@ if (string.IsNullOrWhiteSpace(connectionString))
 
 builder.Services.AddDbContext<AppDbContext>(options =>
 {
-    options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection"));
+    options.UseSqlite(connectionString);
 });
 
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
@@ -95,6 +96,7 @@ builder.Services.AddScoped<ExchangeRateService>();
 builder.Services.AddHttpClient();
 builder.Services.AddHostedService<TelegramCronService>();
 builder.Services.AddHostedService<DailySnapshotService>();
+builder.Services.AddHostedService<MarketPriceRefreshService>();
 builder.Services.AddScoped<BackupService>();
 builder.Services.AddScoped<MigrationService>();
 
@@ -247,6 +249,7 @@ app.MapDcaPlansEndpoints();
 app.MapDashboardEndpoints();
 app.MapRecurringCashflowsEndpoints();
 app.MapNotificationsEndpoints();
+app.MapMarketPricesEndpoints();
 
 // Map fallback to index.html for SPA routing
 app.MapFallbackToFile("index.html");
