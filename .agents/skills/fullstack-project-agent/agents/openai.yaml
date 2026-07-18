@@ -1,0 +1,4 @@
+interface:
+  display_name: "Fullstack Project Agent"
+  short_description: "Coordinate backend frontend docs and verification"
+  default_prompt: "Use $fullstack-project-agent to implement this CorePortfolio task across backend and frontend, update project context docs, and verify both stacks."

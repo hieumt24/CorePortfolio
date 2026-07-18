@@ -55,12 +55,21 @@ builder.Services.AddProblemDetails();
 
 builder.Services.AddCors(options =>
 {
+    var configuredOrigins = builder.Configuration.GetSection("Cors:AllowedOrigins").Get<string[]>()
+        ?? new[] { "http://localhost:5173", "https://core-portfolio-taupe.vercel.app" };
+
     options.AddPolicy("AllowFrontend",
         policy =>
         {
-            policy.WithOrigins("http://localhost:5173", "https://core-portfolio-taupe.vercel.app")
+            policy.SetIsOriginAllowed(origin =>
+                configuredOrigins.Contains(origin, StringComparer.OrdinalIgnoreCase)
+                || (builder.Environment.IsProduction() &&
+                    Uri.TryCreate(origin, UriKind.Absolute, out var uri) &&
+                    uri.Scheme == Uri.UriSchemeHttps &&
+                    uri.Host.EndsWith(".vercel.app", StringComparison.OrdinalIgnoreCase)))
                   .AllowAnyHeader()
-                  .AllowAnyMethod();
+                  .AllowAnyMethod()
+                  .SetPreflightMaxAge(TimeSpan.FromMinutes(10));
         });
 });
 
@@ -162,13 +171,12 @@ if (app.Environment.IsDevelopment())
     app.UseSwaggerUI();
 }
 
-app.UseCors("AllowFrontend");
-
 // Serve frontend SPA files
 app.UseDefaultFiles();
 app.UseStaticFiles();
 
 app.UseHttpsRedirection();
+app.UseCors("AllowFrontend");
 
 app.UseAuthentication();
 app.UseAuthorization();
