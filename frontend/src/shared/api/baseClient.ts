@@ -16,6 +16,11 @@ export const apiClient = async <T>(endpoint: string, options?: RequestInit): Pro
     headers,
   });
 
+  if (response.status === 401 && token) {
+    localStorage.removeItem('token');
+    window.dispatchEvent(new CustomEvent('auth:unauthorized'));
+  }
+
   if (!response.ok) {
     let message = `API Error: ${response.statusText}`;
 

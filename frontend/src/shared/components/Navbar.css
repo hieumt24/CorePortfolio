@@ -218,6 +218,10 @@
     left: 0;
     width: 250px;
     height: 100vh;
+    max-height: 100dvh;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
     transform: translateX(-100%);
     border-radius: 0;
     border-right: 1px solid rgba(255, 255, 255, 0.08);
@@ -225,6 +229,11 @@
   
   .glass-navbar.mobile-open {
     transform: translateX(0);
+  }
+
+  .glass-navbar .navbar-container {
+    min-height: max-content;
+    padding-bottom: 1.5rem;
   }
 
   .mobile-menu-toggle {

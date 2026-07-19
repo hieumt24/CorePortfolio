@@ -34,16 +34,31 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   useEffect(() => {
+    const handleUnauthorized = () => logout();
+    window.addEventListener('auth:unauthorized', handleUnauthorized);
+
     if (token) {
       try {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         const decoded: any = jwtDecode(token);
         // eslint-disable-next-line react-hooks/exhaustive-deps
-        setUser({
+        const decodedUser = {
           id: decoded['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'] || decoded.sub,
           email: decoded['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name'] || decoded.name || decoded.unique_name || 'Admin',
           role: decoded['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] || decoded.role,
-        });
+        };
+
+        if (!decoded.exp || decoded.exp * 1000 <= Date.now()) {
+          logout();
+        } else {
+          setUser(decodedUser);
+          const expiresIn = decoded.exp * 1000 - Date.now();
+          const expiryTimer = window.setTimeout(logout, expiresIn);
+          return () => {
+            window.clearTimeout(expiryTimer);
+            window.removeEventListener('auth:unauthorized', handleUnauthorized);
+          };
+        }
       } catch (e) {
         console.error('Invalid token', e);
         logout();
@@ -52,6 +67,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // eslint-disable-next-line react-hooks/exhaustive-deps
       setUser(null);
     }
+
+    return () => window.removeEventListener('auth:unauthorized', handleUnauthorized);
   }, [token, logout]);
 
   return (
