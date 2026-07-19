@@ -6,6 +6,7 @@ public class CashflowCommandData
     public string CategoryName { get; set; } = string.Empty;
     public string Description { get; set; } = string.Empty;
     public DateTime Date { get; set; }
+    public bool ExpenseOnly { get; set; }
 }
 
 public class TransactionCommandData

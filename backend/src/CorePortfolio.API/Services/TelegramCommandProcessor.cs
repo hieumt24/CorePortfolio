@@ -22,13 +22,21 @@ public class TelegramCommandProcessor : ITelegramCommandProcessor
 
     public async Task<string> ProcessCashflowAsync(CashflowCommandData data, CancellationToken cancellationToken = default)
     {
-        var adminUser = await _dbContext.Users.FirstOrDefaultAsync(u => u.Role == "Admin", cancellationToken);
+        var adminUser = await _dbContext.Users
+            .Where(user => user.Role == "Admin" && user.IsActive)
+            .OrderBy(user => user.CreatedAt)
+            .ThenBy(user => user.Id)
+            .FirstOrDefaultAsync(cancellationToken);
         if (adminUser == null)
         {
             return "❌ Lỗi: Không tìm thấy người dùng Admin trong hệ thống.";
         }
 
-        var portfolio = await _dbContext.Portfolios.FirstOrDefaultAsync(p => p.UserId == adminUser.Id, cancellationToken);
+        var portfolio = await _dbContext.Portfolios
+            .Where(item => item.UserId == adminUser.Id)
+            .OrderBy(item => item.CreatedAt)
+            .ThenBy(item => item.Id)
+            .FirstOrDefaultAsync(cancellationToken);
         if (portfolio == null)
         {
             return "❌ Lỗi: Bạn chưa tạo Portfolio nào. Vui lòng tạo trên ứng dụng web trước.";
@@ -38,14 +46,21 @@ public class TelegramCommandProcessor : ITelegramCommandProcessor
             .Where(c => c.IsGlobal || c.UserId == adminUser.Id)
             .ToListAsync(cancellationToken);
 
-        var category = categories.FirstOrDefault(c => c.Name.Equals(data.CategoryName, StringComparison.OrdinalIgnoreCase));
+        var category = categories.FirstOrDefault(c =>
+            c.Name.Trim().Equals(data.CategoryName.Trim(), StringComparison.OrdinalIgnoreCase));
         if (category == null)
         {
             var catNames = string.Join(", ", categories.Select(c => c.Name));
             return $"❌ Lỗi: Không tìm thấy danh mục `{data.CategoryName}`.\nCác danh mục hiện có: {catNames}";
         }
 
-        var command = new CreateCashflowRecordCommand(
+        if (data.ExpenseOnly && category.Type != CashflowType.Expense)
+        {
+            return $"❌ Danh mục `{category.Name}` không phải danh mục chi tiêu.";
+        }
+
+        var command = new CreateCashflowRecordForUserCommand(
+            UserId: adminUser.Id,
             PortfolioId: portfolio.Id,
             CategoryId: category.Id,
             Amount: data.Amount,
@@ -56,8 +71,8 @@ public class TelegramCommandProcessor : ITelegramCommandProcessor
 
         await _mediator.Send(command, cancellationToken);
         
-        var dateStr = data.Date.ToLocalTime().ToString("dd/MM/yyyy");
-        return $"✅ Đã thêm *{data.Amount:N0} VND* vào *{category.Name}* ({data.Description}) ngày {dateStr}.";
+        var dateStr = data.Date.ToString("dd/MM/yyyy");
+        return $"✅ Đã lưu *{data.Amount:N0} VND* vào *{category.Name}* trên portfolio *{portfolio.Name}* ngày {dateStr}.\nĐã tạo đồng thời Cashflow và Transaction rút tiền.";
     }
 
     public async Task<string> ProcessTransactionAsync(TransactionCommandData data, CancellationToken cancellationToken = default)

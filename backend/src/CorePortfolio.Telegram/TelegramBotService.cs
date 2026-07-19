@@ -94,11 +94,12 @@ public class TelegramBotService : BackgroundService
         {
             await botClient.SendMessage(
                 chatId: senderChatId,
-                text: "Chào mừng! Các lệnh hỗ trợ:\n- `/report`: Báo cáo chi tiết\n- `/portfolio`: Danh sách danh mục\n- `/balance`: Tổng số dư\n- `/cf [Số tiền] \"[Danh mục]\" \"[Ghi chú]\" [Ngày]`: Thêm Thu/Chi\n- `/tx [buy/sell] [Mã CK] [Số lượng] [Giá] [Ngày]`: Thêm Giao dịch",
+                text: "Chào mừng! Các lệnh hỗ trợ:\n- `/report`: Báo cáo chi tiết\n- `/portfolio`: Danh sách danh mục\n- `/balance`: Tổng số dư\n- `/chi [Số tiền] \"[Danh mục]\" \"[Ghi chú]\" [Ngày]`: Ghi chi tiêu\n- `/cf [Số tiền] \"[Danh mục]\" \"[Ghi chú]\" [Ngày]`: Thêm Thu/Chi\n- `/tx [buy/sell] [Mã CK] [Số lượng] [Giá] [Ngày]`: Thêm giao dịch\n\nVí dụ: `/chi 50k \"Ăn uống\" \"Ăn sáng\"`",
                 parseMode: ParseMode.Markdown,
                 cancellationToken: cancellationToken);
         }
-        else if (messageText.StartsWith("/cf", StringComparison.OrdinalIgnoreCase))
+        else if (messageText.StartsWith("/cf", StringComparison.OrdinalIgnoreCase)
+            || messageText.StartsWith("/chi", StringComparison.OrdinalIgnoreCase))
         {
             await ProcessCashflowMessageAsync(botClient, senderChatId, messageText, cancellationToken);
         }
@@ -115,7 +116,7 @@ public class TelegramBotService : BackgroundService
             var data = TelegramMessageParser.ParseCashflow(text);
             if (data == null)
             {
-                await botClient.SendMessage(chatId, "❌ Sai định dạng.\nVí dụ: `/cf 50k \"Ăn uống\" \"Ăn sáng phở bò\" 2023-10-15`", parseMode: ParseMode.Markdown, cancellationToken: cancellationToken);
+                await botClient.SendMessage(chatId, "❌ Sai định dạng.\nVí dụ: `/chi 50k \"Ăn uống\" \"Ăn sáng phở bò\" 2026-07-19`", parseMode: ParseMode.Markdown, cancellationToken: cancellationToken);
                 return;
             }
 
@@ -128,7 +129,7 @@ public class TelegramBotService : BackgroundService
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error processing Cashflow message");
-            await botClient.SendMessage(chatId, "❌ Đã xảy ra lỗi khi thêm Cashflow.", cancellationToken: cancellationToken);
+            await botClient.SendMessage(chatId, "❌ Đã xảy ra lỗi khi ghi chi tiêu.", cancellationToken: cancellationToken);
         }
     }
 

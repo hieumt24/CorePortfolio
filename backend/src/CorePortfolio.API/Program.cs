@@ -47,6 +47,7 @@ using CorePortfolio.API.Common;
 using CorePortfolio.Domain.Accounting;
 using Microsoft.AspNetCore.Diagnostics;
 using System.Security.Claims;
+using CorePortfolio.API.Features.Cashflows.CreateCashflowRecord;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -94,6 +95,7 @@ builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 builder.Services.AddScoped<IPortfolioReportService, PortfolioReportService>();
 builder.Services.AddScoped<ITelegramCommandProcessor, TelegramCommandProcessor>();
 builder.Services.AddScoped<TransactionLedgerService>();
+builder.Services.AddScoped<CashflowRecordWriter>();
 builder.Services.AddScoped<ExchangeRateService>();
 builder.Services.AddHttpClient();
 builder.Services.AddHostedService<TelegramCronService>();

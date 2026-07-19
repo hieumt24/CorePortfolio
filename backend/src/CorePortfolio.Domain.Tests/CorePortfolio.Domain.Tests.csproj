@@ -13,5 +13,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\CorePortfolio.Domain\CorePortfolio.Domain.csproj" />
+    <ProjectReference Include="..\CorePortfolio.Telegram\CorePortfolio.Telegram.csproj" />
   </ItemGroup>
 </Project>
