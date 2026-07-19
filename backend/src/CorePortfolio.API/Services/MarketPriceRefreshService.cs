@@ -21,14 +21,14 @@ public sealed class MarketPriceRefreshService : BackgroundService
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         if (!_configuration.GetValue("MarketPrices:Enabled", true)) return;
-        var interval = Math.Clamp(_configuration.GetValue("MarketPrices:CryptoRefreshIntervalSeconds", 60), 30, 3600);
-        await RefreshAsync(stoppingToken);
+        var interval = Math.Clamp(_configuration.GetValue("MarketPrices:CryptoRefreshIntervalSeconds", 1800), 300, 86400);
+        await RefreshAsync(interval, stoppingToken);
         using var timer = new PeriodicTimer(TimeSpan.FromSeconds(interval));
         while (await timer.WaitForNextTickAsync(stoppingToken))
-            await RefreshAsync(stoppingToken);
+            await RefreshAsync(interval, stoppingToken);
     }
 
-    private async Task RefreshAsync(CancellationToken cancellationToken)
+    private async Task RefreshAsync(int intervalSeconds, CancellationToken cancellationToken)
     {
         try
         {
@@ -41,16 +41,25 @@ public sealed class MarketPriceRefreshService : BackgroundService
                 .ToListAsync(cancellationToken);
 
             foreach (var asset in assets)
-            {
                 MarketPriceSourceResolver.Normalize(asset);
-                if (!asset.PriceSource.Equals("CoinGecko", StringComparison.OrdinalIgnoreCase) || string.IsNullOrWhiteSpace(asset.ExternalId))
-                    continue;
+
+            var refreshBefore = DateTime.UtcNow.AddSeconds(-intervalSeconds);
+            var refreshableAssets = assets
+                .Where(asset => asset.PriceSource.Equals("CoinGecko", StringComparison.OrdinalIgnoreCase)
+                    && !string.IsNullOrWhiteSpace(asset.ExternalId)
+                    && asset.LastUpdated <= refreshBefore)
+                .ToList();
+            var prices = await crypto.GetPricesAsync(
+                refreshableAssets.Select(asset => asset.ExternalId!),
+                cancellationToken);
+
+            foreach (var asset in refreshableAssets)
+            {
                 try
                 {
-                    var price = await crypto.GetPriceAsync(asset.ExternalId!, cancellationToken);
-                    if (price is > 0)
+                    if (prices.TryGetValue(asset.ExternalId!, out var price) && price > 0)
                     {
-                        asset.CurrentPrice = price.Value;
+                        asset.CurrentPrice = price;
                         asset.LastUpdated = DateTime.UtcNow;
                         asset.PriceStatus = "Fresh";
                         asset.LastPriceError = null;

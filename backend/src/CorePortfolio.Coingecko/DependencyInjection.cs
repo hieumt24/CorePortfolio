@@ -8,6 +8,7 @@ public static class DependencyInjection
 {
     public static IServiceCollection AddCoinGeckoInfrastructure(this IServiceCollection services, IConfiguration configuration)
     {
+        services.AddMemoryCache();
         services.AddHttpClient("CoinGecko");
         services.AddScoped<ICryptoPriceService, CoinGeckoService>();
         

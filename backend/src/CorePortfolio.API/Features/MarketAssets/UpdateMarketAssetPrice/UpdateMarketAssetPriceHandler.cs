@@ -50,10 +50,16 @@ public sealed class RefreshMarketAssetPricesHandler : IRequestHandler<RefreshMar
         query = request.MarketAssetId.HasValue ? query.Where(m => m.Id == request.MarketAssetId)
             : query.Where(m => m.PriceSource != "Manual");
         var assets = await query.ToListAsync(cancellationToken);
+        foreach (var asset in assets)
+            MarketPriceSourceResolver.Normalize(asset);
+        var cryptoPrices = await _crypto.GetPricesAsync(
+            assets
+                .Where(asset => asset.PriceSource.Equals("CoinGecko", StringComparison.OrdinalIgnoreCase))
+                .Select(asset => asset.ExternalId ?? string.Empty),
+            cancellationToken);
         var results = new List<PriceRefreshResultDto>();
         foreach (var asset in assets)
         {
-            MarketPriceSourceResolver.Normalize(asset);
             decimal? price = null;
             string? error = null;
             try
@@ -61,7 +67,8 @@ public sealed class RefreshMarketAssetPricesHandler : IRequestHandler<RefreshMar
                 if (asset.PriceSource.Equals("DNSE", StringComparison.OrdinalIgnoreCase))
                     price = await _stocks.GetStockPriceAsync(asset.Symbol, cancellationToken);
                 else if (asset.PriceSource.Equals("CoinGecko", StringComparison.OrdinalIgnoreCase))
-                    price = string.IsNullOrWhiteSpace(asset.ExternalId) ? null : await _crypto.GetPriceAsync(asset.ExternalId, cancellationToken);
+                    price = !string.IsNullOrWhiteSpace(asset.ExternalId) && cryptoPrices.TryGetValue(asset.ExternalId, out var cryptoPrice)
+                        ? cryptoPrice : null;
                 else error = "Nguồn giá không hỗ trợ tự động cập nhật.";
                 if (price is null or <= 0)
                     error ??= string.IsNullOrWhiteSpace(asset.ExternalId) && asset.PriceSource.Equals("CoinGecko", StringComparison.OrdinalIgnoreCase)
