@@ -7,6 +7,7 @@ internal static class DnseConfiguration
     internal const string HttpClientName = "DNSE";
     private const string DefaultBaseUrl = "https://openapi.dnse.com.vn";
     private const string DefaultApiVersion = "2026-05-07";
+    private const int DefaultTimeoutSeconds = 60;
 
     public static string GetBaseUrl(IConfiguration configuration)
     {
@@ -24,6 +25,19 @@ internal static class DnseConfiguration
             "Dnse:ApiVersion",
             "DNSE__ApiVersion",
             "DNSE_API_VERSION") ?? DefaultApiVersion;
+    }
+
+    public static int GetTimeoutSeconds(IConfiguration configuration)
+    {
+        var configuredValue = GetFirstConfiguredValue(configuration,
+            "DNSE:TimeoutSeconds",
+            "Dnse:TimeoutSeconds",
+            "DNSE__TimeoutSeconds",
+            "DNSE_TIMEOUT_SECONDS");
+
+        return int.TryParse(configuredValue, out var timeoutSeconds)
+            ? Math.Clamp(timeoutSeconds, 10, 120)
+            : DefaultTimeoutSeconds;
     }
 
     public static bool TryGetCredentials(

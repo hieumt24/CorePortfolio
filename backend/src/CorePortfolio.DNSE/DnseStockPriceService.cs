@@ -89,9 +89,12 @@ public class DnseStockPriceService : IStockPriceService
         }
         catch (OperationCanceledException exception) when (!cancellationToken.IsCancellationRequested)
         {
-            _logger.LogWarning(exception, "DNSE price request timed out for {Symbol}.", symbol);
+            var timeoutSeconds = DnseConfiguration.GetTimeoutSeconds(_configuration);
+            _logger.LogWarning(exception,
+                "DNSE price request timed out for {Symbol} after {TimeoutSeconds} seconds. Base URL: {BaseUrl}.",
+                symbol, timeoutSeconds, DnseConfiguration.GetBaseUrl(_configuration));
             throw new HttpRequestException(
-                $"DNSE timeout khi lấy giá {symbol.ToUpperInvariant()}; hệ thống giữ lại giá gần nhất.",
+                $"DNSE timeout sau {timeoutSeconds} giây khi lấy giá {symbol.ToUpperInvariant()}; hệ thống giữ lại giá gần nhất.",
                 exception,
                 HttpStatusCode.GatewayTimeout);
         }

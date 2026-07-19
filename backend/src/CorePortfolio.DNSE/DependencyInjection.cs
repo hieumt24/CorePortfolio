@@ -11,7 +11,7 @@ public static class DependencyInjection
         services.AddHttpClient(DnseConfiguration.HttpClientName, client =>
         {
             client.BaseAddress = new Uri(DnseConfiguration.GetBaseUrl(configuration));
-            client.Timeout = TimeSpan.FromSeconds(10);
+            client.Timeout = TimeSpan.FromSeconds(DnseConfiguration.GetTimeoutSeconds(configuration));
         });
 
         services.AddScoped<IStockPriceService, DnseStockPriceService>();
