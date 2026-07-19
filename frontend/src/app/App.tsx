@@ -20,6 +20,8 @@ import { LoginPage } from '../features/auth/components/LoginPage';
 import { RegisterPage } from '../features/auth/components/RegisterPage';
 import { ProtectedRoute } from '../shared/components/ProtectedRoute';
 import { OverviewDashboard } from '../features/dashboard/components/OverviewDashboard';
+import { AdminOverview } from '../features/admin/components/AdminOverview';
+import { UserManagement } from '../features/admin/components/UserManagement';
 
 function App() {
   return (
@@ -46,7 +48,9 @@ function App() {
           
           
           <Route path="/admin" element={<ProtectedRoute requireAdmin={true}><AdminDashboard /></ProtectedRoute>}>
-            <Route index element={<Navigate to="settings" replace />} />
+            <Route index element={<Navigate to="overview" replace />} />
+            <Route path="overview" element={<AdminOverview />} />
+            <Route path="users" element={<UserManagement />} />
             <Route path="settings" element={<SystemSettings />} />
             <Route path="categories" element={<CategoryManagement />} />
             <Route path="cashflow-categories" element={<CashflowCategoryManagement />} />

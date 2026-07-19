@@ -55,3 +55,35 @@ export interface PriceRefreshResult {
   price: number | null;
   error: string | null;
 }
+
+export interface AdminOverview {
+  totalUsers: number;
+  activeUsers: number;
+  adminUsers: number;
+  totalPortfolios: number;
+  totalAssets: number;
+  totalTransactions: number;
+  totalCashflows: number;
+  totalMarketAssets: number;
+  marketAssetsNeedingAttention: number;
+  generatedAt: string;
+}
+
+export interface AdminUser {
+  id: string;
+  username: string;
+  role: 'Admin' | 'User';
+  isActive: boolean;
+  createdAt: string;
+  lastLoginAt: string | null;
+  portfolioCount: number;
+  transactionCount: number;
+}
+
+export interface AdminUserFilters {
+  search?: string;
+  role?: string;
+  isActive?: boolean;
+  page?: number;
+  pageSize?: number;
+}

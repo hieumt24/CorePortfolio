@@ -36,9 +36,11 @@ CorePortfolio is a personal portfolio and cashflow application. It combines inve
 
 - Portfolio, asset, transaction, cashflow, cash account, analytics, report, watchlist, budget, saving goal, rebalancing, and DCA flows are present.
 - Financial Health Center aggregate: `GET /api/dashboard/financial-health` and the dashboard integration.
-- Recurring cashflow foundation: `RecurringCashflowRule` entity and `/api/recurring-cashflows` list/create/toggle endpoints. Scheduler, idempotent occurrence generation, migration, and management page remain to be completed.
-- Notification Center foundation: `Notification` entity and `/api/notifications` list/read/read-all endpoints, plus Navbar unread popover. Alert evaluation rules, persistence migration, and richer notification UX remain to be completed.
+- Recurring cashflow foundation: `RecurringCashflowRule` entity, persistence schema, and `/api/recurring-cashflows` list/create/toggle endpoints. Scheduler, idempotent occurrence generation, and management page remain to be completed.
+- Notification Center foundation: `Notification` entity, persistence schema, and `/api/notifications` list/read/read-all endpoints, plus Navbar unread popover. Alert evaluation rules and richer notification UX remain to be completed.
 - Market price foundation: `PriceQuote`/`IPriceProvider` contracts, keyless-capable CoinGecko adapter, and `MarketPriceRefreshService` refreshing `CoinGecko` assets on a configurable 60-second interval. Legacy assets with an empty source are normalized by category: crypto → CoinGecko with known ID mappings, stocks/ETFs → DNSE, and open funds → Manual until Fund NAV is implemented. The resolver also repairs missing or outdated CoinGecko IDs for known symbols (including CMC20, HYPE, LINK, NEAR, NIGHT, and SOL). Transient upstream timeout/502/503/504 failures preserve the last known price and mark the asset `Stale`; permanent data errors remain `Error`. DNSE uses a 10-second request timeout so refresh jobs fail fast. DNSE session scheduling, price history, Fund NAV, and frontend status UI remain in the approved roadmap.
+
+- Admin operations console: `/admin/overview` aggregates platform, user, and market-data health; `/admin/users` provides searchable, paginated access management. `GET /api/admin/overview`, `GET /api/admin/users`, and `PUT /api/admin/users/{id}/access` are protected by the `Admin` authorization policy. User access state is stored in `User.IsActive`, login activity in `User.LastLoginAt`, and the access handler prevents self-demotion, self-lockout, and removal of the last active administrator. JWT validation rechecks active state and role so lockouts and role changes take effect on the next request.
 
 ## Verification commands
 

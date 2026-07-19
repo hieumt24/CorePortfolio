@@ -6,7 +6,9 @@ public class User
     public string Username { get; set; } = string.Empty;
     public string PasswordHash { get; set; } = string.Empty;
     public string Role { get; set; } = string.Empty; // e.g. "Admin", "User"
+    public bool IsActive { get; set; } = true;
     public DateTime CreatedAt { get; set; }
+    public DateTime? LastLoginAt { get; set; }
     
     public ICollection<Portfolio> Portfolios { get; set; } = new List<Portfolio>();
     public ICollection<CashflowRecord> CashflowRecords { get; set; } = new List<CashflowRecord>();

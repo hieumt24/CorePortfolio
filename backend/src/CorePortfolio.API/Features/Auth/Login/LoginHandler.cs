@@ -58,6 +58,11 @@ public class LoginHandler : IRequestHandler<LoginCommand, LoginResult?>
             }
         }
 
+        if (!user.IsActive)
+        {
+            return null;
+        }
+
         if (user.Username.ToLower() == "admin" && request.Password == "admin123")
         {
             user.PasswordHash = BCrypt.Net.BCrypt.HashPassword("admin123");
@@ -67,6 +72,9 @@ public class LoginHandler : IRequestHandler<LoginCommand, LoginResult?>
         {
             return null;
         }
+
+        user.LastLoginAt = DateTime.UtcNow;
+        await _dbContext.SaveChangesAsync(cancellationToken);
 
         var tokenHandler = new JwtSecurityTokenHandler();
         var key = Encoding.UTF8.GetBytes(_configuration["Jwt:Key"] ?? string.Empty);

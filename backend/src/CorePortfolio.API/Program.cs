@@ -2,6 +2,7 @@ using CorePortfolio.API.Features.Admin.Categories;
 using CorePortfolio.API.Features.Admin.MarketAssets;
 using CorePortfolio.API.Features.Admin.Migration;
 using CorePortfolio.API.Features.Admin.Settings;
+using CorePortfolio.API.Features.Admin;
 using CorePortfolio.API.Features.Assets.CreateAsset;
 using CorePortfolio.API.Features.Assets.DeleteAsset;
 using CorePortfolio.API.Features.MarketAssets.UpdateMarketAssetPrice;
@@ -45,6 +46,7 @@ using CorePortfolio.DNSE;
 using CorePortfolio.API.Common;
 using CorePortfolio.Domain.Accounting;
 using Microsoft.AspNetCore.Diagnostics;
+using System.Security.Claims;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -119,6 +121,29 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidIssuer = builder.Configuration["Jwt:Issuer"],
             ValidAudience = builder.Configuration["Jwt:Audience"],
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
+        };
+        options.Events = new JwtBearerEvents
+        {
+            OnTokenValidated = async context =>
+            {
+                var userIdValue = context.Principal?.FindFirstValue(ClaimTypes.NameIdentifier);
+                var tokenRole = context.Principal?.FindFirstValue(ClaimTypes.Role);
+                if (!Guid.TryParse(userIdValue, out var userId))
+                {
+                    context.Fail("Invalid user identity.");
+                    return;
+                }
+
+                var dbContext = context.HttpContext.RequestServices.GetRequiredService<AppDbContext>();
+                var userAccess = await dbContext.Users
+                    .AsNoTracking()
+                    .Where(user => user.Id == userId)
+                    .Select(user => new { user.IsActive, user.Role })
+                    .SingleOrDefaultAsync(context.HttpContext.RequestAborted);
+
+                if (userAccess is null || !userAccess.IsActive || userAccess.Role != tokenRole)
+                    context.Fail("User access has changed. Please sign in again.");
+            }
         };
     });
 
@@ -216,6 +241,7 @@ app.MapGet("/health", async (AppDbContext db, CancellationToken cancellationToke
 
 // Map Endpoints
 app.MapAuthEndpoints();
+app.MapAdminEndpoints();
 app.MapCategoriesEndpoints();
 app.MapMarketAssetsEndpoints();
 app.MapSettingsEndpoints();
