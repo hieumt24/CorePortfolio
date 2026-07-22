@@ -42,6 +42,7 @@ CorePortfolio is a personal portfolio and cashflow application. It combines inve
 
 - Admin operations console: `/admin/overview` aggregates platform, user, and market-data health; `/admin/users` provides searchable, paginated access management. `GET /api/admin/overview`, `GET /api/admin/users`, and `PUT /api/admin/users/{id}/access` are protected by the `Admin` authorization policy. User access state is stored in `User.IsActive`, login activity in `User.LastLoginAt`, and the access handler prevents self-demotion, self-lockout, and removal of the last active administrator. JWT validation rechecks active state and role so lockouts and role changes take effect on the next request.
 - Telegram expense capture: `/chi [amount] "[category]" "[description]" [yyyy-MM-dd|dd/MM/yyyy]` records an expense for the earliest-created active Admin and that Admin's earliest-created portfolio. A successful command atomically creates the linked `CashflowRecord`, fiat withdrawal `Transaction`, and cash-ledger entry. `/cf` remains available for backward-compatible income/expense capture.
+- Transaction tracking UX: `/transactions` now groups the global ledger into Crypto, Cổ phiếu, and CCQ/ETF tabs (with Vietnamese/English category matching), quick counts, and a category-aware add-transaction entry point. The existing user-scoped transaction API contract remains unchanged.
 
 ## Verification commands
 

@@ -9,11 +9,12 @@ import './GlobalCreateTransactionModal.css';
 
 interface GlobalCreateTransactionModalProps {
   initialPortfolioId?: string;
+  initialCategory?: string;
   onClose: () => void;
   onSuccess: () => void;
 }
 
-export const GlobalCreateTransactionModal: React.FC<GlobalCreateTransactionModalProps> = ({ initialPortfolioId, onClose, onSuccess }) => {
+export const GlobalCreateTransactionModal: React.FC<GlobalCreateTransactionModalProps> = ({ initialPortfolioId, initialCategory, onClose, onSuccess }) => {
   const [portfolios, setPortfolios] = useState<PortfolioDto[]>([]);
   const [assets, setAssets] = useState<AssetSummaryDto[]>([]);
   
@@ -57,14 +58,16 @@ export const GlobalCreateTransactionModal: React.FC<GlobalCreateTransactionModal
       try {
         const summary = await getPortfolioSummary(selectedPortfolioId);
         setAssets(summary.assets);
-        setSelectedCategoryName('');
+        const categories = Array.from(new Set(summary.assets.map(a => a.categoryName)));
+        const preferred = initialCategory && categories.find(category => category.toLowerCase().includes(initialCategory.toLowerCase()));
+        setSelectedCategoryName(preferred ?? '');
         setSelectedAssetId('');
       } catch (err) {
         showNotification('Failed to load assets for portfolio', 'error');
       }
     };
     fetchAssets();
-  }, [selectedPortfolioId]);
+  }, [selectedPortfolioId, initialCategory]);
 
   useEffect(() => {
     setSelectedAssetId('');

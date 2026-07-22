@@ -12,8 +12,9 @@ export const TransactionsDashboard: React.FC = () => {
   
   // Filters
   const [page, setPage] = useState(1);
-  const [pageSize] = useState(10);
+  const [pageSize] = useState(100);
   const [typeFilter, setTypeFilter] = useState<number | ''>('');
+  const [assetGroup, setAssetGroup] = useState<'all' | 'crypto' | 'stock' | 'fund'>('all');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
@@ -40,6 +41,16 @@ export const TransactionsDashboard: React.FC = () => {
   useEffect(() => {
     fetchTransactions();
   }, [page, pageSize, typeFilter, startDate, endDate]);
+
+  const matchesGroup = (category: string, group = assetGroup) => {
+    const value = category.toLowerCase();
+    if (group === 'all') return true;
+    if (group === 'crypto') return value.includes('crypto') || value.includes('tiền mã hóa') || value.includes('tiền điện tử');
+    if (group === 'stock') return value.includes('stock') || value.includes('cổ phiếu') || value.includes('chứng khoán');
+    return value.includes('fund') || value.includes('quỹ') || value.includes('ccq') || value.includes('etf');
+  };
+  const visibleItems = data?.items.filter(item => matchesGroup(item.categoryName)) ?? [];
+  const countFor = (group: 'crypto' | 'stock' | 'fund') => data?.items.filter(item => matchesGroup(item.categoryName, group)).length ?? 0;
 
   const handleDelete = async (id: string) => {
     if (window.confirm('Are you sure you want to delete this transaction?')) {
@@ -86,14 +97,23 @@ export const TransactionsDashboard: React.FC = () => {
       <header className="dashboard-header">
         <div className="header-titles">
           <h1 className="gradient-text">Transactions Ledger</h1>
-          <p className="subtitle">View and filter your global transaction history</p>
+          <p className="subtitle">Theo dõi crypto, cổ phiếu và CCQ trong một dòng thời gian rõ ràng</p>
         </div>
         <div className="header-actions">
           <button className="btn btn-primary" onClick={() => setIsCreateModalOpen(true)}>
-            Record Transaction
+            + Thêm giao dịch
           </button>
         </div>
       </header>
+
+      <section className="transaction-groups" aria-label="Asset groups">
+        {(['all', 'crypto', 'stock', 'fund'] as const).map(group => (
+          <button key={group} className={`group-card ${group} ${assetGroup === group ? 'active' : ''}`} onClick={() => { setAssetGroup(group); setPage(1); }}>
+            <span className="group-icon">{group === 'crypto' ? '₿' : group === 'stock' ? '↗' : group === 'fund' ? '◈' : '◎'}</span>
+            <span><strong>{group === 'all' ? 'Tất cả' : group === 'crypto' ? 'Crypto' : group === 'stock' ? 'Cổ phiếu' : 'CCQ / ETF'}</strong><small>{group === 'all' ? data?.totalCount ?? 0 : countFor(group)} giao dịch</small></span>
+          </button>
+        ))}
+      </section>
 
       <div className="filters-toolbar glass-panel">
         <div className="toolbar-group">
@@ -144,7 +164,7 @@ export const TransactionsDashboard: React.FC = () => {
           <div className="state-panel">
             <div className="spinner"></div>
           </div>
-        ) : !data || data.items.length === 0 ? (
+        ) : visibleItems.length === 0 ? (
           <div className="state-panel empty-state">
             <p>No transactions match your filters.</p>
           </div>
@@ -164,7 +184,7 @@ export const TransactionsDashboard: React.FC = () => {
                 </tr>
               </thead>
               <tbody>
-                {data.items.map(t => (
+                {visibleItems.map(t => (
                   <tr key={t.id}>
                     <td className="date-cell">{new Date(t.date).toLocaleDateString()}</td>
                     <td>{t.portfolioName}</td>
@@ -217,6 +237,7 @@ export const TransactionsDashboard: React.FC = () => {
 
       {isCreateModalOpen && (
         <GlobalCreateTransactionModal 
+          initialCategory={assetGroup === 'all' ? undefined : assetGroup === 'stock' ? 'stock' : assetGroup === 'fund' ? 'fund' : 'crypto'}
           onClose={() => setIsCreateModalOpen(false)}
           onSuccess={() => {
             setIsCreateModalOpen(false);
