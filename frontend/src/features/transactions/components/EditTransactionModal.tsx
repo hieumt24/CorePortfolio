@@ -73,6 +73,9 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({ tran
             >
               <option value={TransactionType.Buy}>Buy</option>
               <option value={TransactionType.Sell}>Sell</option>
+              <option value={TransactionType.Deposit}>Deposit</option>
+              <option value={TransactionType.Withdrawal}>Withdrawal</option>
+              <option value={TransactionType.Dividend}>Dividend</option>
             </select>
           </div>
 

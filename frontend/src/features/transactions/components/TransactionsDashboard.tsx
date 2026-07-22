@@ -1,9 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import { getAllTransactions, deleteTransaction } from '../api/transactionApi';
-import type { GlobalTransactionDto, PaginatedResult } from '../types';
+import type { GlobalTransactionDto, PaginatedResult, TransactionDto } from '../types';
 import { TransactionType } from '../types';
 import { useNotification } from '../../../context/NotificationContext';
 import { GlobalCreateTransactionModal } from './GlobalCreateTransactionModal';
+import { EditTransactionModal } from './EditTransactionModal';
+import type { AssetSummaryDto } from '../../portfolios/types';
 import './TransactionsDashboard.css';
 
 export const TransactionsDashboard: React.FC = () => {
@@ -19,6 +21,7 @@ export const TransactionsDashboard: React.FC = () => {
   const [endDate, setEndDate] = useState('');
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [editingTransaction, setEditingTransaction] = useState<GlobalTransactionDto | null>(null);
   const { showNotification } = useNotification();
 
   const fetchTransactions = async () => {
@@ -87,6 +90,18 @@ export const TransactionsDashboard: React.FC = () => {
       default: return 'Unknown';
     }
   };
+
+  const toEditTransaction = (item: GlobalTransactionDto): TransactionDto => ({
+    id: item.id, type: item.type, quantity: item.quantity, price: item.price,
+    fee: item.fee, notes: item.notes, timestamp: item.date,
+  });
+
+  const toEditAsset = (item: GlobalTransactionDto): AssetSummaryDto => ({
+    assetId: item.assetId, marketAssetId: item.assetId, symbol: item.symbol, name: item.assetName,
+    categoryName: item.categoryName, currency: item.currency, currentPrice: item.price,
+    totalQuantity: item.quantity, totalCost: item.quantity * item.price, currentValue: item.quantity * item.price,
+    totalBought: item.quantity, averageCost: item.price, realizedPnl: 0, unrealizedPnl: 0, fees: item.fee, priceUpdatedAt: item.date,
+  });
 
   return (
     <div className="container dashboard-layout">
@@ -201,6 +216,9 @@ export const TransactionsDashboard: React.FC = () => {
                     <td className="num-col">{formatCurrency(t.price, t.currency)}</td>
                     <td className="num-col strong">{formatCurrency(t.quantity * t.price, t.currency)}</td>
                     <td className="action-col">
+                      <button className="btn-icon edit-action" onClick={() => setEditingTransaction(t)} aria-label={`Edit ${t.symbol} transaction`} title="Edit transaction">
+                        <span aria-hidden="true">✎</span>
+                      </button>
                       <button className="btn-icon" onClick={() => handleDelete(t.id)} aria-label="Delete transaction">
                         <span aria-hidden="true">×</span>
                       </button>
@@ -242,6 +260,18 @@ export const TransactionsDashboard: React.FC = () => {
           onSuccess={() => {
             setIsCreateModalOpen(false);
             showNotification('Transaction recorded successfully', 'success');
+            fetchTransactions();
+          }}
+        />
+      )}
+      {editingTransaction && (
+        <EditTransactionModal
+          transaction={toEditTransaction(editingTransaction)}
+          asset={toEditAsset(editingTransaction)}
+          onClose={() => setEditingTransaction(null)}
+          onSuccess={() => {
+            setEditingTransaction(null);
+            showNotification('Transaction updated successfully', 'success');
             fetchTransactions();
           }}
         />
