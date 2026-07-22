@@ -93,6 +93,28 @@
   cursor: not-allowed;
 }
 
+.asset-select-wrap {
+  position: relative;
+}
+
+.asset-select-wrap .glass-input {
+  padding-right: 2.75rem;
+}
+
+.field-spinner {
+  position: absolute;
+  right: 1rem;
+  top: 50%;
+  width: 1rem;
+  height: 1rem;
+  margin-top: -.5rem;
+  border: 2px solid rgba(99, 102, 241, .25);
+  border-top-color: #6366f1;
+  border-radius: 50%;
+  animation: fieldSpin .7s linear infinite;
+  pointer-events: none;
+}
+
 select.glass-input option {
   background: #ffffff;
   color: #0f172a;
@@ -164,6 +186,10 @@ input[type="datetime-local"].glass-input::-webkit-calendar-picker-indicator:hove
     opacity: 1;
     transform: translateY(0);
   }
+}
+
+@keyframes fieldSpin {
+  to { transform: rotate(360deg); }
 }
 
 @media (max-width: 768px) {

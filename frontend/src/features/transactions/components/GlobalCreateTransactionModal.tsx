@@ -33,6 +33,8 @@ export const GlobalCreateTransactionModal: React.FC<GlobalCreateTransactionModal
   const [date, setDate] = useState(new Date().toISOString().slice(0, 16));
   
   const [loading, setLoading] = useState(false);
+  const [assetsLoading, setAssetsLoading] = useState(false);
+  const [categoryLoading, setCategoryLoading] = useState(false);
   const { showNotification } = useNotification();
 
   useEffect(() => {
@@ -56,6 +58,7 @@ export const GlobalCreateTransactionModal: React.FC<GlobalCreateTransactionModal
 
     const fetchAssets = async () => {
       try {
+        setAssetsLoading(true);
         const summary = await getPortfolioSummary(selectedPortfolioId);
         setAssets(summary.assets);
         const categories = Array.from(new Set(summary.assets.map(a => a.categoryName)));
@@ -64,6 +67,8 @@ export const GlobalCreateTransactionModal: React.FC<GlobalCreateTransactionModal
         setSelectedAssetId('');
       } catch (err) {
         showNotification('Failed to load assets for portfolio', 'error');
+      } finally {
+        setAssetsLoading(false);
       }
     };
     fetchAssets();
@@ -123,9 +128,13 @@ export const GlobalCreateTransactionModal: React.FC<GlobalCreateTransactionModal
             <label>Category</label>
             <select 
               value={selectedCategoryName} 
-              onChange={e => setSelectedCategoryName(e.target.value)}
+              onChange={e => {
+                setCategoryLoading(true);
+                setSelectedCategoryName(e.target.value);
+                window.setTimeout(() => setCategoryLoading(false), 220);
+              }}
               className="glass-input"
-              disabled={!selectedPortfolioId || availableCategories.length === 0}
+              disabled={!selectedPortfolioId || availableCategories.length === 0 || assetsLoading}
             >
               <option value="">{availableCategories.length === 0 && selectedPortfolioId ? 'No categories in portfolio' : 'Select Category'}</option>
               {availableCategories.map(cat => (
@@ -136,18 +145,21 @@ export const GlobalCreateTransactionModal: React.FC<GlobalCreateTransactionModal
 
           <div className="form-group">
             <label>Asset</label>
+            <div className="asset-select-wrap">
             <select 
               value={selectedAssetId} 
               onChange={e => setSelectedAssetId(e.target.value)}
               required
               className="glass-input"
-              disabled={!selectedCategoryName || filteredAssets.length === 0}
+              disabled={assetsLoading || categoryLoading || !selectedCategoryName || filteredAssets.length === 0}
             >
-              <option value="">{filteredAssets.length === 0 && selectedCategoryName ? 'No assets in this category' : 'Select Asset'}</option>
+              <option value="">{assetsLoading ? 'Loading assets…' : categoryLoading ? 'Loading category…' : filteredAssets.length === 0 && selectedCategoryName ? 'No assets in this category' : 'Select Asset'}</option>
               {filteredAssets.map(a => (
                 <option key={a.assetId} value={a.assetId}>{a.symbol} - {a.name}</option>
               ))}
             </select>
+            {(assetsLoading || categoryLoading) && <span className="field-spinner" aria-label="Loading" />}
+            </div>
             {selectedPortfolioId && !selectedCategoryName && availableCategories.length > 0 && (
               <small style={{ color: '#94a3b8', marginTop: '0.5rem', display: 'block' }}>
                 Please select a category first.
