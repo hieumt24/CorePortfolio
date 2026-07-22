@@ -5,6 +5,7 @@ import type { PortfolioDto, AssetSummaryDto } from '../../portfolios/types';
 import { TransactionType } from '../types';
 import { useNotification } from '../../../context/NotificationContext';
 import { NumericFormat } from 'react-number-format';
+import { isCryptoCategory } from '../utils/assetCategory';
 import './GlobalCreateTransactionModal.css';
 
 interface GlobalCreateTransactionModalProps {
@@ -26,6 +27,7 @@ export const GlobalCreateTransactionModal: React.FC<GlobalCreateTransactionModal
   const filteredAssets = selectedCategoryName 
     ? assets.filter(a => a.categoryName === selectedCategoryName)
     : assets;
+  const cryptoCategorySelected = isCryptoCategory(selectedCategoryName);
   
   const [type, setType] = useState<number>(TransactionType.Buy);
   const [quantity, setQuantity] = useState('');
@@ -76,7 +78,11 @@ export const GlobalCreateTransactionModal: React.FC<GlobalCreateTransactionModal
 
   useEffect(() => {
     setSelectedAssetId('');
-  }, [selectedCategoryName]);
+    if (type === TransactionType.Earn && !cryptoCategorySelected) {
+      setType(TransactionType.Buy);
+      setPrice('');
+    }
+  }, [selectedCategoryName, type, cryptoCategorySelected]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -174,7 +180,11 @@ export const GlobalCreateTransactionModal: React.FC<GlobalCreateTransactionModal
 
           <div className="form-group">
             <label>Type</label>
-            <select value={type} onChange={e => setType(Number(e.target.value))} className="glass-input">
+            <select value={type} onChange={e => {
+              const nextType = Number(e.target.value);
+              setType(nextType);
+              if (nextType === TransactionType.Earn) setPrice('0');
+            }} className="glass-input">
               {selectedCategoryName === 'Fiat' ? (
                 <>
                   <option value={TransactionType.Deposit}>Deposit</option>
@@ -184,6 +194,7 @@ export const GlobalCreateTransactionModal: React.FC<GlobalCreateTransactionModal
                 <>
                   <option value={TransactionType.Buy}>Buy</option>
                   <option value={TransactionType.Sell}>Sell</option>
+                  {cryptoCategorySelected && <option value={TransactionType.Earn}>Earn / Reward</option>}
                   <option value={TransactionType.Dividend}>Dividend</option>
                 </>
               )}
@@ -204,7 +215,7 @@ export const GlobalCreateTransactionModal: React.FC<GlobalCreateTransactionModal
               />
             </div>
             <div className="form-group" style={{ flex: 1 }}>
-              <label>{type === TransactionType.Dividend ? 'Dividend per unit' : 'Price'}</label>
+              <label>{type === TransactionType.Dividend ? 'Dividend per unit' : type === TransactionType.Earn ? 'Acquisition cost' : 'Price'}</label>
               <NumericFormat
                 value={price} 
                 onValueChange={(values) => setPrice(values.value)}
@@ -213,7 +224,9 @@ export const GlobalCreateTransactionModal: React.FC<GlobalCreateTransactionModal
                 thousandSeparator="."
                 decimalSeparator=","
                 allowNegative={false}
+                disabled={type === TransactionType.Earn}
               />
+              {type === TransactionType.Earn && <small className="field-hint">Rewards add quantity at zero cost and do not create a purchase cash flow.</small>}
             </div>
           </div>
 

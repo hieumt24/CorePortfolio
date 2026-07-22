@@ -43,7 +43,8 @@ public class GetPortfolioSummaryHandler : IRequestHandler<GetPortfolioSummaryQue
             var marketAsset = asset.MarketAsset;
             var category = marketAsset?.Category;
             var result = PortfolioAccountingCalculator.Calculate(
-                portfolio.Transactions.Where(t => t.AssetId == asset.Id), marketAsset?.CurrentPrice ?? 0);
+                portfolio.Transactions.Where(t => t.AssetId == asset.Id), marketAsset?.CurrentPrice ?? 0,
+                AssetCategoryClassifier.IsCrypto(category?.Name));
 
             var currency = category?.DefaultCurrency ?? "VND";
             totalInvested += ExchangeRateService.ToVnd(result.CostBasis, currency, usdToVnd);

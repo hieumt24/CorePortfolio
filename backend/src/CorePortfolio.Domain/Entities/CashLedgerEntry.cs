@@ -24,5 +24,6 @@ public enum CashLedgerEntryType
     Deposit = 4,
     Withdrawal = 5,
     Cashflow = 6,
-    MigratedOpeningBalance = 7
+    MigratedOpeningBalance = 7,
+    Earn = 8
 }

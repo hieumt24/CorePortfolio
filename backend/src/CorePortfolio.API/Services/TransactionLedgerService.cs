@@ -14,24 +14,33 @@ public sealed class TransactionLedgerService
 
     public async Task ValidateHoldingAsync(Transaction candidate, Guid userId, CancellationToken cancellationToken)
     {
-        var ownsAsset = await _dbContext.Assets
-            .AnyAsync(a => a.Id == candidate.AssetId && a.PortfolioId == candidate.PortfolioId &&
-                a.Portfolio!.UserId == userId, cancellationToken);
-        if (!ownsAsset) throw new ResourceNotFoundException("Không tìm thấy tài sản trong danh mục.");
+        var categoryName = await _dbContext.Assets
+            .Where(a => a.Id == candidate.AssetId && a.PortfolioId == candidate.PortfolioId &&
+                a.Portfolio!.UserId == userId)
+            .Select(a => a.MarketAsset!.Category!.Name)
+            .SingleOrDefaultAsync(cancellationToken);
+        if (categoryName == null) throw new ResourceNotFoundException("Không tìm thấy tài sản trong danh mục.");
+        var isCrypto = AssetCategoryClassifier.IsCrypto(categoryName);
+        if (candidate.Type == TransactionType.Earn && !isCrypto)
+            throw new AccountingValidationException("Earn chỉ áp dụng cho tài sản crypto.");
 
         var transactions = await _dbContext.Transactions.AsNoTracking()
             .Where(t => t.AssetId == candidate.AssetId && t.Id != candidate.Id)
             .ToListAsync(cancellationToken);
         transactions.Add(candidate);
-        PortfolioAccountingCalculator.Calculate(transactions, 0);
+        PortfolioAccountingCalculator.Calculate(transactions, 0, isCrypto);
     }
 
     public async Task ValidateAfterDeleteAsync(Transaction transaction, CancellationToken cancellationToken)
     {
+        var categoryName = await _dbContext.Assets
+            .Where(a => a.Id == transaction.AssetId)
+            .Select(a => a.MarketAsset!.Category!.Name)
+            .SingleOrDefaultAsync(cancellationToken);
         var remaining = await _dbContext.Transactions.AsNoTracking()
             .Where(t => t.AssetId == transaction.AssetId && t.Id != transaction.Id)
             .ToListAsync(cancellationToken);
-        PortfolioAccountingCalculator.Calculate(remaining, 0);
+        PortfolioAccountingCalculator.Calculate(remaining, 0, AssetCategoryClassifier.IsCrypto(categoryName));
     }
 
     public async Task SyncLedgerEntryAsync(Transaction transaction, CancellationToken cancellationToken)
@@ -71,6 +80,7 @@ public sealed class TransactionLedgerService
             TransactionType.Dividend => CashLedgerEntryType.Dividend,
             TransactionType.Deposit => CashLedgerEntryType.Deposit,
             TransactionType.Withdrawal => CashLedgerEntryType.Withdrawal,
+            TransactionType.Earn => CashLedgerEntryType.Earn,
             _ => throw new AccountingValidationException("Loại giao dịch không hợp lệ.")
         };
         entry.Amount = transaction.Type switch
@@ -79,10 +89,12 @@ public sealed class TransactionLedgerService
             TransactionType.Sell or TransactionType.Dividend => gross - transaction.Fee,
             TransactionType.Deposit => gross,
             TransactionType.Withdrawal => -gross,
+            TransactionType.Earn => -transaction.Fee,
             _ => 0
         };
         entry.Description = string.IsNullOrWhiteSpace(transaction.Notes)
             ? $"{transaction.Type} transaction"
             : transaction.Notes;
     }
+
 }

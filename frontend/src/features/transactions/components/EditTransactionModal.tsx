@@ -5,6 +5,7 @@ import type { TransactionDto } from '../types';
 import type { AssetSummaryDto } from '../../portfolios/types';
 import { NumericFormat } from 'react-number-format';
 import '../../portfolios/components/CreatePortfolioModal.css';
+import { isCryptoCategory } from '../utils/assetCategory';
 
 interface EditTransactionModalProps {
   transaction: TransactionDto;
@@ -76,6 +77,9 @@ export const EditTransactionModal: React.FC<EditTransactionModalProps> = ({ tran
               <option value={TransactionType.Deposit}>Deposit</option>
               <option value={TransactionType.Withdrawal}>Withdrawal</option>
               <option value={TransactionType.Dividend}>Dividend</option>
+              {isCryptoCategory(asset.categoryName) && (
+                <option value={TransactionType.Earn}>Earn / Reward</option>
+              )}
             </select>
           </div>
 

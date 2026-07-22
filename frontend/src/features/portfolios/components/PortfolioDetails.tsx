@@ -82,18 +82,26 @@ export const PortfolioDetails: React.FC = () => {
   const calculateGroupTotals = (assets: AssetSummaryDto[], currency: string) => {
     let totalInvested = 0;
     let currentValue = 0;
+    let totalRealizedPnl = 0;
     let totalUnrealizedPnl = 0;
+    let totalBought = 0;
 
     assets.forEach(a => {
       totalInvested += a.totalCost || 0;
       currentValue += a.currentValue || 0;
+      totalRealizedPnl += a.realizedPnl || 0;
       totalUnrealizedPnl += a.unrealizedPnl || 0;
+      totalBought += a.totalBought || 0;
     });
+    const totalPnl = totalRealizedPnl + totalUnrealizedPnl;
     
     return {
       totalInvested,
       currentValue,
+      realizedPnl: totalRealizedPnl,
       unrealizedPnl: totalUnrealizedPnl,
+      totalPnl,
+      pnlPercentage: totalBought > 0 ? (totalPnl / totalBought) * 100 : null,
       currency
     };
   };
@@ -124,9 +132,16 @@ export const PortfolioDetails: React.FC = () => {
               <span className="summary-val">{formatCurrency(totals.currentValue, totals.currency)}</span>
             </div>
             <div className="summary-item">
-              <span className="summary-label">PnL</span>
-              <span className={`summary-val ${totals.unrealizedPnl >= 0 ? 'text-success' : 'text-danger'}`}>
-                {totals.unrealizedPnl > 0 ? '+' : ''}{formatCurrency(totals.unrealizedPnl, totals.currency)}
+              <span className="summary-label">Realized</span>
+              <span className={`summary-val ${totals.realizedPnl >= 0 ? 'text-success' : 'text-danger'}`}>
+                {totals.realizedPnl > 0 ? '+' : ''}{formatCurrency(totals.realizedPnl, totals.currency)}
+              </span>
+            </div>
+            <div className="summary-item">
+              <span className="summary-label">Total PnL</span>
+              <span className={`summary-val ${totals.totalPnl >= 0 ? 'text-success' : 'text-danger'}`}>
+                {totals.totalPnl > 0 ? '+' : ''}{formatCurrency(totals.totalPnl, totals.currency)}
+                {' · '}{totals.pnlPercentage === null ? '—' : `${totals.pnlPercentage > 0 ? '+' : ''}${totals.pnlPercentage.toFixed(2)}%`}
               </span>
             </div>
           </div>
@@ -248,6 +263,28 @@ export const PortfolioDetails: React.FC = () => {
                 <span className="stat-label">Unrealized PnL</span>
                 <span className={`stat-value ${summary.unrealizedPnl >= 0 ? 'text-success' : 'text-danger'}`}>
                   {summary.unrealizedPnl > 0 ? '+' : ''}{formatCurrency(summary.unrealizedPnl, 'VND')}
+                </span>
+              </div>
+            </div>
+            <div className="glass-stat-card glass-panel">
+              <div className="stat-icon" style={summary.realizedPnl >= 0 ? { background: 'linear-gradient(135deg, #06b6d4, #0284c7)' } : { background: 'linear-gradient(135deg, #f97316, #c2410c)' }}>
+                {summary.realizedPnl >= 0 ? '✓' : '−'}
+              </div>
+              <div className="stat-content">
+                <span className="stat-label">Realized PnL</span>
+                <span className={`stat-value ${summary.realizedPnl >= 0 ? 'text-success' : 'text-danger'}`}>
+                  {summary.realizedPnl > 0 ? '+' : ''}{formatCurrency(summary.realizedPnl, 'VND')}
+                </span>
+              </div>
+            </div>
+            <div className="glass-stat-card glass-panel">
+              <div className="stat-icon" style={(summary.realizedPnl + summary.unrealizedPnl) >= 0 ? { background: 'linear-gradient(135deg, #14b8a6, #0f766e)' } : { background: 'linear-gradient(135deg, #ef4444, #991b1b)' }}>
+                Σ
+              </div>
+              <div className="stat-content">
+                <span className="stat-label">Total PnL</span>
+                <span className={`stat-value ${(summary.realizedPnl + summary.unrealizedPnl) >= 0 ? 'text-success' : 'text-danger'}`}>
+                  {(summary.realizedPnl + summary.unrealizedPnl) > 0 ? '+' : ''}{formatCurrency(summary.realizedPnl + summary.unrealizedPnl, 'VND')}
                 </span>
               </div>
             </div>

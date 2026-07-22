@@ -63,6 +63,53 @@ public class PortfolioAccountingCalculatorTests
         Assert.Throws<AccountingValidationException>(() => PortfolioAccountingCalculator.Calculate(transactions, 100));
     }
 
+    [Fact]
+    public void EarnedCryptoIncreasesQuantityWithoutInflatingInvestedCapital()
+    {
+        var result = PortfolioAccountingCalculator.Calculate(new[]
+        {
+            Tx(TransactionType.Buy, 1, 100, 0, new DateTime(2026, 1, 1)),
+            Tx(TransactionType.Earn, 0.5m, 0, 0, new DateTime(2026, 1, 2)),
+            Tx(TransactionType.Sell, 1.25m, 200, 5, new DateTime(2026, 1, 3))
+        }, 220);
+
+        Assert.Equal(0.25m, result.Quantity);
+        Assert.Equal(16.66666667m, result.CostBasis, 8);
+        Assert.Equal(161.66666667m, result.RealizedPnl, 8);
+        Assert.Equal(38.33333333m, result.UnrealizedPnl, 8);
+        Assert.Equal(100, result.TotalBought);
+    }
+
+    [Fact]
+    public void AllowsUntrackedEarnedQuantityOnlyWhenExplicitlyEnabled()
+    {
+        var transactions = new[]
+        {
+            Tx(TransactionType.Buy, 1, 100, 0, new DateTime(2026, 1, 1)),
+            Tx(TransactionType.Sell, 1.5m, 200, 5, new DateTime(2026, 1, 2))
+        };
+
+        var result = PortfolioAccountingCalculator.Calculate(transactions, 200, allowUntrackedEarnedQuantity: true);
+
+        Assert.Equal(0, result.Quantity);
+        Assert.Equal(195, result.RealizedPnl);
+        Assert.Throws<AccountingValidationException>(() => PortfolioAccountingCalculator.Calculate(transactions, 200));
+    }
+
+    [Fact]
+    public void AcquisitionAtSameTimestampIsAppliedBeforeSale()
+    {
+        var timestamp = new DateTime(2026, 1, 1);
+        var result = PortfolioAccountingCalculator.Calculate(new[]
+        {
+            Tx(TransactionType.Sell, 1, 120, 0, timestamp),
+            Tx(TransactionType.Earn, 1, 0, 0, timestamp)
+        }, 120);
+
+        Assert.Equal(0, result.Quantity);
+        Assert.Equal(120, result.RealizedPnl);
+    }
+
     private static Transaction Tx(TransactionType type, decimal quantity, decimal price, decimal fee, DateTime date) =>
         new() { Id = Guid.NewGuid(), Type = type, Quantity = quantity, Price = price, Fee = fee, Date = date };
 }

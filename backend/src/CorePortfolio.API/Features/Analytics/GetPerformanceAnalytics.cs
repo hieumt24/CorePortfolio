@@ -65,7 +65,7 @@ public class GetPerformanceAnalyticsHandler : IRequestHandler<GetPerformanceAnal
             var summary = await _mediator.Send(new GetPortfolioSummaryQuery(p.Id), cancellationToken);
             if (summary == null) continue;
 
-            foreach (var asset in summary.Assets.Where(a => a.TotalQuantity > 0 && a.CategoryName != "Fiat"))
+            foreach (var asset in summary.Assets.Where(a => a.CategoryName != "Fiat"))
             {
                 var currentVal = asset.CurrentValue;
                 var cost = asset.TotalCost;
@@ -84,7 +84,11 @@ public class GetPerformanceAnalyticsHandler : IRequestHandler<GetPerformanceAnal
                     totalBought /= vndUsdRate;
                 }
 
-                var returnVal = currentVal - cost;
+                var realizedPnl = asset.RealizedPnl;
+                if (request.Currency == "VND" && asset.Currency == "USD") realizedPnl *= vndUsdRate;
+                else if (request.Currency == "USD" && asset.Currency == "VND") realizedPnl /= vndUsdRate;
+
+                var returnVal = currentVal - cost + realizedPnl;
                 var returnPct = totalBought > 0 ? (returnVal / totalBought) * 100 : 0;
 
                 assetPerformances.Add(new AssetPerformanceDto

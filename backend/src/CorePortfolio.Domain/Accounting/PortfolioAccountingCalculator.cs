@@ -7,11 +7,15 @@ public sealed record AssetAccountingResult(decimal Quantity, decimal CostBasis, 
 
 public static class PortfolioAccountingCalculator
 {
-    public static AssetAccountingResult Calculate(IEnumerable<Transaction> transactions, decimal currentPrice)
+    public static AssetAccountingResult Calculate(IEnumerable<Transaction> transactions, decimal currentPrice,
+        bool allowUntrackedEarnedQuantity = false)
     {
         decimal quantity = 0, costBasis = 0, realizedPnl = 0, fees = 0, totalBought = 0;
 
-        foreach (var transaction in transactions.OrderBy(t => t.Date).ThenBy(t => t.Id))
+        foreach (var transaction in transactions
+            .OrderBy(t => t.Date)
+            .ThenBy(t => t.Type == TransactionType.Sell ? 1 : 0)
+            .ThenBy(t => t.Id))
         {
             if (transaction.Quantity <= 0)
                 throw new AccountingValidationException("Số lượng giao dịch phải lớn hơn 0.");
@@ -27,9 +31,23 @@ public static class PortfolioAccountingCalculator
                     costBasis += purchaseCost;
                     totalBought += purchaseCost;
                     break;
+                case TransactionType.Earn:
+                    // Rewards increase holdings without treating their market value as invested capital.
+                    // A network/platform fee is capitalized into the remaining cost basis.
+                    quantity += transaction.Quantity;
+                    costBasis += transaction.Fee;
+                    totalBought += transaction.Fee;
+                    break;
                 case TransactionType.Sell:
                     if (transaction.Quantity > quantity)
-                        throw new AccountingValidationException("Không thể bán vượt quá số lượng đang sở hữu.");
+                    {
+                        if (!allowUntrackedEarnedQuantity)
+                            throw new AccountingValidationException("Không thể bán vượt quá số lượng đang sở hữu.");
+
+                        // Crypto rewards may have been earned outside the tracked ledger. Treat only the
+                        // missing quantity as a zero-cost reward so the sale and realized PnL stay coherent.
+                        quantity = transaction.Quantity;
+                    }
                     var averageCost = quantity == 0 ? 0 : costBasis / quantity;
                     var disposedCost = averageCost * transaction.Quantity;
                     realizedPnl += transaction.Quantity * transaction.Price - transaction.Fee - disposedCost;

@@ -5,6 +5,7 @@ import type { AssetSummaryDto } from '../../portfolios/types';
 import { NumericFormat } from 'react-number-format';
 import './CreateTransactionModal.css';
 import { calculateCashImpact } from '../utils/transactionImpact';
+import { isCryptoCategory } from '../utils/assetCategory';
 
 interface CreateTransactionModalProps {
   portfolioId: string;
@@ -69,12 +70,19 @@ export const CreateTransactionModal: React.FC<CreateTransactionModalProps> = ({ 
             <select
               id="type"
               value={type}
-              onChange={e => setType(Number(e.target.value) as TransactionType)}
+              onChange={e => {
+                const nextType = Number(e.target.value) as TransactionType;
+                setType(nextType);
+                if (nextType === TransactionType.Earn) setPrice('0');
+              }}
               disabled={loading}
               className="tx-solid-input tx-select"
             >
               <option value={TransactionType.Buy}>Buy</option>
               <option value={TransactionType.Sell}>Sell</option>
+              {isCryptoCategory(asset.categoryName) && (
+                <option value={TransactionType.Earn}>Earn / Reward</option>
+              )}
             </select>
           </div>
 
@@ -96,7 +104,7 @@ export const CreateTransactionModal: React.FC<CreateTransactionModalProps> = ({ 
 
           <div className="tx-form-group">
             <label htmlFor="price">
-              {type === TransactionType.Dividend ? 'Dividend per Unit/Share' : 'Price Per Unit'}
+              {type === TransactionType.Dividend ? 'Dividend per Unit/Share' : type === TransactionType.Earn ? 'Acquisition Cost' : 'Price Per Unit'}
             </label>
             <div style={{ display: 'flex', gap: '10px' }}>
               <NumericFormat
@@ -106,7 +114,7 @@ export const CreateTransactionModal: React.FC<CreateTransactionModalProps> = ({ 
                 placeholder="e.g. 150.00"
                 className="tx-solid-input"
                 style={{ flex: 1 }}
-                disabled={loading}
+                disabled={loading || type === TransactionType.Earn}
                 thousandSeparator="."
                 decimalSeparator=","
                 allowNegative={false}

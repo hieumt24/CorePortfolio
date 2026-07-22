@@ -71,6 +71,7 @@ export const PortfolioTransactionHistory: React.FC<Props> = ({ portfolioId }) =>
       case TransactionType.Deposit: return 'Deposit';
       case TransactionType.Withdrawal: return 'Withdrawal';
       case TransactionType.Dividend: return 'Dividend';
+      case TransactionType.Earn: return 'Earn';
       default: return 'Unknown';
     }
   };
@@ -95,6 +96,7 @@ export const PortfolioTransactionHistory: React.FC<Props> = ({ portfolioId }) =>
             <option value={TransactionType.Deposit}>Deposit</option>
             <option value={TransactionType.Withdrawal}>Withdrawal</option>
             <option value={TransactionType.Dividend}>Dividend</option>
+            <option value={TransactionType.Earn}>Earn / Reward</option>
           </select>
         </div>
       </div>

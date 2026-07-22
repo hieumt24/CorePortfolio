@@ -12,5 +12,6 @@ export const calculateCashImpact = (
   if (type === TransactionType.Sell || type === TransactionType.Dividend) return gross - fee;
   if (type === TransactionType.Deposit) return gross;
   if (type === TransactionType.Withdrawal) return -gross;
+  if (type === TransactionType.Earn) return -fee;
   return 0;
 };

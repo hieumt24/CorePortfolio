@@ -150,13 +150,15 @@ export const AssetDetailsModal: React.FC<AssetDetailsModalProps> = ({ asset, por
                           tx.type === TransactionType.Sell ? 'sell' :
                           tx.type === TransactionType.Dividend ? 'dividend' :
                           tx.type === TransactionType.Deposit ? 'deposit' :
-                          tx.type === TransactionType.Withdrawal ? 'withdrawal' : ''
+                          tx.type === TransactionType.Withdrawal ? 'withdrawal' :
+                          tx.type === TransactionType.Earn ? 'earn' : ''
                         }`}>
                           {tx.type === TransactionType.Buy ? 'Buy' : 
                            tx.type === TransactionType.Sell ? 'Sell' : 
                            tx.type === TransactionType.Dividend ? 'Dividend' :
                            tx.type === TransactionType.Deposit ? 'Deposit' :
-                           tx.type === TransactionType.Withdrawal ? 'Withdrawal' : 'Unknown'}
+                           tx.type === TransactionType.Withdrawal ? 'Withdrawal' :
+                           tx.type === TransactionType.Earn ? 'Earn / Reward' : 'Unknown'}
                         </span>
                       </td>
                       <td className="num-col">{tx.quantity.toLocaleString(undefined, { maximumFractionDigits: 8 })}</td>

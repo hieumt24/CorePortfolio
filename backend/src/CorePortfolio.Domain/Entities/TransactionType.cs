@@ -6,5 +6,6 @@ public enum TransactionType
     Sell = 1,
     Deposit = 2,
     Withdrawal = 3,
-    Dividend = 4
+    Dividend = 4,
+    Earn = 5
 }

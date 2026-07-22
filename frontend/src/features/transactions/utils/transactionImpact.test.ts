@@ -10,4 +10,8 @@ describe('calculateCashImpact', () => {
   it('deducts fees from sale proceeds', () => {
     expect(calculateCashImpact(TransactionType.Sell, 10, 100, 5)).toBe(995);
   });
+
+  it('only charges the fee for earned crypto', () => {
+    expect(calculateCashImpact(TransactionType.Earn, 2, 100, 5)).toBe(-5);
+  });
 });
