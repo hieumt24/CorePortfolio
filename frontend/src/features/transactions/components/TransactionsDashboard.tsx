@@ -1,11 +1,24 @@
-import React, { useEffect, useState } from 'react';
-import { getAllTransactions, deleteTransaction } from '../api/transactionApi';
+import React, { useEffect, useRef, useState } from 'react';
+import { createTransaction, getAllTransactions, deleteTransaction } from '../api/transactionApi';
 import type { GlobalTransactionDto, PaginatedResult, TransactionDto } from '../types';
 import { TransactionType } from '../types';
 import { useNotification } from '../../../context/NotificationContext';
 import { GlobalCreateTransactionModal } from './GlobalCreateTransactionModal';
 import { EditTransactionModal } from './EditTransactionModal';
+import { getPortfolios, getPortfolioSummary } from '../../portfolios/api/portfolioApi';
 import type { AssetSummaryDto } from '../../portfolios/types';
+import {
+  parseCsvRows,
+  parseFlexibleNumber,
+  parseGeneratedPdfRows,
+  parseSpreadsheetXmlRows,
+  parseTransactionDate,
+  parseTransactionType,
+  rowsToTransactionImportRows,
+  transactionsToCsv,
+  transactionsToPdf,
+  transactionsToSpreadsheetXml,
+} from '../utils/transactionFileTransfer';
 import './TransactionsDashboard.css';
 
 export const TransactionsDashboard: React.FC = () => {
@@ -22,6 +35,8 @@ export const TransactionsDashboard: React.FC = () => {
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<GlobalTransactionDto | null>(null);
+  const [transferBusy, setTransferBusy] = useState<'import' | 'csv' | 'xls' | 'pdf' | null>(null);
+  const importInputRef = useRef<HTMLInputElement>(null);
   const { showNotification } = useNotification();
 
   const fetchTransactions = async () => {
@@ -44,6 +59,146 @@ export const TransactionsDashboard: React.FC = () => {
   useEffect(() => {
     fetchTransactions();
   }, [page, pageSize, typeFilter, startDate, endDate]);
+
+  const fetchAllTransactions = async () => {
+    const allItems: GlobalTransactionDto[] = [];
+    let currentPage = 1;
+    let totalCount = Number.POSITIVE_INFINITY;
+
+    while (allItems.length < totalCount) {
+      const result = await getAllTransactions({ page: currentPage, pageSize: 500 });
+      allItems.push(...result.items);
+      totalCount = result.totalCount;
+      if (result.items.length === 0) break;
+      currentPage += 1;
+    }
+    return allItems;
+  };
+
+  const downloadBlob = (blob: Blob, filename: string) => {
+    const url = URL.createObjectURL(blob);
+    const anchor = document.createElement('a');
+    anchor.href = url;
+    anchor.download = filename;
+    document.body.appendChild(anchor);
+    anchor.click();
+    anchor.remove();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+
+  const handleExport = async (format: 'csv' | 'xls' | 'pdf') => {
+    try {
+      setTransferBusy(format);
+      const transactions = await fetchAllTransactions();
+      const dateStamp = new Date().toISOString().slice(0, 10);
+      if (format === 'csv') {
+        downloadBlob(new Blob([transactionsToCsv(transactions)], { type: 'text/csv;charset=utf-8' }), `coreportfolio-transactions-${dateStamp}.csv`);
+      } else if (format === 'xls') {
+        downloadBlob(new Blob([transactionsToSpreadsheetXml(transactions)], { type: 'application/vnd.ms-excel' }), `coreportfolio-transactions-${dateStamp}.xls`);
+      } else {
+        downloadBlob(transactionsToPdf(transactions), `coreportfolio-transactions-${dateStamp}.pdf`);
+      }
+      showNotification(`Đã export ${transactions.length} giao dịch dạng ${format.toUpperCase()}.`, 'success');
+    } catch (error) {
+      showNotification(error instanceof Error ? error.message : 'Không thể export giao dịch.', 'error');
+    } finally {
+      setTransferBusy(null);
+    }
+  };
+
+  const handleImportFile = async (file: File) => {
+    try {
+      setTransferBusy('import');
+      const extension = file.name.toLowerCase().split('.').pop();
+      let rows: string[][];
+      if (extension === 'csv') {
+        rows = parseCsvRows(await file.text());
+      } else if (extension === 'xls' || extension === 'xml') {
+        rows = parseSpreadsheetXmlRows(await file.text());
+      } else if (extension === 'pdf') {
+        rows = parseGeneratedPdfRows(await file.arrayBuffer());
+      } else {
+        throw new Error('Chỉ hỗ trợ file CSV, XLS hoặc PDF.');
+      }
+
+      const importRows = rowsToTransactionImportRows(rows);
+      const portfolios = await getPortfolios();
+      const directory = await Promise.all(portfolios.map(async portfolio => ({
+        portfolio,
+        assets: (await getPortfolioSummary(portfolio.id)).assets,
+      })));
+      const existingTransactions = await fetchAllTransactions();
+      const existingIds = new Set(existingTransactions.map(transaction => transaction.id.toLowerCase()));
+      let importedCount = 0;
+      let skippedCount = 0;
+      const errors: string[] = [];
+
+      for (const [index, row] of importRows.entries()) {
+        const rowNumber = index + 2;
+        if (row.id && existingIds.has(row.id.toLowerCase())) {
+          skippedCount += 1;
+          continue;
+        }
+
+        const lookup = (value: string | undefined) => value?.trim().toLocaleLowerCase() ?? '';
+        const portfolio = row.portfolioId
+          ? directory.find(item => item.portfolio.id.toLowerCase() === lookup(row.portfolioId))
+          : directory.find(item => lookup(item.portfolio.name) === lookup(row.portfolio));
+        const asset = portfolio?.assets.find(item =>
+          (row.assetId && item.assetId.toLowerCase() === lookup(row.assetId))
+          || (row.symbol && lookup(item.symbol) === lookup(row.symbol))
+          || (row.asset && lookup(item.name) === lookup(row.asset)),
+        );
+        const type = parseTransactionType(row.type);
+        const quantity = parseFlexibleNumber(row.quantity);
+        const price = parseFlexibleNumber(row.price);
+        const fee = parseFlexibleNumber(row.fee);
+        const date = parseTransactionDate(row.date);
+
+        if (!portfolio) {
+          errors.push(`Dòng ${rowNumber}: không tìm thấy portfolio.`);
+          continue;
+        }
+        if (!asset) {
+          errors.push(`Dòng ${rowNumber}: không tìm thấy asset.`);
+          continue;
+        }
+        if (!type || !row.quantity?.trim() || quantity <= 0 || !row.price?.trim() || price < 0 || !date) {
+          errors.push(`Dòng ${rowNumber}: Type, Quantity, Price hoặc Date không hợp lệ.`);
+          continue;
+        }
+
+        try {
+          await createTransaction({
+            portfolioId: portfolio.portfolio.id,
+            assetId: asset.assetId,
+            type,
+            quantity,
+            price,
+            fee,
+            currency: row.currency?.trim() || asset.currency,
+            notes: row.notes?.trim() || '',
+            timestamp: date.toISOString(),
+          });
+          importedCount += 1;
+        } catch (error) {
+          errors.push(`Dòng ${rowNumber}: ${error instanceof Error ? error.message : 'Không thể tạo giao dịch.'}`);
+        }
+      }
+
+      await fetchTransactions();
+      if (errors.length > 0) {
+        showNotification(`Đã import ${importedCount} giao dịch, bỏ qua ${skippedCount}; ${errors.length} dòng lỗi.`, 'error');
+        console.warn('Transaction import errors:', errors);
+      } else {
+        showNotification(`Đã import ${importedCount} giao dịch${skippedCount ? `, bỏ qua ${skippedCount} dòng trùng` : ''}.`, 'success');
+      }
+    } catch (error) {
+      showNotification(error instanceof Error ? error.message : 'Không thể import giao dịch.', 'error');
+    } finally {
+      setTransferBusy(null);
+    }
+  };
 
   const matchesGroup = (category: string, group = assetGroup) => {
     const value = category.toLowerCase();
@@ -116,7 +271,41 @@ export const TransactionsDashboard: React.FC = () => {
           <p className="subtitle">Theo dõi crypto, cổ phiếu và CCQ trong một dòng thời gian rõ ràng</p>
         </div>
         <div className="header-actions">
-          <button className="btn btn-primary" onClick={() => setIsCreateModalOpen(true)}>
+          <input
+            ref={importInputRef}
+            type="file"
+            accept=".csv,.xls,.xml,.pdf"
+            className="sr-only"
+            onChange={event => {
+              const file = event.target.files?.[0];
+              if (file) void handleImportFile(file);
+              event.currentTarget.value = '';
+            }}
+          />
+          <div className="transfer-actions" aria-label="Import and export transactions">
+            <button
+              className="btn btn-transfer"
+              onClick={() => importInputRef.current?.click()}
+              disabled={transferBusy !== null}
+            >
+              {transferBusy === 'import' ? 'Đang import…' : '⇧ Import'}
+            </button>
+            <div className="export-actions">
+              <span className="export-label">Export</span>
+              {(['csv', 'xls', 'pdf'] as const).map(format => (
+                <button
+                  key={format}
+                  className="export-format-btn"
+                  onClick={() => void handleExport(format)}
+                  disabled={transferBusy !== null}
+                  title={`Export ${format.toUpperCase()}`}
+                >
+                  {transferBusy === format ? '…' : format.toUpperCase()}
+                </button>
+              ))}
+            </div>
+          </div>
+          <button className="btn btn-primary" onClick={() => setIsCreateModalOpen(true)} disabled={transferBusy !== null}>
             + Thêm giao dịch
           </button>
         </div>
