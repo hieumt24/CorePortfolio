@@ -11,6 +11,25 @@
   color: #c4b5fd;
 }
 
+.btn-delete-all {
+  border: 1px solid rgba(248, 113, 113, .42);
+  background: rgba(239, 68, 68, .1);
+  color: #fca5a5;
+}
+
+.btn-delete-all:hover:not(:disabled) {
+  border-color: rgba(248, 113, 113, .78);
+  background: rgba(239, 68, 68, .2);
+  color: #fee2e2;
+  box-shadow: 0 6px 18px rgba(239, 68, 68, .16);
+  transform: translateY(-2px);
+}
+
+.btn-delete-all:focus-visible {
+  outline: 2px solid #f87171;
+  outline-offset: 2px;
+}
+
 .btn-transfer:hover:not(:disabled) {
   border-color: rgba(167, 139, 250, .72);
   background: rgba(99, 102, 241, .22);

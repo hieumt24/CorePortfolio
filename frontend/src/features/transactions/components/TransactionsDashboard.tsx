@@ -1,5 +1,5 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { createTransaction, getAllTransactions, deleteTransaction } from '../api/transactionApi';
+import { createTransaction, deleteAllTransactions, deleteTransaction, getAllTransactions } from '../api/transactionApi';
 import type { GlobalTransactionDto, PaginatedResult, TransactionDto } from '../types';
 import { TransactionType } from '../types';
 import { useNotification } from '../../../context/NotificationContext';
@@ -37,6 +37,7 @@ export const TransactionsDashboard: React.FC = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<GlobalTransactionDto | null>(null);
   const [transferBusy, setTransferBusy] = useState<'import' | 'csv' | 'xls' | 'pdf' | null>(null);
+  const [deletingAll, setDeletingAll] = useState(false);
   const importInputRef = useRef<HTMLInputElement>(null);
   const { showNotification } = useNotification();
 
@@ -233,6 +234,31 @@ export const TransactionsDashboard: React.FC = () => {
     }
   };
 
+  const handleDeleteAll = async () => {
+    const confirmed = window.confirm(
+      'Bạn sắp xóa TOÀN BỘ giao dịch Crypto, Cổ phiếu và CCQ/ETF, bao gồm các dòng tiền liên quan. Portfolio và asset vẫn được giữ lại. Hành động này không thể hoàn tác. Tiếp tục?',
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setDeletingAll(true);
+      const result = await deleteAllTransactions();
+      setPage(1);
+      await fetchTransactions();
+
+      if (result.deletedCount === 0) {
+        showNotification('Không có giao dịch nào để xóa.', 'info');
+      } else {
+        showNotification(`Đã xóa toàn bộ ${result.deletedCount} giao dịch.`, 'success');
+      }
+    } catch (error) {
+      showNotification(error instanceof Error ? error.message : 'Không thể xóa toàn bộ giao dịch.', 'error');
+    } finally {
+      setDeletingAll(false);
+    }
+  };
+
   const formatCurrency = (value: number, currency: string) => {
     try {
       const isVND = currency === 'VND';
@@ -297,7 +323,7 @@ export const TransactionsDashboard: React.FC = () => {
             <button
               className="btn btn-transfer"
               onClick={() => importInputRef.current?.click()}
-              disabled={transferBusy !== null}
+              disabled={transferBusy !== null || deletingAll}
             >
               {transferBusy === 'import' ? 'Đang import…' : '⇧ Import'}
             </button>
@@ -308,7 +334,7 @@ export const TransactionsDashboard: React.FC = () => {
                   key={format}
                   className="export-format-btn"
                   onClick={() => void handleExport(format)}
-                  disabled={transferBusy !== null}
+                  disabled={transferBusy !== null || deletingAll}
                   title={`Export ${format.toUpperCase()}`}
                 >
                   {transferBusy === format ? '…' : format.toUpperCase()}
@@ -316,7 +342,15 @@ export const TransactionsDashboard: React.FC = () => {
               ))}
             </div>
           </div>
-          <button className="btn btn-primary" onClick={() => setIsCreateModalOpen(true)} disabled={transferBusy !== null}>
+          <button
+            className="btn btn-delete-all"
+            onClick={() => void handleDeleteAll()}
+            disabled={transferBusy !== null || deletingAll || loading}
+            title="Xóa toàn bộ giao dịch Crypto, Cổ phiếu và CCQ/ETF"
+          >
+            {deletingAll ? 'Đang xóa…' : 'Xóa tất cả'}
+          </button>
+          <button className="btn btn-primary" onClick={() => setIsCreateModalOpen(true)} disabled={transferBusy !== null || deletingAll}>
             + Thêm giao dịch
           </button>
         </div>

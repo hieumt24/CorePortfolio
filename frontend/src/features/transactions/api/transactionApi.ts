@@ -25,6 +25,12 @@ export const deleteTransaction = (id: string): Promise<void> => {
   });
 };
 
+export const deleteAllTransactions = (): Promise<{ deletedCount: number }> => {
+  return apiClient<{ deletedCount: number }>('/transactions', {
+    method: 'DELETE',
+  });
+};
+
 export const getAllTransactions = (params?: {
   portfolioId?: string;
   assetId?: string;
