@@ -1,8 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import {
   parseCsvRows,
+  parseFlexibleNumber,
   parseGeneratedPdfRows,
   parseSpreadsheetXmlRows,
+  parseTransactionDate,
+  parseTransactionType,
   rowsToTransactionImportRows,
   transactionsToCsv,
   transactionsToPdf,
@@ -60,5 +63,19 @@ describe('transaction file transfer', () => {
     expect(rows[0]).toEqual(['Date', 'Portfolio', 'Symbol', 'Type', 'Quantity', 'Price', 'Total']);
     expect(rows[1]).toContain('Growth, 2026');
     expect(rows[1]).toContain('VND');
+  });
+
+  it('finds and maps a fund report header after cover rows', () => {
+    const rows = rowsToTransactionImportRows([
+      ['', 'BÁO CÁO TÀI SẢN'],
+      ['', 'Tên CCQ', 'Tên chương trình', 'Ngày mua', '', 'Số lượng', 'Giá mua\n(VND)'],
+      ['', 'DCDS', 'Linh hoạt', '23/07/2026', '', '11.03', '90,617.66'],
+      ['', 'TỔNG TÀI SẢN'],
+    ]);
+
+    expect(rows[0]).toMatchObject({ symbol: 'DCDS', quantity: '11.03', price: '90,617.66' });
+    expect(parseTransactionType(rows[0].type)).toBe(TransactionType.Buy);
+    expect(parseFlexibleNumber(rows[0].price)).toBe(90617.66);
+    expect(parseTransactionDate(rows[0].date)?.toISOString()).toBe('2026-07-23T00:00:00.000Z');
   });
 });

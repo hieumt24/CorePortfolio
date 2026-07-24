@@ -9,6 +9,7 @@ import { getPortfolios, getPortfolioSummary } from '../../portfolios/api/portfol
 import type { AssetSummaryDto } from '../../portfolios/types';
 import {
   parseCsvRows,
+  parseExcelRows,
   parseFlexibleNumber,
   parseGeneratedPdfRows,
   parseSpreadsheetXmlRows,
@@ -113,7 +114,12 @@ export const TransactionsDashboard: React.FC = () => {
       let rows: string[][];
       if (extension === 'csv') {
         rows = parseCsvRows(await file.text());
-      } else if (extension === 'xls' || extension === 'xml') {
+      } else if (extension === 'xls' || extension === 'xlsx') {
+        const buffer = await file.arrayBuffer();
+        const bytes = new Uint8Array(buffer.slice(0, 8));
+        const isOleBinary = bytes[0] === 0xD0 && bytes[1] === 0xCF && bytes[2] === 0x11 && bytes[3] === 0xE0;
+        rows = isOleBinary ? await parseExcelRows(buffer) : parseSpreadsheetXmlRows(new TextDecoder().decode(buffer));
+      } else if (extension === 'xml') {
         rows = parseSpreadsheetXmlRows(await file.text());
       } else if (extension === 'pdf') {
         rows = parseGeneratedPdfRows(await file.arrayBuffer());
@@ -135,6 +141,10 @@ export const TransactionsDashboard: React.FC = () => {
 
       for (const [index, row] of importRows.entries()) {
         const rowNumber = index + 2;
+        if (!row.quantity?.trim() && !row.price?.trim() && !row.date?.trim()) {
+          skippedCount += 1;
+          continue;
+        }
         if (row.id && existingIds.has(row.id.toLowerCase())) {
           skippedCount += 1;
           continue;
@@ -143,11 +153,12 @@ export const TransactionsDashboard: React.FC = () => {
         const lookup = (value: string | undefined) => value?.trim().toLocaleLowerCase() ?? '';
         const portfolio = row.portfolioId
           ? directory.find(item => item.portfolio.id.toLowerCase() === lookup(row.portfolioId))
-          : directory.find(item => lookup(item.portfolio.name) === lookup(row.portfolio));
+          : directory.find(item => lookup(item.portfolio.name) === lookup(row.portfolio))
+            ?? (directory.length === 1 ? directory[0] : undefined);
         const asset = portfolio?.assets.find(item =>
           (row.assetId && item.assetId.toLowerCase() === lookup(row.assetId))
           || (row.symbol && lookup(item.symbol) === lookup(row.symbol))
-          || (row.asset && lookup(item.name) === lookup(row.asset)),
+          || (row.asset && (lookup(item.name) === lookup(row.asset) || lookup(item.symbol) === lookup(row.asset))),
         );
         const type = parseTransactionType(row.type);
         const quantity = parseFlexibleNumber(row.quantity);
@@ -163,7 +174,7 @@ export const TransactionsDashboard: React.FC = () => {
           errors.push(`Dòng ${rowNumber}: không tìm thấy asset.`);
           continue;
         }
-        if (!type || !row.quantity?.trim() || quantity <= 0 || !row.price?.trim() || price < 0 || !date) {
+        if (type === null || !row.quantity?.trim() || quantity <= 0 || !row.price?.trim() || price < 0 || !date) {
           errors.push(`Dòng ${rowNumber}: Type, Quantity, Price hoặc Date không hợp lệ.`);
           continue;
         }
@@ -274,7 +285,7 @@ export const TransactionsDashboard: React.FC = () => {
           <input
             ref={importInputRef}
             type="file"
-            accept=".csv,.xls,.xml,.pdf"
+            accept=".csv,.xls,.xlsx,.xml,.pdf"
             className="sr-only"
             onChange={event => {
               const file = event.target.files?.[0];
