@@ -57,6 +57,17 @@ interface OkxTradingRow {
   balanceUnit: string;
 }
 
+interface BinanceTradingRow {
+  entryId: string;
+  time: string;
+  pair: string;
+  side: string;
+  price: string;
+  executed: string;
+  amount: string;
+  fee: string;
+}
+
 const transactionTypeNames: Record<TransactionTypeValue, string> = {
   [TransactionType.Buy]: 'Buy',
   [TransactionType.Sell]: 'Sell',
@@ -296,6 +307,141 @@ const extractOkxTradingRows = async (buffer: ArrayBuffer): Promise<OkxTradingRow
   return rows;
 };
 
+const readPdfColumn = (items: PositionedPdfText[], minX: number, maxX: number) =>
+  items
+    .filter(item => item.x >= minX && item.x < maxX)
+    .sort((left, right) => left.x - right.x)
+    .map(item => item.text.trim())
+    .join('')
+    .trim();
+
+const extractBinanceTradingRows = async (buffer: ArrayBuffer): Promise<BinanceTradingRow[]> => {
+  const [{ getDocument, GlobalWorkerOptions }, workerModule] = await Promise.all([
+    import('pdfjs-dist/legacy/build/pdf.mjs'),
+    import('pdfjs-dist/legacy/build/pdf.worker.min.mjs?url'),
+  ]);
+  if (typeof Worker !== 'undefined') {
+    GlobalWorkerOptions.workerSrc = workerModule.default;
+  }
+
+  const document = await getDocument({ data: new Uint8Array(buffer) }).promise;
+  const rows: BinanceTradingRow[] = [];
+
+  try {
+    for (let pageNumber = 1; pageNumber <= document.numPages; pageNumber += 1) {
+      const page = await document.getPage(pageNumber);
+      const content = await page.getTextContent();
+      const items: PositionedPdfText[] = content.items.flatMap(item =>
+        'str' in item && item.str.trim()
+          ? [{
+              text: item.str,
+              x: item.transform[4],
+              y: item.transform[5],
+            }]
+          : [],
+      );
+      const isBinance = items.some(item => item.text.toLowerCase().includes('binance.com')) &&
+        items.some(item => /thời gian|time/i.test(item.text)) &&
+        items.some(item => /cặp giao dịch|trading pair/i.test(item.text));
+      if (!isBinance) continue;
+
+      const dateItems = items.filter(item =>
+        item.x < 120 && /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(item.text.trim()),
+      );
+      dateItems.forEach((dateItem, rowIndex) => {
+        const rowItems = items.filter(item => Math.abs(item.y - dateItem.y) <= 2);
+        rows.push({
+          entryId: `${pageNumber}-${rowIndex + 1}`,
+          time: readPdfColumn(rowItems, 0, 125),
+          pair: readPdfColumn(rowItems, 125, 225),
+          side: readPdfColumn(rowItems, 225, 325),
+          price: readPdfColumn(rowItems, 325, 425),
+          executed: readPdfColumn(rowItems, 425, 525),
+          amount: readPdfColumn(rowItems, 525, 625),
+          fee: readPdfColumn(rowItems, 625, Number.POSITIVE_INFINITY),
+        });
+      });
+    }
+  } finally {
+    await document.destroy();
+  }
+
+  if (rows.length === 0) {
+    throw new Error('Không tìm thấy giao dịch trong PDF Binance Spot.');
+  }
+  return rows;
+};
+
+const splitNumberAndUnit = (value: string) => {
+  const match = value.trim().match(/^([+-]?(?:\d+(?:\.\d*)?|\.\d+))([A-Za-z0-9]+)$/);
+  return match
+    ? { value: Math.abs(parseFlexibleNumber(match[1])), unit: match[2].toUpperCase() }
+    : null;
+};
+
+export const binanceRowsToImportRows = (rows: BinanceTradingRow[]): string[][] => {
+  const normalized = rows.flatMap(row => {
+    const executed = splitNumberAndUnit(row.executed);
+    const amount = splitNumberAndUnit(row.amount);
+    const fee = splitNumberAndUnit(row.fee);
+    const price = parseFlexibleNumber(row.price);
+    const side = row.side.toUpperCase();
+    if (!executed || !amount || !fee || price <= 0 || !/^(BUY|SELL)$/.test(side)) return [];
+    return [{ row, executed, amount, fee, price, side }];
+  });
+
+  const bnbPrices = normalized
+    .filter(item => item.executed.unit === 'BNB' && item.amount.unit === 'USDT')
+    .map(item => ({
+      timestamp: Date.parse(`${item.row.time.replace(' ', 'T')}+07:00`),
+      price: item.price,
+    }))
+    .filter(item => Number.isFinite(item.timestamp));
+
+  const convertedRows = normalized.map(item => {
+    let feeInQuote = 0;
+    let feeNote = `${item.fee.value} ${item.fee.unit}`;
+    if (item.fee.unit === item.amount.unit) {
+      feeInQuote = item.fee.value;
+    } else if (item.fee.unit === item.executed.unit) {
+      feeInQuote = item.fee.value * item.price;
+    } else if (item.fee.unit === 'BNB' && bnbPrices.length > 0) {
+      const timestamp = Date.parse(`${item.row.time.replace(' ', 'T')}+07:00`);
+      const nearest = bnbPrices.reduce((best, candidate) =>
+        Math.abs(candidate.timestamp - timestamp) < Math.abs(best.timestamp - timestamp) ? candidate : best,
+      );
+      feeInQuote = item.fee.value * nearest.price;
+      feeNote += ` @ ${nearest.price} ${item.amount.unit}`;
+    }
+
+    const currency = item.amount.unit === 'USDT' || item.amount.unit === 'USDC'
+      ? 'USD'
+      : item.amount.unit;
+    return [
+      item.executed.unit,
+      item.side,
+      String(item.executed.value),
+      String(item.price),
+      String(Number(feeInQuote.toPrecision(15))),
+      currency,
+      `Binance Spot | Entry ${item.row.entryId} | Fee ${feeNote} | UTC+7`,
+      `${item.row.time.replace(' ', 'T')}+07:00`,
+    ];
+  });
+
+  if (convertedRows.length === 0) {
+    throw new Error('Không tìm thấy giao dịch Buy/Sell hợp lệ trong PDF Binance Spot.');
+  }
+
+  return [
+    ['Symbol', 'Type', 'Quantity', 'Price', 'Fee', 'Currency', 'Notes', 'Date'],
+    ...convertedRows,
+  ];
+};
+
+const parseBinancePdfRows = async (buffer: ArrayBuffer) =>
+  binanceRowsToImportRows(await extractBinanceTradingRows(buffer));
+
 const okxRowsToImportRows = (rows: OkxTradingRow[]): string[][] => {
   const spotRows = rows.filter(row =>
     row.tradeType.toLowerCase() === 'spot' &&
@@ -360,8 +506,12 @@ export const parsePdfRows = async (buffer: ArrayBuffer): Promise<string[][]> => 
   try {
     return parseGeneratedPdfRows(buffer);
   } catch {
-    const okxRows = await extractOkxTradingRows(buffer);
-    return okxRowsToImportRows(okxRows);
+    try {
+      return await parseBinancePdfRows(buffer);
+    } catch {
+      const okxRows = await extractOkxTradingRows(buffer);
+      return okxRowsToImportRows(okxRows);
+    }
   }
 };
 

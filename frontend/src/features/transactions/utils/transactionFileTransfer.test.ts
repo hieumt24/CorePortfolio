@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import {
+  binanceRowsToImportRows,
   parseCsvRows,
   parseFlexibleNumber,
   parseGeneratedPdfRows,
@@ -100,5 +101,55 @@ describe('transaction file transfer', () => {
     expect(parseTransactionType(rows[0].type)).toBe(TransactionType.Buy);
     expect(parseFlexibleNumber(rows[0].price)).toBe(90617.66);
     expect(parseTransactionDate(rows[0].date)?.toISOString()).toBe('2026-07-23T00:00:00.000Z');
+  });
+
+  it('maps Binance Spot fills and converts base or BNB fees into quote currency', () => {
+    const rows = binanceRowsToImportRows([
+      {
+        entryId: '1-1',
+        time: '2026-01-10 10:00:00',
+        pair: 'BNBUSDT',
+        side: 'BUY',
+        price: '900',
+        executed: '0.1BNB',
+        amount: '90USDT',
+        fee: '0.0001BNB',
+      },
+      {
+        entryId: '1-2',
+        time: '2026-01-10 10:01:00',
+        pair: 'SOLUSDT',
+        side: 'BUY',
+        price: '135',
+        executed: '0.2SOL',
+        amount: '27USDT',
+        fee: '0.00001BNB',
+      },
+      {
+        entryId: '1-3',
+        time: '2026-01-10 10:02:00',
+        pair: 'SOLUSDT',
+        side: 'SELL',
+        price: '136',
+        executed: '0.1SOL',
+        amount: '13.6USDT',
+        fee: '0.0136USDT',
+      },
+    ]);
+    const imported = rowsToTransactionImportRows(rows);
+
+    expect(imported).toHaveLength(3);
+    expect(imported[0]).toMatchObject({
+      symbol: 'BNB',
+      type: 'BUY',
+      quantity: '0.1',
+      price: '900',
+      fee: '0.09',
+      currency: 'USD',
+      date: '2026-01-10T10:00:00+07:00',
+    });
+    expect(imported[1]).toMatchObject({ symbol: 'SOL', fee: '0.009' });
+    expect(imported[2]).toMatchObject({ symbol: 'SOL', type: 'SELL', fee: '0.0136' });
+    expect(imported.every(row => row.notes?.includes('Binance Spot'))).toBe(true);
   });
 });
