@@ -1,4 +1,6 @@
 import React, { useState, useEffect } from 'react';
+import DatePicker from 'react-datepicker';
+import 'react-datepicker/dist/react-datepicker.css';
 import { createTransaction } from '../api/transactionApi';
 import { getPortfolios, getPortfolioSummary } from '../../portfolios/api/portfolioApi';
 import type { PortfolioDto, AssetSummaryDto } from '../../portfolios/types';
@@ -6,6 +8,7 @@ import { TransactionType } from '../types';
 import { useNotification } from '../../../context/NotificationContext';
 import { NumericFormat } from 'react-number-format';
 import { isCryptoCategory } from '../utils/assetCategory';
+import { calculateCashImpact } from '../utils/transactionImpact';
 import './GlobalCreateTransactionModal.css';
 
 interface GlobalCreateTransactionModalProps {
@@ -14,6 +17,36 @@ interface GlobalCreateTransactionModalProps {
   onClose: () => void;
   onSuccess: () => void;
 }
+
+interface DateTimeTriggerProps {
+  value?: string;
+  onClick?: () => void;
+}
+
+const DateTimeTrigger = React.forwardRef<HTMLButtonElement, DateTimeTriggerProps>(
+  ({ value, onClick }, ref) => (
+    <button
+      ref={ref}
+      type="button"
+      className="date-time-trigger"
+      onClick={onClick}
+      aria-label={`Chọn ngày và giờ giao dịch. Hiện tại: ${value}`}
+    >
+      <span className="date-time-icon" aria-hidden="true">
+        <svg viewBox="0 0 24 24" fill="none">
+          <path d="M7 3v3M17 3v3M4.5 9.5h15M6 5h12a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2Z" />
+          <path d="M12 13v3l2 1" />
+        </svg>
+      </span>
+      <span className="date-time-copy">
+        <small>Thời điểm ghi nhận</small>
+        <strong>{value}</strong>
+      </span>
+      <span className="date-time-chevron" aria-hidden="true">⌄</span>
+    </button>
+  ),
+);
+DateTimeTrigger.displayName = 'DateTimeTrigger';
 
 export const GlobalCreateTransactionModal: React.FC<GlobalCreateTransactionModalProps> = ({ initialPortfolioId, initialCategory, onClose, onSuccess }) => {
   const [portfolios, setPortfolios] = useState<PortfolioDto[]>([]);
@@ -28,16 +61,36 @@ export const GlobalCreateTransactionModal: React.FC<GlobalCreateTransactionModal
     ? assets.filter(a => a.categoryName === selectedCategoryName)
     : assets;
   const cryptoCategorySelected = isCryptoCategory(selectedCategoryName);
+  const selectedAsset = assets.find(asset => asset.assetId === selectedAssetId);
   
   const [type, setType] = useState<number>(TransactionType.Buy);
   const [quantity, setQuantity] = useState('');
   const [price, setPrice] = useState('');
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 16));
+  const [fee, setFee] = useState('0');
+  const [date, setDate] = useState<Date>(new Date());
   
   const [loading, setLoading] = useState(false);
   const [assetsLoading, setAssetsLoading] = useState(false);
   const [categoryLoading, setCategoryLoading] = useState(false);
   const { showNotification } = useNotification();
+
+  const quantityValue = Number(quantity) || 0;
+  const priceValue = Number(price) || 0;
+  const feeValue = Number(fee) || 0;
+  const currency = selectedAsset?.currency || 'VND';
+  const cashImpact = calculateCashImpact(type as TransactionType, quantityValue, priceValue, feeValue);
+  const amountSummary = (() => {
+    if (type === TransactionType.Buy) return { label: 'Tổng tiền đã thanh toán', hint: 'Giá trị giao dịch + phí' };
+    if (type === TransactionType.Sell || type === TransactionType.Dividend) return { label: 'Tổng tiền nhận về', hint: 'Giá trị giao dịch − phí' };
+    if (type === TransactionType.Deposit) return { label: 'Tổng tiền nạp', hint: 'Số tiền cộng vào tài khoản' };
+    if (type === TransactionType.Withdrawal) return { label: 'Tổng tiền rút', hint: 'Số tiền trừ khỏi tài khoản' };
+    return { label: 'Phí ghi nhận', hint: 'Reward không phát sinh chi phí mua' };
+  })();
+  const formattedCashImpact = new Intl.NumberFormat(currency === 'VND' ? 'vi-VN' : 'en-US', {
+    style: 'currency',
+    currency,
+    maximumFractionDigits: currency === 'VND' ? 0 : 2,
+  }).format(Math.abs(cashImpact));
 
   useEffect(() => {
     const fetchPorts = async () => {
@@ -96,7 +149,8 @@ export const GlobalCreateTransactionModal: React.FC<GlobalCreateTransactionModal
         type: type as TransactionType,
         quantity: Number(quantity),
         price: Number(price),
-        timestamp: new Date(date).toISOString(),
+        fee: feeValue,
+        timestamp: date.toISOString(),
       });
       onSuccess();
     } catch (error) {
@@ -230,15 +284,48 @@ export const GlobalCreateTransactionModal: React.FC<GlobalCreateTransactionModal
             </div>
           </div>
 
-          <div className="form-group">
-            <label>Date & Time</label>
-            <input 
-              type="datetime-local" 
-              value={date} 
-              onChange={e => setDate(e.target.value)}
-              required
-              className="glass-input"
-            />
+          <div className="form-row transaction-details-row">
+            <div className="form-group transaction-fee-field">
+              <label htmlFor="transaction-fee">Phí giao dịch</label>
+              <NumericFormat
+                id="transaction-fee"
+                value={fee}
+                onValueChange={(values) => setFee(values.value)}
+                className="glass-input"
+                thousandSeparator="."
+                decimalSeparator=","
+                allowNegative={false}
+                disabled={loading}
+              />
+            </div>
+            <div className="form-group transaction-date-field">
+              <label>Ngày & giờ</label>
+              <DatePicker
+                selected={date}
+                onChange={(value: Date | null) => value && setDate(value)}
+                showTimeSelect
+                timeIntervals={5}
+                timeCaption="Giờ"
+                dateFormat="dd/MM/yyyy 'lúc' HH:mm"
+                timeFormat="HH:mm"
+                calendarStartDay={1}
+                popperPlacement="bottom-end"
+                calendarClassName="transaction-calendar"
+                popperClassName="transaction-calendar-popper"
+                customInput={<DateTimeTrigger />}
+              />
+            </div>
+          </div>
+
+          <div className={`transaction-total-card ${cashImpact > 0 ? 'positive' : ''}`} aria-live="polite">
+            <div className="transaction-total-icon" aria-hidden="true">
+              <span>{cashImpact > 0 ? '↙' : '↗'}</span>
+            </div>
+            <div className="transaction-total-copy">
+              <span>{amountSummary.label}</span>
+              <small>{amountSummary.hint}</small>
+            </div>
+            <strong>{formattedCashImpact}</strong>
           </div>
 
           <div className="modal-actions">
