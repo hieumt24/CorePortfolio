@@ -2,9 +2,25 @@ import { apiClient } from '../../../shared/api/baseClient';
 import type { MarketAsset, CreateMarketAssetRequest, PaginatedResult, PriceRefreshResult } from '../types';
 
 export const marketAssetsApi = {
-  getMarketAssets: (categoryId?: string, page = 1, pageSize = 10) => {
+  getMarketAssets: (
+    categoryId?: string,
+    page = 1,
+    pageSize = 10,
+    filters?: {
+      search?: string;
+      priceSource?: string;
+      priceStatus?: string;
+      sortBy?: string;
+      sortDirection?: 'asc' | 'desc';
+    },
+  ) => {
     let url = `/admin/market-assets?page=${page}&pageSize=${pageSize}`;
     if (categoryId) url += `&categoryId=${categoryId}`;
+    if (filters?.search) url += `&search=${encodeURIComponent(filters.search)}`;
+    if (filters?.priceSource) url += `&priceSource=${encodeURIComponent(filters.priceSource)}`;
+    if (filters?.priceStatus) url += `&priceStatus=${encodeURIComponent(filters.priceStatus)}`;
+    if (filters?.sortBy) url += `&sortBy=${encodeURIComponent(filters.sortBy)}`;
+    if (filters?.sortDirection) url += `&sortDirection=${filters.sortDirection}`;
     return apiClient<PaginatedResult<MarketAsset>>(url, { method: 'GET' });
   },
     

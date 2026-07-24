@@ -15,6 +15,7 @@ Use this skill for every implementation task in CorePortfolio. Treat backend, fr
 4. Implement the frontend contract in the same task: API client, types, loading/error/empty states, route or navigation entry, and responsive styling. Use existing design tokens; read the premium UI skill for visual redesigns.
 5. Update `docs/PROJECT_CONTEXT.md` whenever architecture, routes, API contracts, entities, migrations, or feature status changes.
 6. Verify with `git diff --check`, backend build/test, and `npm run build` from `frontend`. Report warnings separately from failures.
+7. For changes involving UI, stop after automated verification and provide the user with a short, task-specific manual smoke-test guide. Do not start local servers, control a browser, perform visual smoke testing, or wait for UI confirmation unless the user explicitly asks for it. The user may run the smoke test and attach screenshots/files for a follow-up review.
 
 ## Cross-layer checklist
 
@@ -24,9 +25,11 @@ Use this skill for every implementation task in CorePortfolio. Treat backend, fr
 - Loading, error, empty, success, and retry states exist.
 - New user-facing functionality is reachable from a route or Navbar.
 - Documentation is updated in the same change.
+- UI handoff identifies the route, exact interactions to try, expected result, and the most useful screenshot/error details to attach if something fails.
 
 ## Guardrails
 
 - Do not implement only one stack without documenting why the other is unaffected.
 - Do not add MVC controllers when a feature slice and Minimal API fit the project.
 - Do not hide backend build failures behind a successful frontend-only check.
+- Do not make a requested commit or push wait on manual UI smoke testing unless the user explicitly makes that smoke test a completion gate.

@@ -37,6 +37,8 @@ const getStatusTone = (status: string) => {
   return 'manual';
 };
 
+type MarketAssetSort = 'symbol' | 'name' | 'category' | 'source' | 'price' | 'updated' | 'status';
+
 export function MarketAssetManagement() {
   const { showNotification } = useNotification();
   const [categories, setCategories] = useState<AssetCategory[]>([]);
@@ -50,14 +52,30 @@ export function MarketAssetManagement() {
   const [isUpdatingAll, setIsUpdatingAll] = useState(false);
   const [refreshingAssetId, setRefreshingAssetId] = useState<string | null>(null);
   const [inlineErrors, setInlineErrors] = useState<Record<string, string>>({});
+  const [searchInput, setSearchInput] = useState('');
+  const [search, setSearch] = useState('');
+  const [priceSourceFilter, setPriceSourceFilter] = useState('');
+  const [priceStatusFilter, setPriceStatusFilter] = useState('');
+  const [sortBy, setSortBy] = useState<MarketAssetSort>('symbol');
+  const [sortDirection, setSortDirection] = useState<'asc' | 'desc'>('asc');
+  const [isLoading, setIsLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
 
   useEffect(() => {
     loadCategories();
   }, []);
 
   useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setSearch(searchInput.trim());
+      setCurrentPage(1);
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [searchInput]);
+
+  useEffect(() => {
     loadMarketAssets(selectedCategoryId || undefined, currentPage, pageSize);
-  }, [selectedCategoryId, currentPage, pageSize]);
+  }, [selectedCategoryId, currentPage, pageSize, search, priceSourceFilter, priceStatusFilter, sortBy, sortDirection]);
 
   const automaticAssetsCount = useMemo(
     () => marketAssets.filter(asset => asset.priceSource.toLowerCase() !== 'manual').length,
@@ -74,8 +92,16 @@ export function MarketAssetManagement() {
   };
 
   const loadMarketAssets = async (categoryId?: string, page = 1, size = 10) => {
+    setIsLoading(true);
+    setLoadError('');
     try {
-      const response = await marketAssetsApi.getMarketAssets(categoryId, page, size);
+      const response = await marketAssetsApi.getMarketAssets(categoryId, page, size, {
+        search,
+        priceSource: priceSourceFilter,
+        priceStatus: priceStatusFilter,
+        sortBy,
+        sortDirection,
+      });
       setMarketAssets(response.items || []);
       setTotalCount(response.totalCount || 0);
       setCurrentPage(response.page || 1);
@@ -86,7 +112,10 @@ export function MarketAssetManagement() {
       setInlineErrors(serverErrors);
     } catch (error) {
       console.error('Failed to load market assets', error);
+      setLoadError(error instanceof Error ? error.message : 'Failed to load market assets');
       showNotification('Failed to load market assets', 'error');
+    } finally {
+      setIsLoading(false);
     }
   };
 
@@ -99,6 +128,28 @@ export function MarketAssetManagement() {
     setAssetToEdit(null);
     setIsModalOpen(true);
   };
+
+  const handleSort = (column: MarketAssetSort) => {
+    setCurrentPage(1);
+    if (sortBy === column) {
+      setSortDirection(direction => direction === 'asc' ? 'desc' : 'asc');
+      return;
+    }
+    setSortBy(column);
+    setSortDirection('asc');
+  };
+
+  const sortLabel = (column: MarketAssetSort, label: string) => (
+    <button
+      type="button"
+      className={`market-sort-btn ${sortBy === column ? 'active' : ''}`}
+      onClick={() => handleSort(column)}
+      aria-label={`Sort by ${label} ${sortBy === column && sortDirection === 'asc' ? 'descending' : 'ascending'}`}
+    >
+      {label}
+      <span aria-hidden="true">{sortBy === column ? (sortDirection === 'asc' ? '↑' : '↓') : '↕'}</span>
+    </button>
+  );
 
   const handleEditMarketAsset = (asset: MarketAsset) => {
     setAssetToEdit(asset);
@@ -196,23 +247,83 @@ export function MarketAssetManagement() {
         ))}
       </div>
 
+      <section className="market-assets-control-panel glass-panel" aria-label="Search, filter and sort market assets">
+        <label className="market-search-field">
+          <span className="sr-only">Search market assets</span>
+          <span className="market-search-icon" aria-hidden="true">⌕</span>
+          <input
+            type="search"
+            value={searchInput}
+            onChange={event => setSearchInput(event.target.value)}
+            placeholder="Search symbol, name or external ID…"
+          />
+          {searchInput && (
+            <button type="button" onClick={() => setSearchInput('')} aria-label="Clear search">&times;</button>
+          )}
+        </label>
+
+        <div className="market-filter-group">
+          <label>
+            <span>Price source</span>
+            <select value={priceSourceFilter} onChange={event => { setPriceSourceFilter(event.target.value); setCurrentPage(1); }}>
+              <option value="">All sources</option>
+              <option value="Manual">Manual</option>
+              <option value="CoinGecko">CoinGecko</option>
+              <option value="DNSE">DNSE</option>
+            </select>
+          </label>
+          <label>
+            <span>Price status</span>
+            <select value={priceStatusFilter} onChange={event => { setPriceStatusFilter(event.target.value); setCurrentPage(1); }}>
+              <option value="">All statuses</option>
+              <option value="Fresh">Fresh</option>
+              <option value="Stale">Stale</option>
+              <option value="Error">Error</option>
+              <option value="Manual">Manual</option>
+            </select>
+          </label>
+          <button
+            type="button"
+            className="market-reset-btn"
+            onClick={() => {
+              setSearchInput('');
+              setSearch('');
+              setPriceSourceFilter('');
+              setPriceStatusFilter('');
+              setSortBy('symbol');
+              setSortDirection('asc');
+              setCurrentPage(1);
+            }}
+            disabled={!searchInput && !priceSourceFilter && !priceStatusFilter && sortBy === 'symbol' && sortDirection === 'asc'}
+          >
+            Reset
+          </button>
+        </div>
+
+        <div className="market-result-summary">
+          <strong>{totalCount}</strong>
+          <span>matching assets</span>
+          <small>Sorted by {sortBy} · {sortDirection === 'asc' ? 'A–Z / low–high' : 'Z–A / high–low'}</small>
+        </div>
+      </section>
+
       <div className="market-assets-table-panel">
         <div className="table-responsive">
           <table className="modern-data-table market-assets-table">
             <thead>
               <tr>
-                <th>Symbol</th>
-                <th>Name</th>
-                <th>Category</th>
-                <th>Price Source</th>
-                <th className="text-right">Current Price</th>
-                <th>Last Updated</th>
-                <th>Status</th>
+                <th>{sortLabel('symbol', 'Symbol')}</th>
+                <th>{sortLabel('name', 'Name')}</th>
+                <th>{sortLabel('category', 'Category')}</th>
+                <th>{sortLabel('source', 'Price Source')}</th>
+                <th className="text-right">{sortLabel('price', 'Current Price')}</th>
+                <th>{sortLabel('updated', 'Last Updated')}</th>
+                <th>{sortLabel('status', 'Status')}</th>
                 <th className="text-center">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {marketAssets.map(asset => {
+              {!isLoading && !loadError && marketAssets.map(asset => {
                 const error = inlineErrors[asset.id];
                 return (
                   <tr key={asset.id} className={error ? 'has-inline-error' : ''}>
@@ -257,11 +368,32 @@ export function MarketAssetManagement() {
                 );
               })}
 
-              {marketAssets.length === 0 && (
+              {isLoading && (
+                <tr>
+                  <td colSpan={8}>
+                    <div className="market-table-state"><span className="market-loading-orbit" /><p>Loading market assets…</p></div>
+                  </td>
+                </tr>
+              )}
+
+              {!isLoading && loadError && (
+                <tr>
+                  <td colSpan={8}>
+                    <div className="market-table-state error">
+                      <strong>Could not load market assets</strong>
+                      <p>{loadError}</p>
+                      <button className="btn-outline" onClick={() => void loadMarketAssets(selectedCategoryId || undefined, currentPage, pageSize)}>Retry</button>
+                    </div>
+                  </td>
+                </tr>
+              )}
+
+              {!isLoading && !loadError && marketAssets.length === 0 && (
                 <tr>
                   <td colSpan={8}>
                     <div className="empty-state market-empty">
-                      <p>No market assets found for this filter.</p>
+                      <strong>No matching market assets</strong>
+                      <p>Try another keyword or reset the active filters.</p>
                     </div>
                   </td>
                 </tr>
@@ -270,7 +402,7 @@ export function MarketAssetManagement() {
           </table>
         </div>
 
-        {totalCount > 0 && (
+        {!isLoading && !loadError && totalCount > 0 && (
           <div className="pagination-bar">
             <div className="pagination-info">
               Showing {((currentPage - 1) * pageSize) + 1} to {Math.min(currentPage * pageSize, totalCount)} of {totalCount} entries

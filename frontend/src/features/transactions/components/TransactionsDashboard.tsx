@@ -1,25 +1,23 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { createTransaction, deleteAllTransactions, deleteTransaction, getAllTransactions } from '../api/transactionApi';
+import { deleteAllTransactions, deleteTransaction, getAllTransactions } from '../api/transactionApi';
 import type { GlobalTransactionDto, PaginatedResult, TransactionAssetGroup, TransactionDto } from '../types';
 import { TransactionType } from '../types';
 import { useNotification } from '../../../context/NotificationContext';
 import { GlobalCreateTransactionModal } from './GlobalCreateTransactionModal';
 import { EditTransactionModal } from './EditTransactionModal';
-import { getPortfolios, getPortfolioSummary } from '../../portfolios/api/portfolioApi';
+import { TransactionImportPreviewModal } from './TransactionImportPreviewModal';
 import type { AssetSummaryDto } from '../../portfolios/types';
 import {
   parseCsvRows,
   parseExcelRows,
-  parseFlexibleNumber,
   parsePdfRows,
   parseSpreadsheetXmlRows,
-  parseTransactionDate,
-  parseTransactionType,
   rowsToTransactionImportRows,
   transactionsToCsv,
   transactionsToPdf,
   transactionsToSpreadsheetXml,
 } from '../utils/transactionFileTransfer';
+import type { TransactionImportRow } from '../utils/transactionFileTransfer';
 import './TransactionsDashboard.css';
 
 const assetGroupLabels: Record<TransactionAssetGroup, string> = {
@@ -54,15 +52,6 @@ const matchesAssetGroup = (category: string, group: TransactionAssetGroup) => {
   return isFundCategory(value);
 };
 
-const transactionFingerprint = (
-  assetId: string,
-  type: number,
-  quantity: number,
-  price: number,
-  date: Date,
-  notes: string,
-) => [assetId, type, quantity, price, date.toISOString(), notes.trim()].join('|').toLowerCase();
-
 export const TransactionsDashboard: React.FC = () => {
   const [data, setData] = useState<PaginatedResult<GlobalTransactionDto> | null>(null);
   const [loading, setLoading] = useState(true);
@@ -80,6 +69,7 @@ export const TransactionsDashboard: React.FC = () => {
   const [editingTransaction, setEditingTransaction] = useState<GlobalTransactionDto | null>(null);
   const [transferBusy, setTransferBusy] = useState<'import' | 'csv' | 'xls' | 'pdf' | null>(null);
   const [deletingAll, setDeletingAll] = useState(false);
+  const [importPreview, setImportPreview] = useState<{ fileName: string; rows: TransactionImportRow[] } | null>(null);
   const importInputRef = useRef<HTMLInputElement>(null);
   const { showNotification } = useNotification();
 
@@ -174,110 +164,7 @@ export const TransactionsDashboard: React.FC = () => {
         throw new Error('Chỉ hỗ trợ file CSV, XLS hoặc PDF.');
       }
 
-      const importRows = rowsToTransactionImportRows(rows);
-      const portfolios = await getPortfolios();
-      const directory = await Promise.all(portfolios.map(async portfolio => ({
-        portfolio,
-        assets: (await getPortfolioSummary(portfolio.id)).assets,
-      })));
-      const existingTransactions = await fetchAllTransactions();
-      const existingIds = new Set(existingTransactions.map(transaction => transaction.id.toLowerCase()));
-      const existingFingerprints = new Set(existingTransactions.map(transaction =>
-        transactionFingerprint(
-          transaction.assetId,
-          transaction.type,
-          transaction.quantity,
-          transaction.price,
-          new Date(transaction.date),
-          transaction.notes ?? '',
-        ),
-      ));
-      let importedCount = 0;
-      let skippedCount = 0;
-      const errors: string[] = [];
-
-      for (const [index, row] of importRows.entries()) {
-        const rowNumber = index + 2;
-        if (!row.quantity?.trim() && !row.price?.trim() && !row.date?.trim()) {
-          skippedCount += 1;
-          continue;
-        }
-        if (row.id && existingIds.has(row.id.toLowerCase())) {
-          skippedCount += 1;
-          continue;
-        }
-
-        const lookup = (value: string | undefined) => value?.trim().toLocaleLowerCase() ?? '';
-        const portfolio = row.portfolioId
-          ? directory.find(item => item.portfolio.id.toLowerCase() === lookup(row.portfolioId))
-          : directory.find(item => lookup(item.portfolio.name) === lookup(row.portfolio))
-            ?? (directory.length === 1 ? directory[0] : undefined);
-        const asset = portfolio?.assets.find(item =>
-          (row.assetId && item.assetId.toLowerCase() === lookup(row.assetId))
-          || (row.symbol && lookup(item.symbol) === lookup(row.symbol))
-          || (row.asset && (lookup(item.name) === lookup(row.asset) || lookup(item.symbol) === lookup(row.asset))),
-        );
-        const type = parseTransactionType(row.type);
-        const quantity = parseFlexibleNumber(row.quantity);
-        const price = parseFlexibleNumber(row.price);
-        const fee = parseFlexibleNumber(row.fee);
-        const date = parseTransactionDate(row.date);
-
-        if (!portfolio) {
-          errors.push(`Dòng ${rowNumber}: không tìm thấy portfolio.`);
-          continue;
-        }
-        if (!asset) {
-          errors.push(`Dòng ${rowNumber}: không tìm thấy asset.`);
-          continue;
-        }
-        if (!matchesAssetGroup(asset.categoryName, actionScope)) {
-          skippedCount += 1;
-          continue;
-        }
-        if (type === null || !row.quantity?.trim() || quantity <= 0 || !row.price?.trim() || price < 0 || !date) {
-          errors.push(`Dòng ${rowNumber}: Type, Quantity, Price hoặc Date không hợp lệ.`);
-          continue;
-        }
-        const fingerprint = transactionFingerprint(
-          asset.assetId,
-          type,
-          quantity,
-          price,
-          date,
-          row.notes ?? '',
-        );
-        if (existingFingerprints.has(fingerprint)) {
-          skippedCount += 1;
-          continue;
-        }
-
-        try {
-          await createTransaction({
-            portfolioId: portfolio.portfolio.id,
-            assetId: asset.assetId,
-            type,
-            quantity,
-            price,
-            fee,
-            currency: row.currency?.trim() || asset.currency,
-            notes: row.notes?.trim() || '',
-            timestamp: date.toISOString(),
-          });
-          importedCount += 1;
-          existingFingerprints.add(fingerprint);
-        } catch (error) {
-          errors.push(`Dòng ${rowNumber}: ${error instanceof Error ? error.message : 'Không thể tạo giao dịch.'}`);
-        }
-      }
-
-      await fetchTransactions();
-      if (errors.length > 0) {
-        showNotification(`Đã import ${importedCount} giao dịch, bỏ qua ${skippedCount}; ${errors.length} dòng lỗi.`, 'error');
-        console.warn('Transaction import errors:', errors);
-      } else {
-        showNotification(`Đã import ${importedCount} giao dịch${skippedCount ? `, bỏ qua ${skippedCount} dòng trùng` : ''}.`, 'success');
-      }
+      setImportPreview({ fileName: file.name, rows: rowsToTransactionImportRows(rows) });
     } catch (error) {
       showNotification(error instanceof Error ? error.message : 'Không thể import giao dịch.', 'error');
     } finally {
@@ -599,6 +486,15 @@ export const TransactionsDashboard: React.FC = () => {
             showNotification('Transaction updated successfully', 'success');
             fetchTransactions();
           }}
+        />
+      )}
+      {importPreview && (
+        <TransactionImportPreviewModal
+          fileName={importPreview.fileName}
+          rows={importPreview.rows}
+          assetGroup={actionScope}
+          onClose={() => setImportPreview(null)}
+          onImported={fetchTransactions}
         />
       )}
     </div>

@@ -45,9 +45,26 @@ public static class MarketAssetsEndpoints
             }
         }).RequireAuthorization("Admin");
 
-        group.MapGet("/", async (IMediator mediator, [FromQuery] Guid? categoryId, [FromQuery] int page = 1, [FromQuery] int pageSize = 10) =>
+        group.MapGet("/", async (
+            IMediator mediator,
+            [FromQuery] Guid? categoryId,
+            [FromQuery] string? search,
+            [FromQuery] string? priceSource,
+            [FromQuery] string? priceStatus,
+            [FromQuery] string sortBy = "symbol",
+            [FromQuery] string sortDirection = "asc",
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 10) =>
         {
-            var result = await mediator.Send(new GetMarketAssetsQuery(categoryId, page, pageSize));
+            var result = await mediator.Send(new GetMarketAssetsQuery(
+                categoryId,
+                search,
+                priceSource,
+                priceStatus,
+                sortBy,
+                sortDirection,
+                page,
+                pageSize));
             return Results.Ok(result);
         });
 

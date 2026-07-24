@@ -11,7 +11,15 @@ public record MarketAssetDto(Guid Id, Guid CategoryId, string CategoryName, stri
     decimal CurrentPrice, DateTime LastUpdated, string PriceSource, string? ExternalId,
     string PriceStatus, string? LastPriceError);
 
-public record GetMarketAssetsQuery(Guid? CategoryId, int Page = 1, int PageSize = 10) : IRequest<PaginatedResult<MarketAssetDto>>;
+public record GetMarketAssetsQuery(
+    Guid? CategoryId,
+    string? Search = null,
+    string? PriceSource = null,
+    string? PriceStatus = null,
+    string SortBy = "symbol",
+    string SortDirection = "asc",
+    int Page = 1,
+    int PageSize = 10) : IRequest<PaginatedResult<MarketAssetDto>>;
 
 public class GetMarketAssetsHandler : IRequestHandler<GetMarketAssetsQuery, PaginatedResult<MarketAssetDto>>
 {
@@ -27,10 +35,62 @@ public class GetMarketAssetsHandler : IRequestHandler<GetMarketAssetsQuery, Pagi
             query = query.Where(m => m.CategoryId == request.CategoryId.Value);
         }
 
+        if (!string.IsNullOrWhiteSpace(request.Search))
+        {
+            var search = request.Search.Trim().ToLower();
+            query = query.Where(m =>
+                m.Symbol.ToLower().Contains(search) ||
+                m.Name.ToLower().Contains(search) ||
+                (m.ExternalId != null && m.ExternalId.ToLower().Contains(search)));
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.PriceSource))
+        {
+            var priceSource = request.PriceSource.Trim().ToLower();
+            query = query.Where(m => m.PriceSource.ToLower() == priceSource);
+        }
+
+        if (!string.IsNullOrWhiteSpace(request.PriceStatus))
+        {
+            var status = request.PriceStatus.Trim().ToLower();
+            var staleCutoff = DateTime.UtcNow.AddHours(-48);
+            query = status switch
+            {
+                "stale" => query.Where(m =>
+                    m.PriceStatus.ToLower() == "stale" ||
+                    (m.PriceStatus.ToLower() == "fresh" && m.LastUpdated < staleCutoff)),
+                "fresh" => query.Where(m =>
+                    m.PriceStatus.ToLower() == "fresh" && m.LastUpdated >= staleCutoff),
+                _ => query.Where(m => m.PriceStatus.ToLower() == status)
+            };
+        }
+
         var totalCount = await query.CountAsync(cancellationToken);
 
-        var items = await query
-            .OrderBy(m => m.Symbol)
+        var descending = request.SortDirection.Equals("desc", StringComparison.OrdinalIgnoreCase);
+        var orderedQuery = request.SortBy.Trim().ToLowerInvariant() switch
+        {
+            "name" => descending ? query.OrderByDescending(m => m.Name) : query.OrderBy(m => m.Name),
+            "category" => descending
+                ? query.OrderByDescending(m => m.Category!.Name)
+                : query.OrderBy(m => m.Category!.Name),
+            "price" => descending
+                ? query.OrderByDescending(m => m.CurrentPrice)
+                : query.OrderBy(m => m.CurrentPrice),
+            "updated" => descending
+                ? query.OrderByDescending(m => m.LastUpdated)
+                : query.OrderBy(m => m.LastUpdated),
+            "source" => descending
+                ? query.OrderByDescending(m => m.PriceSource)
+                : query.OrderBy(m => m.PriceSource),
+            "status" => descending
+                ? query.OrderByDescending(m => m.PriceStatus)
+                : query.OrderBy(m => m.PriceStatus),
+            _ => descending ? query.OrderByDescending(m => m.Symbol) : query.OrderBy(m => m.Symbol)
+        };
+
+        var items = await orderedQuery
+            .ThenBy(m => m.Id)
             .Skip((request.Page - 1) * request.PageSize)
             .Take(request.PageSize)
             .Select(m => new MarketAssetDto(m.Id, m.CategoryId, m.Category!.Name, m.Symbol, m.Name,
