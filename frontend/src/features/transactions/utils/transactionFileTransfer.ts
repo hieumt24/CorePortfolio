@@ -36,6 +36,27 @@ export interface TransactionImportRow {
   date?: string;
 }
 
+interface PositionedPdfText {
+  text: string;
+  x: number;
+  y: number;
+}
+
+interface OkxTradingRow {
+  id: string;
+  orderId: string;
+  time: string;
+  tradeType: string;
+  symbol: string;
+  action: string;
+  amount: string;
+  tradingUnit: string;
+  price: string;
+  fee: string;
+  feeUnit: string;
+  balanceUnit: string;
+}
+
 const transactionTypeNames: Record<TransactionTypeValue, string> = {
   [TransactionType.Buy]: 'Buy',
   [TransactionType.Sell]: 'Sell',
@@ -191,6 +212,17 @@ const unescapePdfText = (value: string) =>
 
 export const parseGeneratedPdfRows = (buffer: ArrayBuffer): string[][] => {
   const source = new TextDecoder().decode(buffer);
+  const metadata = source.match(/%CP_TX_DATA:([A-Za-z0-9+/=]+)/)?.[1];
+  if (metadata) {
+    try {
+      const binary = atob(metadata);
+      const bytes = Uint8Array.from(binary, character => character.charCodeAt(0));
+      return JSON.parse(new TextDecoder().decode(bytes)) as string[][];
+    } catch {
+      throw new Error('Metadata giao dịch trong PDF CorePortfolio không hợp lệ.');
+    }
+  }
+
   const values: string[] = [];
   const pattern = /\(((?:\\.|[^)])*)\)\s*Tj/g;
   let match: RegExpExecArray | null;
@@ -199,6 +231,138 @@ export const parseGeneratedPdfRows = (buffer: ArrayBuffer): string[][] => {
 
   const rows = values.map(value => value.split('\t'));
   return [rows[0], ...rows.slice(1)];
+};
+
+const readPdfCell = (items: PositionedPdfText[], minY: number, maxY: number) =>
+  items
+    .filter(item => item.y >= minY && item.y < maxY)
+    .sort((left, right) => left.x - right.x)
+    .map(item => item.text.trim())
+    .join('')
+    .trim();
+
+const extractOkxTradingRows = async (buffer: ArrayBuffer): Promise<OkxTradingRow[]> => {
+  const [{ getDocument, GlobalWorkerOptions }, workerModule] = await Promise.all([
+    import('pdfjs-dist/legacy/build/pdf.mjs'),
+    import('pdfjs-dist/legacy/build/pdf.worker.min.mjs?url'),
+  ]);
+  if (typeof Worker !== 'undefined') {
+    GlobalWorkerOptions.workerSrc = workerModule.default;
+  }
+
+  const document = await getDocument({ data: new Uint8Array(buffer) }).promise;
+  const rows: OkxTradingRow[] = [];
+
+  try {
+    for (let pageNumber = 1; pageNumber <= document.numPages; pageNumber += 1) {
+      const page = await document.getPage(pageNumber);
+      const content = await page.getTextContent();
+      const items: PositionedPdfText[] = content.items.flatMap(item =>
+        'str' in item && item.str.trim()
+          ? [{
+              text: item.str,
+              x: item.transform[4],
+              y: item.transform[5],
+            }]
+          : [],
+      );
+
+      const dateItems = items.filter(item =>
+        /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/.test(item.text.trim()),
+      );
+
+      dateItems.forEach(dateItem => {
+        const rowItems = items.filter(item => Math.abs(item.x - dateItem.x) <= 6.5);
+        rows.push({
+          id: readPdfCell(rowItems, 0, 75),
+          orderId: readPdfCell(rowItems, 75, 125),
+          time: readPdfCell(rowItems, 125, 185),
+          tradeType: readPdfCell(rowItems, 185, 230),
+          symbol: readPdfCell(rowItems, 230, 265),
+          action: readPdfCell(rowItems, 265, 300),
+          amount: readPdfCell(rowItems, 300, 345),
+          tradingUnit: readPdfCell(rowItems, 345, 385),
+          price: readPdfCell(rowItems, 385, 430),
+          fee: readPdfCell(rowItems, 470, 505),
+          feeUnit: readPdfCell(rowItems, 505, 540),
+          balanceUnit: readPdfCell(rowItems, 765, Number.POSITIVE_INFINITY),
+        });
+      });
+    }
+  } finally {
+    await document.destroy();
+  }
+
+  return rows;
+};
+
+const okxRowsToImportRows = (rows: OkxTradingRow[]): string[][] => {
+  const spotRows = rows.filter(row =>
+    row.tradeType.toLowerCase() === 'spot' &&
+    /^(buy|sell)$/i.test(row.action),
+  );
+
+  const convertedRows = spotRows.flatMap(row => {
+    const [baseSymbol, quoteSymbol] = row.symbol.toUpperCase().split('-');
+    if (!baseSymbol || !quoteSymbol || row.balanceUnit.toUpperCase() !== baseSymbol) return [];
+
+    const quantity = Math.abs(parseFlexibleNumber(row.amount));
+    const price = parseFlexibleNumber(row.price);
+    if (quantity <= 0 || price <= 0) return [];
+
+    const matchingLeg = spotRows.find(candidate => {
+      if (
+        candidate === row ||
+        candidate.orderId !== row.orderId ||
+        candidate.time !== row.time ||
+        candidate.price !== row.price ||
+        candidate.balanceUnit.toUpperCase() !== quoteSymbol
+      ) return false;
+
+      const quoteAmount = Math.abs(parseFlexibleNumber(candidate.amount));
+      const expectedQuoteAmount = quantity * price;
+      const tolerance = Math.max(0.00000001, expectedQuoteAmount * 0.000001);
+      return Math.abs(quoteAmount - expectedQuoteAmount) <= tolerance;
+    });
+
+    const feeLeg = [row, matchingLeg]
+      .filter((candidate): candidate is OkxTradingRow => Boolean(candidate))
+      .find(candidate => Math.abs(parseFlexibleNumber(candidate.fee)) > 0);
+    const rawFee = Math.abs(parseFlexibleNumber(feeLeg?.fee));
+    const fee = feeLeg?.feeUnit.toUpperCase() === baseSymbol ? rawFee * price : rawFee;
+    const normalizedCurrency = quoteSymbol === 'USDT' || quoteSymbol === 'USDC'
+      ? 'USD'
+      : quoteSymbol;
+
+    return [[
+      baseSymbol,
+      row.action,
+      String(quantity),
+      String(price),
+      String(fee),
+      normalizedCurrency,
+      `OKX Spot | Order ${row.orderId} | Entry ${row.id} | UTC+8`,
+      `${row.time.replace(' ', 'T')}+08:00`,
+    ]];
+  });
+
+  if (convertedRows.length === 0) {
+    throw new Error('Không tìm thấy giao dịch Spot hợp lệ trong PDF Trading History của OKX.');
+  }
+
+  return [
+    ['Symbol', 'Type', 'Quantity', 'Price', 'Fee', 'Currency', 'Notes', 'Date'],
+    ...convertedRows,
+  ];
+};
+
+export const parsePdfRows = async (buffer: ArrayBuffer): Promise<string[][]> => {
+  try {
+    return parseGeneratedPdfRows(buffer);
+  } catch {
+    const okxRows = await extractOkxTradingRows(buffer);
+    return okxRowsToImportRows(okxRows);
+  }
 };
 
 const headerAliases: Record<string, keyof TransactionImportRow> = {
@@ -328,53 +492,139 @@ const stripDiacritics = (value: string) =>
 const pdfSafe = (value: string) =>
   stripDiacritics(value).replace(/[^\x20-\x7E\t]/g, '?').replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)');
 
-const pdfRows = (transactions: GlobalTransactionDto[]) => [
-  'Date\tPortfolio\tSymbol\tType\tQuantity\tPrice\tTotal',
-  ...transactions.map(transaction => [
-    new Date(transaction.date).toISOString().slice(0, 10),
-    transaction.portfolioName,
-    transaction.symbol,
-    formatType(transaction.type),
-    formatNumber(transaction.quantity),
-    `${formatNumber(transaction.price, 2)} ${transaction.currency}`,
-    `${formatNumber(transaction.quantity * transaction.price, 2)} ${transaction.currency}`,
-  ].join('\t')),
-];
+const encodePdfMetadata = (rows: string[][]) => {
+  const bytes = new TextEncoder().encode(JSON.stringify(rows));
+  let binary = '';
+  bytes.forEach(byte => {
+    binary += String.fromCharCode(byte);
+  });
+  return btoa(binary);
+};
 
-export const transactionsToPdf = (transactions: GlobalTransactionDto[]) => {
-  const linesPerPage = 42;
-  const lines = pdfRows(transactions);
-  const pages = Array.from({ length: Math.max(1, Math.ceil(lines.length / linesPerPage)) }, (_, index) =>
-    lines.slice(index * linesPerPage, (index + 1) * linesPerPage),
+const pdfColor = ([red, green, blue]: [number, number, number]) =>
+  `${red.toFixed(3)} ${green.toFixed(3)} ${blue.toFixed(3)}`;
+
+const pdfText = (
+  text: string,
+  x: number,
+  y: number,
+  size: number,
+  color: [number, number, number] = [0.12, 0.16, 0.25],
+  font = 'F1',
+) => `${pdfColor(color)} rg BT /${font} ${size} Tf ${x} ${y} Td (${pdfSafe(text)}) Tj ET`;
+
+const pdfRect = (
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+  color: [number, number, number],
+) => `${pdfColor(color)} rg ${x} ${y} ${width} ${height} re f`;
+
+const truncatePdfText = (value: string, maxLength: number) =>
+  value.length > maxLength ? `${value.slice(0, Math.max(1, maxLength - 1))}~` : value;
+
+const formatPdfNumber = (value: number) => {
+  const absolute = Math.abs(value);
+  const maximumFractionDigits = absolute >= 1000 ? 2 : absolute >= 1 ? 4 : 8;
+  return formatNumber(value, maximumFractionDigits);
+};
+
+export const transactionsToPdf = (
+  transactions: GlobalTransactionDto[],
+  scopeLabel = 'Tất cả',
+) => {
+  const rowsPerPage = 22;
+  const pages = Array.from(
+    { length: Math.max(1, Math.ceil(transactions.length / rowsPerPage)) },
+    (_, index) => transactions.slice(index * rowsPerPage, (index + 1) * rowsPerPage),
   );
   const objects: string[] = [];
-  const pageObjectIds = pages.map((_, index) => 4 + index * 2);
+  const pageObjectIds = pages.map((_, index) => 5 + index * 2);
+  const metadataRows = [
+    Array.from(TRANSACTION_FILE_HEADERS),
+    ...transactions.map(transactionToFileRow),
+  ];
 
   objects.push('<< /Type /Catalog /Pages 2 0 R >>');
   objects.push(`<< /Type /Pages /Kids [${pageObjectIds.map(id => `${id} 0 R`).join(' ')}] /Count ${pages.length} >>`);
   objects.push('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>');
+  objects.push('<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold >>');
 
   pages.forEach((page, index) => {
+    const pageNumber = index + 1;
+    const buyCount = transactions.filter(transaction => transaction.type === TransactionType.Buy).length;
+    const sellCount = transactions.filter(transaction => transaction.type === TransactionType.Sell).length;
     const content = [
-      'BT',
-      '/F1 7 Tf',
-      '36 780 Td',
-      '11 TL',
-      ...page.map((line, lineIndex) => `(${pdfSafe(line.slice(0, 132))}) Tj${lineIndex < page.length - 1 ? ' T*' : ''}`),
-      'ET',
+      pdfRect(0, 520, 842, 75, [0.035, 0.055, 0.13]),
+      pdfRect(0, 520, 9, 75, [0.39, 0.4, 0.95]),
+      pdfText('COREPORTFOLIO', 34, 566, 10, [0.65, 0.68, 1], 'F2'),
+      pdfText('TRANSACTION REPORT', 34, 540, 22, [1, 1, 1], 'F2'),
+      pdfText(`Scope: ${scopeLabel}`, 640, 560, 9, [0.8, 0.82, 0.94], 'F2'),
+      pdfText(`Generated: ${new Date().toISOString().slice(0, 10)}`, 640, 542, 8, [0.62, 0.67, 0.8]),
+      pdfRect(34, 483, 154, 27, [0.94, 0.95, 1]),
+      pdfRect(198, 483, 112, 27, [0.92, 0.99, 0.96]),
+      pdfRect(320, 483, 112, 27, [1, 0.95, 0.95]),
+      pdfText('TOTAL', 44, 500, 7, [0.39, 0.4, 0.65], 'F2'),
+      pdfText(`${transactions.length} transactions`, 44, 489, 10, [0.13, 0.16, 0.3], 'F2'),
+      pdfText('BUY', 208, 500, 7, [0.08, 0.55, 0.35], 'F2'),
+      pdfText(`${buyCount}`, 208, 489, 10, [0.05, 0.38, 0.25], 'F2'),
+      pdfText('SELL', 330, 500, 7, [0.78, 0.22, 0.25], 'F2'),
+      pdfText(`${sellCount}`, 330, 489, 10, [0.62, 0.12, 0.18], 'F2'),
+      pdfRect(34, 450, 774, 24, [0.12, 0.14, 0.28]),
+      ...[
+        ['DATE', 40],
+        ['PORTFOLIO', 122],
+        ['ASSET', 238],
+        ['TYPE', 332],
+        ['QUANTITY', 398],
+        ['PRICE', 493],
+        ['FEE', 605],
+        ['TOTAL', 690],
+      ].map(([label, x]) => pdfText(String(label), Number(x), 459, 7, [0.9, 0.92, 1], 'F2')),
+      ...page.flatMap((transaction, rowIndex) => {
+        const rowTop = 432 - rowIndex * 18;
+        const typeName = formatType(transaction.type);
+        const isPositive = transaction.type === TransactionType.Buy ||
+          transaction.type === TransactionType.Deposit ||
+          transaction.type === TransactionType.Earn;
+        return [
+          pdfRect(34, rowTop - 5, 774, 18, rowIndex % 2 === 0 ? [0.98, 0.985, 1] : [0.945, 0.955, 0.985]),
+          pdfText(new Date(transaction.date).toISOString().slice(0, 10), 40, rowTop, 7),
+          pdfText(truncatePdfText(transaction.portfolioName, 18), 122, rowTop, 7),
+          pdfText(truncatePdfText(transaction.symbol, 12), 238, rowTop, 7, [0.22, 0.25, 0.45], 'F2'),
+          pdfRect(332, rowTop - 3, 48, 12, isPositive ? [0.1, 0.65, 0.43] : [0.9, 0.25, 0.3]),
+          pdfText(truncatePdfText(typeName.toUpperCase(), 10), 337, rowTop, 6, [1, 1, 1], 'F2'),
+          pdfText(truncatePdfText(formatPdfNumber(transaction.quantity), 14), 398, rowTop, 7),
+          pdfText(truncatePdfText(`${formatPdfNumber(transaction.price)} ${transaction.currency}`, 19), 493, rowTop, 7),
+          pdfText(truncatePdfText(formatPdfNumber(transaction.fee), 12), 605, rowTop, 7),
+          pdfText(
+            truncatePdfText(`${formatPdfNumber(transaction.quantity * transaction.price)} ${transaction.currency}`, 19),
+            690,
+            rowTop,
+            7,
+            [0.08, 0.1, 0.2],
+            'F2',
+          ),
+        ];
+      }),
+      pdfRect(34, 28, 774, 1, [0.82, 0.84, 0.91]),
+      pdfText('CorePortfolio - Personal investment ledger', 34, 15, 7, [0.45, 0.49, 0.6]),
+      pdfText(`Page ${pageNumber} / ${pages.length}`, 744, 15, 7, [0.45, 0.49, 0.6], 'F2'),
     ].join('\n');
-    objects.push(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R >> >> /Contents ${5 + index * 2} 0 R >>`);
+    objects.push(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 842 595] /Resources << /Font << /F1 3 0 R /F2 4 0 R >> >> /Contents ${6 + index * 2} 0 R >>`);
     objects.push(`<< /Length ${new TextEncoder().encode(content).length} >>\nstream\n${content}\nendstream`);
   });
 
-  let pdf = '%PDF-1.4\n';
+  let pdf = `%PDF-1.4\n%CP_TX_DATA:${encodePdfMetadata(metadataRows)}\n`;
   const offsets = [0];
   objects.forEach((object, index) => {
     offsets.push(new TextEncoder().encode(pdf).length);
     pdf += `${index + 1} 0 obj\n${object}\nendobj\n`;
   });
+  const xrefOffset = new TextEncoder().encode(pdf).length;
   pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`;
   pdf += offsets.slice(1).map(offset => `${String(offset).padStart(10, '0')} 00000 n \n`).join('');
-  pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${new TextEncoder().encode(pdf).length}\n%%EOF`;
+  pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xrefOffset}\n%%EOF`;
   return new Blob([pdf], { type: 'application/pdf' });
 };

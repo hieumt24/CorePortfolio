@@ -7,7 +7,37 @@ public static class AssetCategoryClassifier
 {
     public static bool IsCrypto(string? categoryName)
     {
-        if (string.IsNullOrWhiteSpace(categoryName)) return false;
+        var value = Normalize(categoryName);
+        return value.Contains("crypto") || value.Contains("tien ma hoa") || value.Contains("tien dien tu");
+    }
+
+    public static bool IsStock(string? categoryName)
+    {
+        var value = Normalize(categoryName);
+        if (IsFundValue(value)) return false;
+
+        return value.Contains("stock") ||
+               value.Contains("equity") ||
+               value.Contains("co phieu") ||
+               value.Contains("chung khoan");
+    }
+
+    public static bool IsFund(string? categoryName)
+    {
+        var value = Normalize(categoryName);
+        return IsFundValue(value);
+    }
+
+    private static bool IsFundValue(string value) =>
+        value.Contains("fund") ||
+        value.Contains("ccq") ||
+        value.Contains("etf") ||
+        value.Contains("quy") ||
+        value.Contains("chung chi quy");
+
+    private static string Normalize(string? categoryName)
+    {
+        if (string.IsNullOrWhiteSpace(categoryName)) return string.Empty;
 
         var decomposed = categoryName.Normalize(NormalizationForm.FormD);
         var builder = new StringBuilder(decomposed.Length);
@@ -17,7 +47,9 @@ public static class AssetCategoryClassifier
                 builder.Append(char.ToLowerInvariant(character));
         }
 
-        var value = builder.ToString().Normalize(NormalizationForm.FormC);
-        return value.Contains("crypto") || value.Contains("tien ma hoa") || value.Contains("tien dien tu");
+        return builder
+            .ToString()
+            .Replace('đ', 'd')
+            .Normalize(NormalizationForm.FormC);
     }
 }

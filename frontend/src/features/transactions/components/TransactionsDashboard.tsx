@@ -1,6 +1,6 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { createTransaction, deleteAllTransactions, deleteTransaction, getAllTransactions } from '../api/transactionApi';
-import type { GlobalTransactionDto, PaginatedResult, TransactionDto } from '../types';
+import type { GlobalTransactionDto, PaginatedResult, TransactionAssetGroup, TransactionDto } from '../types';
 import { TransactionType } from '../types';
 import { useNotification } from '../../../context/NotificationContext';
 import { GlobalCreateTransactionModal } from './GlobalCreateTransactionModal';
@@ -11,7 +11,7 @@ import {
   parseCsvRows,
   parseExcelRows,
   parseFlexibleNumber,
-  parseGeneratedPdfRows,
+  parsePdfRows,
   parseSpreadsheetXmlRows,
   parseTransactionDate,
   parseTransactionType,
@@ -22,6 +22,47 @@ import {
 } from '../utils/transactionFileTransfer';
 import './TransactionsDashboard.css';
 
+const assetGroupLabels: Record<TransactionAssetGroup, string> = {
+  all: 'Tất cả',
+  crypto: 'Crypto',
+  stock: 'Cổ phiếu',
+  fund: 'CCQ / ETF',
+};
+
+const normalizeCategory = (category: string) =>
+  category
+    .toLowerCase()
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd');
+
+const isFundCategory = (value: string) =>
+  value.includes('fund') ||
+  value.includes('quy') ||
+  value.includes('ccq') ||
+  value.includes('etf') ||
+  value.includes('chung chi quy');
+
+const matchesAssetGroup = (category: string, group: TransactionAssetGroup) => {
+  const value = normalizeCategory(category);
+  if (group === 'all') return true;
+  if (group === 'crypto') return value.includes('crypto') || value.includes('tien ma hoa') || value.includes('tien dien tu');
+  if (group === 'stock') {
+    return !isFundCategory(value) &&
+      (value.includes('stock') || value.includes('equity') || value.includes('co phieu') || value.includes('chung khoan'));
+  }
+  return isFundCategory(value);
+};
+
+const transactionFingerprint = (
+  assetId: string,
+  type: number,
+  quantity: number,
+  price: number,
+  date: Date,
+  notes: string,
+) => [assetId, type, quantity, price, date.toISOString(), notes.trim()].join('|').toLowerCase();
+
 export const TransactionsDashboard: React.FC = () => {
   const [data, setData] = useState<PaginatedResult<GlobalTransactionDto> | null>(null);
   const [loading, setLoading] = useState(true);
@@ -30,7 +71,8 @@ export const TransactionsDashboard: React.FC = () => {
   const [page, setPage] = useState(1);
   const [pageSize] = useState(100);
   const [typeFilter, setTypeFilter] = useState<number | ''>('');
-  const [assetGroup, setAssetGroup] = useState<'all' | 'crypto' | 'stock' | 'fund'>('all');
+  const [assetGroup, setAssetGroup] = useState<TransactionAssetGroup>('all');
+  const [actionScope, setActionScope] = useState<TransactionAssetGroup>('all');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
 
@@ -91,16 +133,20 @@ export const TransactionsDashboard: React.FC = () => {
   const handleExport = async (format: 'csv' | 'xls' | 'pdf') => {
     try {
       setTransferBusy(format);
-      const transactions = await fetchAllTransactions();
+      const allTransactions = await fetchAllTransactions();
+      const transactions = allTransactions.filter(transaction =>
+        matchesAssetGroup(transaction.categoryName, actionScope),
+      );
       const dateStamp = new Date().toISOString().slice(0, 10);
+      const scopeSuffix = actionScope === 'all' ? 'all' : actionScope;
       if (format === 'csv') {
-        downloadBlob(new Blob([transactionsToCsv(transactions)], { type: 'text/csv;charset=utf-8' }), `coreportfolio-transactions-${dateStamp}.csv`);
+        downloadBlob(new Blob([transactionsToCsv(transactions)], { type: 'text/csv;charset=utf-8' }), `coreportfolio-transactions-${scopeSuffix}-${dateStamp}.csv`);
       } else if (format === 'xls') {
-        downloadBlob(new Blob([transactionsToSpreadsheetXml(transactions)], { type: 'application/vnd.ms-excel' }), `coreportfolio-transactions-${dateStamp}.xls`);
+        downloadBlob(new Blob([transactionsToSpreadsheetXml(transactions)], { type: 'application/vnd.ms-excel' }), `coreportfolio-transactions-${scopeSuffix}-${dateStamp}.xls`);
       } else {
-        downloadBlob(transactionsToPdf(transactions), `coreportfolio-transactions-${dateStamp}.pdf`);
+        downloadBlob(transactionsToPdf(transactions, assetGroupLabels[actionScope]), `coreportfolio-transactions-${scopeSuffix}-${dateStamp}.pdf`);
       }
-      showNotification(`Đã export ${transactions.length} giao dịch dạng ${format.toUpperCase()}.`, 'success');
+      showNotification(`Đã export ${transactions.length} giao dịch ${assetGroupLabels[actionScope]} dạng ${format.toUpperCase()}.`, 'success');
     } catch (error) {
       showNotification(error instanceof Error ? error.message : 'Không thể export giao dịch.', 'error');
     } finally {
@@ -123,7 +169,7 @@ export const TransactionsDashboard: React.FC = () => {
       } else if (extension === 'xml') {
         rows = parseSpreadsheetXmlRows(await file.text());
       } else if (extension === 'pdf') {
-        rows = parseGeneratedPdfRows(await file.arrayBuffer());
+        rows = await parsePdfRows(await file.arrayBuffer());
       } else {
         throw new Error('Chỉ hỗ trợ file CSV, XLS hoặc PDF.');
       }
@@ -136,6 +182,16 @@ export const TransactionsDashboard: React.FC = () => {
       })));
       const existingTransactions = await fetchAllTransactions();
       const existingIds = new Set(existingTransactions.map(transaction => transaction.id.toLowerCase()));
+      const existingFingerprints = new Set(existingTransactions.map(transaction =>
+        transactionFingerprint(
+          transaction.assetId,
+          transaction.type,
+          transaction.quantity,
+          transaction.price,
+          new Date(transaction.date),
+          transaction.notes ?? '',
+        ),
+      ));
       let importedCount = 0;
       let skippedCount = 0;
       const errors: string[] = [];
@@ -175,8 +231,24 @@ export const TransactionsDashboard: React.FC = () => {
           errors.push(`Dòng ${rowNumber}: không tìm thấy asset.`);
           continue;
         }
+        if (!matchesAssetGroup(asset.categoryName, actionScope)) {
+          skippedCount += 1;
+          continue;
+        }
         if (type === null || !row.quantity?.trim() || quantity <= 0 || !row.price?.trim() || price < 0 || !date) {
           errors.push(`Dòng ${rowNumber}: Type, Quantity, Price hoặc Date không hợp lệ.`);
+          continue;
+        }
+        const fingerprint = transactionFingerprint(
+          asset.assetId,
+          type,
+          quantity,
+          price,
+          date,
+          row.notes ?? '',
+        );
+        if (existingFingerprints.has(fingerprint)) {
+          skippedCount += 1;
           continue;
         }
 
@@ -193,6 +265,7 @@ export const TransactionsDashboard: React.FC = () => {
             timestamp: date.toISOString(),
           });
           importedCount += 1;
+          existingFingerprints.add(fingerprint);
         } catch (error) {
           errors.push(`Dòng ${rowNumber}: ${error instanceof Error ? error.message : 'Không thể tạo giao dịch.'}`);
         }
@@ -212,15 +285,9 @@ export const TransactionsDashboard: React.FC = () => {
     }
   };
 
-  const matchesGroup = (category: string, group = assetGroup) => {
-    const value = category.toLowerCase();
-    if (group === 'all') return true;
-    if (group === 'crypto') return value.includes('crypto') || value.includes('tiền mã hóa') || value.includes('tiền điện tử');
-    if (group === 'stock') return value.includes('stock') || value.includes('cổ phiếu') || value.includes('chứng khoán');
-    return value.includes('fund') || value.includes('quỹ') || value.includes('ccq') || value.includes('etf');
-  };
-  const visibleItems = data?.items.filter(item => matchesGroup(item.categoryName)) ?? [];
-  const countFor = (group: 'crypto' | 'stock' | 'fund') => data?.items.filter(item => matchesGroup(item.categoryName, group)).length ?? 0;
+  const visibleItems = data?.items.filter(item => matchesAssetGroup(item.categoryName, assetGroup)) ?? [];
+  const countFor = (group: Exclude<TransactionAssetGroup, 'all'>) =>
+    data?.items.filter(item => matchesAssetGroup(item.categoryName, group)).length ?? 0;
 
   const handleDelete = async (id: string) => {
     if (window.confirm('Are you sure you want to delete this transaction?')) {
@@ -235,22 +302,23 @@ export const TransactionsDashboard: React.FC = () => {
   };
 
   const handleDeleteAll = async () => {
+    const scopeLabel = assetGroupLabels[actionScope];
     const confirmed = window.confirm(
-      'Bạn sắp xóa TOÀN BỘ giao dịch Crypto, Cổ phiếu và CCQ/ETF, bao gồm các dòng tiền liên quan. Portfolio và asset vẫn được giữ lại. Hành động này không thể hoàn tác. Tiếp tục?',
+      `Bạn sắp xóa toàn bộ giao dịch thuộc phạm vi "${scopeLabel}", bao gồm các dòng tiền liên quan. Portfolio và asset vẫn được giữ lại. Hành động này không thể hoàn tác. Tiếp tục?`,
     );
 
     if (!confirmed) return;
 
     try {
       setDeletingAll(true);
-      const result = await deleteAllTransactions();
+      const result = await deleteAllTransactions(actionScope);
       setPage(1);
       await fetchTransactions();
 
       if (result.deletedCount === 0) {
         showNotification('Không có giao dịch nào để xóa.', 'info');
       } else {
-        showNotification(`Đã xóa toàn bộ ${result.deletedCount} giao dịch.`, 'success');
+        showNotification(`Đã xóa ${result.deletedCount} giao dịch ${scopeLabel}.`, 'success');
       }
     } catch (error) {
       showNotification(error instanceof Error ? error.message : 'Không thể xóa toàn bộ giao dịch.', 'error');
@@ -308,53 +376,74 @@ export const TransactionsDashboard: React.FC = () => {
           <p className="subtitle">Theo dõi crypto, cổ phiếu và CCQ trong một dòng thời gian rõ ràng</p>
         </div>
         <div className="header-actions">
-          <input
-            ref={importInputRef}
-            type="file"
-            accept=".csv,.xls,.xlsx,.xml,.pdf"
-            className="sr-only"
-            onChange={event => {
-              const file = event.target.files?.[0];
-              if (file) void handleImportFile(file);
-              event.currentTarget.value = '';
-            }}
-          />
-          <div className="transfer-actions" aria-label="Import and export transactions">
-            <button
-              className="btn btn-transfer"
-              onClick={() => importInputRef.current?.click()}
-              disabled={transferBusy !== null || deletingAll}
-            >
-              {transferBusy === 'import' ? 'Đang import…' : '⇧ Import'}
-            </button>
-            <div className="export-actions">
-              <span className="export-label">Export</span>
-              {(['csv', 'xls', 'pdf'] as const).map(format => (
-                <button
-                  key={format}
-                  className="export-format-btn"
-                  onClick={() => void handleExport(format)}
-                  disabled={transferBusy !== null || deletingAll}
-                  title={`Export ${format.toUpperCase()}`}
-                >
-                  {transferBusy === format ? '…' : format.toUpperCase()}
-                </button>
-              ))}
-            </div>
-          </div>
-          <button
-            className="btn btn-delete-all"
-            onClick={() => void handleDeleteAll()}
-            disabled={transferBusy !== null || deletingAll || loading}
-            title="Xóa toàn bộ giao dịch Crypto, Cổ phiếu và CCQ/ETF"
-          >
-            {deletingAll ? 'Đang xóa…' : 'Xóa tất cả'}
-          </button>
           <button className="btn btn-primary" onClick={() => setIsCreateModalOpen(true)} disabled={transferBusy !== null || deletingAll}>
             + Thêm giao dịch
           </button>
         </div>
       </header>
+
+      <section className="data-actions-panel glass-panel" aria-label="Thao tác dữ liệu giao dịch">
+        <input
+          ref={importInputRef}
+          type="file"
+          accept=".csv,.xls,.xlsx,.xml,.pdf"
+          className="sr-only"
+          onChange={event => {
+            const file = event.target.files?.[0];
+            if (file) void handleImportFile(file);
+            event.currentTarget.value = '';
+          }}
+        />
+        <div className="data-actions-copy">
+          <span className="data-actions-kicker">DATA CONTROL</span>
+          <strong>Chọn phạm vi thao tác</strong>
+          <small>Áp dụng chung cho Import, Export và Xóa</small>
+        </div>
+        <div className="scope-selector" role="group" aria-label="Phạm vi tài sản">
+          {(Object.keys(assetGroupLabels) as TransactionAssetGroup[]).map(group => (
+            <button
+              key={group}
+              className={`scope-option ${actionScope === group ? 'active' : ''}`}
+              onClick={() => setActionScope(group)}
+              disabled={transferBusy !== null || deletingAll}
+              aria-pressed={actionScope === group}
+            >
+              {assetGroupLabels[group]}
+            </button>
+          ))}
+        </div>
+        <div className="transfer-actions" aria-label="Import and export transactions">
+          <button
+            className="btn btn-transfer"
+            onClick={() => importInputRef.current?.click()}
+            disabled={transferBusy !== null || deletingAll}
+          >
+            {transferBusy === 'import' ? 'Đang import…' : '⇧ Import'}
+          </button>
+          <div className="export-actions">
+            <span className="export-label">Export</span>
+            {(['csv', 'xls', 'pdf'] as const).map(format => (
+              <button
+                key={format}
+                className="export-format-btn"
+                onClick={() => void handleExport(format)}
+                disabled={transferBusy !== null || deletingAll}
+                title={`Export ${assetGroupLabels[actionScope]} dạng ${format.toUpperCase()}`}
+              >
+                {transferBusy === format ? '…' : format.toUpperCase()}
+              </button>
+            ))}
+          </div>
+          <button
+            className="btn btn-delete-all"
+            onClick={() => void handleDeleteAll()}
+            disabled={transferBusy !== null || deletingAll || loading}
+            title={`Xóa toàn bộ giao dịch ${assetGroupLabels[actionScope]}`}
+          >
+            {deletingAll ? 'Đang xóa…' : `Xóa ${assetGroupLabels[actionScope]}`}
+          </button>
+        </div>
+      </section>
 
       <section className="transaction-groups" aria-label="Asset groups">
         {(['all', 'crypto', 'stock', 'fund'] as const).map(group => (

@@ -8,6 +8,8 @@ export const TransactionType = {
 } as const;
 export type TransactionType = typeof TransactionType[keyof typeof TransactionType];
 
+export type TransactionAssetGroup = 'all' | 'crypto' | 'stock' | 'fund';
+
 export interface TransactionDto {
   id: string;
   type: TransactionType;

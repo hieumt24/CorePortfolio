@@ -1,5 +1,5 @@
 import { apiClient } from '../../../shared/api/baseClient';
-import type { CreateTransactionRequest, UpdateTransactionRequest, TransactionDto, GlobalTransactionDto, PaginatedResult } from '../types';
+import type { CreateTransactionRequest, UpdateTransactionRequest, TransactionDto, GlobalTransactionDto, PaginatedResult, TransactionAssetGroup } from '../types';
 
 export const createTransaction = (data: CreateTransactionRequest): Promise<{ id: string }> => {
   return apiClient<{ id: string }>('/transactions', {
@@ -25,8 +25,14 @@ export const deleteTransaction = (id: string): Promise<void> => {
   });
 };
 
-export const deleteAllTransactions = (): Promise<{ deletedCount: number }> => {
-  return apiClient<{ deletedCount: number }>('/transactions', {
+export const deleteAllTransactions = (assetGroup: TransactionAssetGroup): Promise<{ deletedCount: number }> => {
+  const groupValues: Record<TransactionAssetGroup, string> = {
+    all: 'All',
+    crypto: 'Crypto',
+    stock: 'Stock',
+    fund: 'Fund',
+  };
+  return apiClient<{ deletedCount: number }>(`/transactions?assetGroup=${groupValues[assetGroup]}`, {
     method: 'DELETE',
   });
 };

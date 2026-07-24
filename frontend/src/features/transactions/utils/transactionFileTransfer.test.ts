@@ -59,10 +59,33 @@ describe('transaction file transfer', () => {
   it('exports and imports the generated PDF table', async () => {
     const blob = transactionsToPdf([transaction]);
     const rows = parseGeneratedPdfRows(await blob.arrayBuffer());
+    const imported = rowsToTransactionImportRows(rows);
 
-    expect(rows[0]).toEqual(['Date', 'Portfolio', 'Symbol', 'Type', 'Quantity', 'Price', 'Total']);
-    expect(rows[1]).toContain('Growth, 2026');
-    expect(rows[1]).toContain('VND');
+    expect(rows[0]).toEqual([
+      'Id',
+      'PortfolioId',
+      'Portfolio',
+      'AssetId',
+      'Symbol',
+      'Asset',
+      'Category',
+      'Currency',
+      'Type',
+      'Quantity',
+      'Price',
+      'Fee',
+      'Notes',
+      'Date',
+      'Total',
+    ]);
+    expect(imported[0]).toMatchObject({
+      id: 'tx-1',
+      portfolioId: 'portfolio-1',
+      portfolio: 'Growth, 2026',
+      symbol: 'VND',
+      fee: '500',
+      notes: 'Imported, verified',
+    });
   });
 
   it('finds and maps a fund report header after cover rows', () => {
