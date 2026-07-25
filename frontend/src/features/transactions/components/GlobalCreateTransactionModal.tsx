@@ -317,7 +317,9 @@ export const GlobalCreateTransactionModal: React.FC<GlobalCreateTransactionModal
               <label>Quantity</label>
               <NumericFormat
                 value={quantity} 
-                onValueChange={(values) => updateAmountField('quantity', values.value)}
+                onValueChange={(values, sourceInfo) => {
+                  if (sourceInfo.source === 'event') updateAmountField('quantity', values.value);
+                }}
                 className="glass-input"
                 thousandSeparator="."
                 decimalSeparator=","
@@ -329,7 +331,9 @@ export const GlobalCreateTransactionModal: React.FC<GlobalCreateTransactionModal
               <label>{type === TransactionType.Dividend ? 'Dividend per unit' : type === TransactionType.Earn ? 'Acquisition cost' : 'Price'}</label>
               <NumericFormat
                 value={price} 
-                onValueChange={(values) => updateAmountField('price', values.value)}
+                onValueChange={(values, sourceInfo) => {
+                  if (sourceInfo.source === 'event') updateAmountField('price', values.value);
+                }}
                 className="glass-input"
                 thousandSeparator="."
                 decimalSeparator=","
@@ -343,7 +347,9 @@ export const GlobalCreateTransactionModal: React.FC<GlobalCreateTransactionModal
               <div className="currency-input-group">
                 <NumericFormat
                   value={total}
-                  onValueChange={(values) => updateAmountField('total', values.value)}
+                  onValueChange={(values, sourceInfo) => {
+                    if (sourceInfo.source === 'event') updateAmountField('total', values.value);
+                  }}
                   className="glass-input"
                   thousandSeparator="."
                   decimalSeparator=","
