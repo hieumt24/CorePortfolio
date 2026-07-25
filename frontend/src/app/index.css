@@ -48,7 +48,7 @@ html, body {
   line-height: 1.6;
   -webkit-font-smoothing: antialiased;
   min-height: 100vh;
-  overflow-x: hidden;
+  overflow-x: clip;
   /* Premium Mesh/Radial Background */
   background-image: 
     radial-gradient(circle at top right, rgba(99, 102, 241, 0.12), transparent 40%),

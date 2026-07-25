@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { getPortfolios } from '../api/portfolioApi';
-import type { PortfolioDto } from '../types';
+import { getPortfolioSummary, getPortfolios } from '../api/portfolioApi';
+import type { PortfolioDto, PortfolioSummaryDto } from '../types';
 
 export const usePortfolios = () => {
   const [portfolios, setPortfolios] = useState<PortfolioDto[]>([]);
@@ -27,7 +27,7 @@ export const usePortfolios = () => {
 };
 
 export const usePortfolioSummary = (id: string) => {
-  const [summary, setSummary] = useState<any>(null);
+  const [summary, setSummary] = useState<PortfolioSummaryDto | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -36,11 +36,10 @@ export const usePortfolioSummary = (id: string) => {
     try {
       setLoading(true);
       setError(null);
-      const { getPortfolioSummary } = await import('../api/portfolioApi');
       const data = await getPortfolioSummary(id);
       setSummary(data);
-    } catch (err: any) {
-      setError(err.message || 'Failed to load portfolio details');
+    } catch (err: unknown) {
+      setError(err instanceof Error ? err.message : 'Failed to load portfolio details');
     } finally {
       setLoading(false);
     }
