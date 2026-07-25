@@ -5,12 +5,12 @@ import { CreateAssetModal } from '../../assets/components/CreateAssetModal';
 import { AssetDetailsModal } from '../../assets/components/AssetDetailsModal';
 import { GlobalCreateTransactionModal } from '../../transactions/components/GlobalCreateTransactionModal';
 import { useNotification } from '../../../context/NotificationContext';
-import { DashboardSkeleton } from '../../../shared/components/Skeleton';
 import { usePortfolioSummary } from '../hooks/usePortfolios';
 import type { AssetSummaryDto } from '../types';
 import { EditPortfolioModal } from './EditPortfolioModal';
 import { FundPortfolioModal } from './FundPortfolioModal';
 import { HoldingsList } from './HoldingsList';
+import { PortfolioLoadingState } from './PortfolioLoadingState';
 import { PortfolioTransactionHistory } from './PortfolioTransactionHistory';
 import './PortfolioDetails.css';
 
@@ -91,7 +91,13 @@ export const PortfolioDetails: React.FC = () => {
     };
   }, [summary, usdToVndRate]);
 
-  if (loading || (usdToVndRate === 0 && !error)) return <DashboardSkeleton />;
+  if (loading || (usdToVndRate === 0 && !error)) {
+    return (
+      <div className="container details-layout">
+        <PortfolioLoadingState portfolioId={id} />
+      </div>
+    );
+  }
   if (error) return <div className="state-panel glass-panel error-state">{error}</div>;
   if (!summary) return <div className="state-panel glass-panel error-state">Portfolio not found</div>;
 
