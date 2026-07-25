@@ -145,10 +145,12 @@ export const PortfolioDetails: React.FC = () => {
               </span>
             </div>
           </div>
-        </div>
-        <div className="assets-grid">
-          {assets.map((asset: AssetSummaryDto) => {
-            const pnlPercentage = asset.totalCost > 0 ? (asset.unrealizedPnl / asset.totalCost) * 100 : 0;
+          </div>
+          <div className="assets-grid">
+            {assets.map((asset: AssetSummaryDto) => {
+            const totalPnl = (asset.realizedPnl || 0) + (asset.unrealizedPnl || 0);
+            const pnlPercentage = asset.totalBought > 0 ? (totalPnl / asset.totalBought) * 100 : null;
+            const isClosedPosition = Math.abs(asset.totalQuantity || 0) < 0.00000001;
             return (
               <button 
                 key={asset.assetId} 
@@ -173,13 +175,17 @@ export const PortfolioDetails: React.FC = () => {
                 </div>
                 <div className="asset-metrics" style={{ borderTop: 'none', paddingTop: 0 }}>
                   <div className="metric">
-                    <span className="metric-label">Unrealized PnL</span>
+                    <span className="metric-label">
+                      Total PnL{isClosedPosition ? ' · Closed' : ''}
+                    </span>
                     <div style={{ display: 'flex', alignItems: 'center' }}>
-                      <span className={`metric-val ${asset.unrealizedPnl >= 0 ? 'text-success' : 'text-danger'}`}>
-                        {asset.unrealizedPnl > 0 ? '+' : ''}{formatCurrency(asset.unrealizedPnl, asset.currency)}
+                      <span className={`metric-val ${totalPnl >= 0 ? 'text-success' : 'text-danger'}`}>
+                        {totalPnl > 0 ? '+' : ''}{formatCurrency(totalPnl, asset.currency)}
                       </span>
-                      <span className={`badge ${asset.unrealizedPnl >= 0 ? 'success' : 'danger'}`} style={{ marginLeft: '0.5rem' }}>
-                        {asset.unrealizedPnl > 0 ? '+' : ''}{pnlPercentage.toFixed(2)}%
+                      <span className={`badge ${totalPnl >= 0 ? 'success' : 'danger'}`} style={{ marginLeft: '0.5rem' }}>
+                        {pnlPercentage === null
+                          ? '—'
+                          : `${pnlPercentage > 0 ? '+' : ''}${pnlPercentage.toFixed(2)}%`}
                       </span>
                     </div>
                   </div>
