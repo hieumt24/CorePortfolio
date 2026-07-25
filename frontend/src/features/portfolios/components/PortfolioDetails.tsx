@@ -257,7 +257,7 @@ export const PortfolioDetails: React.FC = () => {
             <div className="glass-stat-card glass-panel">
               <div className="stat-icon" style={{ background: 'linear-gradient(135deg, #8b5cf6, #d946ef)' }}>📈</div>
               <div className="stat-content">
-                <span className="stat-label">Current Value (VND)</span>
+                <span className="stat-label">Holdings Value (VND)</span>
                 <span className="stat-value">{formatCurrency(summary.currentTotalValue, 'VND')}</span>
               </div>
             </div>

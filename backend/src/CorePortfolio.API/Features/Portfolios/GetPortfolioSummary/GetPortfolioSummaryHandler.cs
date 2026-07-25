@@ -59,8 +59,6 @@ public class GetPortfolioSummaryHandler : IRequestHandler<GetPortfolioSummaryQue
                 marketAsset?.LastUpdated ?? DateTime.MinValue));
         }
 
-        totalValue += accounts.Sum(c => ExchangeRateService.ToVnd(c.Balance, c.Currency, usdToVnd));
-
         return new PortfolioSummaryDto(portfolio.Id, portfolio.Name, totalInvested, totalValue, assets,
             accounts, realized, unrealized, fees, "VND", DateTime.UtcNow);
     }
