@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using CorePortfolio.API.Features.Admin.Settings.GetNavigationSettings;
 using CorePortfolio.API.Features.Admin.Settings.GetSetting;
 using CorePortfolio.API.Features.Admin.Settings.UpdateSetting;
 
@@ -14,6 +15,12 @@ public static class SettingsEndpoints
         // Public group (Authenticated users)
         var publicGroup = app.MapGroup("/api/settings")
             .WithTags("Settings");
+
+        publicGroup.MapGet("/navigation/features", async (IMediator mediator, CancellationToken cancellationToken) =>
+        {
+            var features = await mediator.Send(new GetNavigationSettingsQuery(), cancellationToken);
+            return Results.Ok(features);
+        }).WithName("GetNavigationSettings");
 
         publicGroup.MapGet("/{key}", async (string key, IMediator mediator) =>
         {

@@ -1,8 +1,23 @@
 import React, { useEffect, useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
+import { settingsApi } from '../../features/admin/api/settingsApi';
+import { notificationsApi, type NotificationItem } from '../../features/notifications/api/notificationsApi';
 import { useAuth } from '../../context/AuthContext';
 import './Navbar.css';
-import { notificationsApi, type NotificationItem } from '../../features/notifications/api/notificationsApi';
+
+const navigationItems = [
+  { key: 'NAV_DASHBOARD', path: '/dashboard', label: 'Dashboard' },
+  { key: 'NAV_PORTFOLIOS', path: '/portfolios', label: 'My Portfolios' },
+  { key: 'NAV_TRANSACTIONS', path: '/transactions', label: 'Transactions' },
+  { key: 'NAV_REPORTS', path: '/reports', label: 'Global Report' },
+  { key: 'NAV_CASHFLOW', path: '/cashflow', label: 'Cashflow' },
+  { key: 'NAV_WATCHLIST', path: '/watchlist', label: 'Watchlist' },
+  { key: 'NAV_BUDGETS', path: '/budgets', label: 'Budgets' },
+  { key: 'NAV_SAVING_GOALS', path: '/saving-goals', label: 'Mục tiêu tiết kiệm' },
+  { key: 'NAV_ANALYTICS', path: '/analytics', label: 'Analytics' },
+  { key: 'NAV_REBALANCING', path: '/rebalancing', label: 'Tái cân bằng' },
+  { key: 'NAV_DCA_PLANS', path: '/dca-plans', label: 'Lịch DCA' },
+];
 
 export const Navbar: React.FC = () => {
   const location = useLocation();
@@ -11,10 +26,20 @@ export const Navbar: React.FC = () => {
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [navigationVisibility, setNavigationVisibility] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
-    if (!isAuthenticated) return;
+    if (!isAuthenticated) {
+      setNavigationVisibility({});
+      return;
+    }
+
     notificationsApi.list(true).then(setNotifications).catch(() => setNotifications([]));
+    settingsApi.getNavigationFeatures()
+      .then(features => setNavigationVisibility(
+        Object.fromEntries(features.map(feature => [feature.key, feature.isEnabled])),
+      ))
+      .catch(() => setNavigationVisibility({}));
   }, [isAuthenticated]);
 
   const handleLogout = () => {
@@ -28,115 +53,52 @@ export const Navbar: React.FC = () => {
 
   return (
     <>
-      {/* Mobile Toggle Button (Visible only on mobile) */}
-      <button 
-        className={`mobile-menu-toggle ${isMobileMenuOpen ? 'open' : ''}`} 
+      <button
+        className={`mobile-menu-toggle ${isMobileMenuOpen ? 'open' : ''}`}
         onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
         aria-label="Toggle menu"
       >
-        <span></span>
-        <span></span>
-        <span></span>
+        <span />
+        <span />
+        <span />
       </button>
 
-      {/* Mobile Overlay */}
-      <div 
-        className={`mobile-overlay ${isMobileMenuOpen ? 'active' : ''}`} 
+      <div
+        className={`mobile-overlay ${isMobileMenuOpen ? 'active' : ''}`}
         onClick={closeMenu}
-      ></div>
+      />
 
       <nav className={`glass-navbar ${isMobileMenuOpen ? 'mobile-open' : ''}`}>
         <div className="navbar-container">
           <div className="navbar-logo" onClick={() => navigate('/')}>
             CorePortfolio
           </div>
-          
+
           <div className="navbar-menu">
             {isAuthenticated && (
               <div className="navbar-links">
-                <NavLink 
-                  to="/dashboard" 
-                  className={location.pathname.startsWith('/dashboard') ? "nav-link active" : "nav-link"}
-                  onClick={closeMenu}
+                {navigationItems
+                  .filter(item => navigationVisibility[item.key] !== false)
+                  .map(item => (
+                    <NavLink
+                      key={item.key}
+                      to={item.path}
+                      className={location.pathname.startsWith(item.path) ? 'nav-link active' : 'nav-link'}
+                      onClick={closeMenu}
+                    >
+                      {item.label}
+                    </NavLink>
+                  ))}
+                <button
+                  className="nav-link notification-trigger"
+                  onClick={() => setShowNotifications(value => !value)}
+                  aria-label="Notifications"
                 >
-                  Dashboard
-                </NavLink>
-                <button className="nav-link notification-trigger" onClick={() => setShowNotifications(value => !value)} aria-label="Notifications">
                   🔔{notifications.length > 0 && <span className="notification-badge">{notifications.length}</span>}
                 </button>
-                <NavLink 
-                  to="/portfolios" 
-                  className={location.pathname.startsWith('/portfolios') ? "nav-link active" : "nav-link"}
-                  onClick={closeMenu}
-                >
-                  My Portfolios
-                </NavLink>
-                <NavLink 
-                  to="/transactions" 
-                  className={location.pathname.startsWith('/transactions') ? "nav-link active" : "nav-link"}
-                  onClick={closeMenu}
-                >
-                  Transactions
-                </NavLink>
-                <NavLink 
-                  to="/reports" 
-                  className={location.pathname.startsWith('/reports') ? "nav-link active" : "nav-link"}
-                  onClick={closeMenu}
-                >
-                  Global Report
-                </NavLink>
-                <NavLink 
-                  to="/cashflow" 
-                  className={location.pathname.startsWith('/cashflow') ? "nav-link active" : "nav-link"}
-                  onClick={closeMenu}
-                >
-                  Cashflow
-                </NavLink>
-                <NavLink 
-                  to="/watchlist" 
-                  className={location.pathname.startsWith('/watchlist') ? "nav-link active" : "nav-link"}
-                  onClick={closeMenu}
-                >
-                  Watchlist
-                </NavLink>
-                <NavLink 
-                  to="/budgets" 
-                  className={location.pathname.startsWith('/budgets') ? "nav-link active" : "nav-link"}
-                  onClick={closeMenu}
-                >
-                  Budgets
-                </NavLink>
-                <NavLink 
-                  to="/saving-goals" 
-                  className={location.pathname.startsWith('/saving-goals') ? "nav-link active" : "nav-link"}
-                  onClick={closeMenu}
-                >
-                  Mục tiêu tiết kiệm
-                </NavLink>
-                <NavLink 
-                  to="/analytics" 
-                  className={location.pathname.startsWith('/analytics') ? "nav-link active" : "nav-link"}
-                  onClick={closeMenu}
-                >
-                  Analytics
-                </NavLink>
-                <NavLink 
-                  to="/rebalancing" 
-                  className={location.pathname.startsWith('/rebalancing') ? "nav-link active" : "nav-link"}
-                  onClick={closeMenu}
-                >
-                  Tái cân bằng
-                </NavLink>
-                <NavLink 
-                  to="/dca-plans" 
-                  className={location.pathname.startsWith('/dca-plans') ? "nav-link active" : "nav-link"}
-                  onClick={closeMenu}
-                >
-                  Lịch DCA
-                </NavLink>
               </div>
             )}
-            
+
             <div className="navbar-admin">
               {isAuthenticated ? (
                 <div className="admin-actions">
@@ -156,10 +118,26 @@ export const Navbar: React.FC = () => {
               )}
             </div>
           </div>
+
           {showNotifications && (
             <div className="notification-popover">
-              <div className="notification-popover-header"><strong>Notifications</strong><button onClick={() => notificationsApi.markAllRead().then(() => setNotifications([]))}>Mark all read</button></div>
-              {notifications.length === 0 ? <span className="notification-empty">No new alerts</span> : notifications.map(item => <button key={item.id} className="notification-item" onClick={() => notificationsApi.markRead(item.id).then(() => setNotifications(current => current.filter(n => n.id !== item.id)))}><strong>{item.title}</strong><small>{item.message}</small></button>)}
+              <div className="notification-popover-header">
+                <strong>Notifications</strong>
+                <button onClick={() => notificationsApi.markAllRead().then(() => setNotifications([]))}>Mark all read</button>
+              </div>
+              {notifications.length === 0 ? (
+                <span className="notification-empty">No new alerts</span>
+              ) : notifications.map(item => (
+                <button
+                  key={item.id}
+                  className="notification-item"
+                  onClick={() => notificationsApi.markRead(item.id)
+                    .then(() => setNotifications(current => current.filter(notification => notification.id !== item.id)))}
+                >
+                  <strong>{item.title}</strong>
+                  <small>{item.message}</small>
+                </button>
+              ))}
             </div>
           )}
         </div>

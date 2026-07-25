@@ -1,5 +1,10 @@
 import { apiClient } from '../../../shared/api/baseClient';
 
+export interface NavigationFeature {
+  key: string;
+  isEnabled: boolean;
+}
+
 export const settingsApi = {
   getSetting: async (key: string): Promise<string | null> => {
     try {
@@ -10,6 +15,9 @@ export const settingsApi = {
       return null;
     }
   },
+
+  getNavigationFeatures: () =>
+    apiClient<NavigationFeature[]>('/settings/navigation/features'),
 
   updateSetting: async (key: string, value: string): Promise<boolean> => {
     try {
@@ -22,5 +30,11 @@ export const settingsApi = {
       console.error('Error updating setting:', error);
       return false;
     }
-  }
+  },
+
+  updateNavigationFeature: (key: string, isEnabled: boolean) =>
+    apiClient<void>(`/admin/settings/${key}`, {
+      method: 'PUT',
+      body: JSON.stringify({ value: String(isEnabled) }),
+    }),
 };
