@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useRef, useState, useEffect } from 'react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { createTransaction } from '../api/transactionApi';
@@ -9,6 +9,10 @@ import { useNotification } from '../../../context/NotificationContext';
 import { NumericFormat } from 'react-number-format';
 import { isCryptoCategory } from '../utils/assetCategory';
 import { calculateCashImpact } from '../utils/transactionImpact';
+import {
+  deriveTransactionAmount,
+  type TransactionAmountField,
+} from '../utils/transactionAmount';
 import './GlobalCreateTransactionModal.css';
 
 interface GlobalCreateTransactionModalProps {
@@ -22,6 +26,11 @@ interface DateTimeTriggerProps {
   value?: string;
   onClick?: () => void;
 }
+
+const toInputValue = (value: number) => {
+  if (!Number.isFinite(value) || value < 0) return '';
+  return String(Number(value.toPrecision(12)));
+};
 
 const DateTimeTrigger = React.forwardRef<HTMLButtonElement, DateTimeTriggerProps>(
   ({ value, onClick }, ref) => (
@@ -66,8 +75,11 @@ export const GlobalCreateTransactionModal: React.FC<GlobalCreateTransactionModal
   const [type, setType] = useState<number>(TransactionType.Buy);
   const [quantity, setQuantity] = useState('');
   const [price, setPrice] = useState('');
+  const [total, setTotal] = useState('');
   const [fee, setFee] = useState('0');
+  const [currency, setCurrency] = useState<'VND' | 'USD'>('VND');
   const [date, setDate] = useState<Date>(new Date());
+  const amountInputOrder = useRef<TransactionAmountField[]>([]);
   
   const [loading, setLoading] = useState(false);
   const [assetsLoading, setAssetsLoading] = useState(false);
@@ -77,7 +89,6 @@ export const GlobalCreateTransactionModal: React.FC<GlobalCreateTransactionModal
   const quantityValue = Number(quantity) || 0;
   const priceValue = Number(price) || 0;
   const feeValue = Number(fee) || 0;
-  const currency = selectedAsset?.currency || 'VND';
   const cashImpact = calculateCashImpact(type as TransactionType, quantityValue, priceValue, feeValue);
   const amountSummary = (() => {
     if (type === TransactionType.Buy) return { label: 'Tổng tiền đã thanh toán', hint: 'Giá trị giao dịch + phí' };
@@ -131,15 +142,46 @@ export const GlobalCreateTransactionModal: React.FC<GlobalCreateTransactionModal
 
   useEffect(() => {
     setSelectedAssetId('');
+  }, [selectedCategoryName]);
+
+  useEffect(() => {
     if (type === TransactionType.Earn && !cryptoCategorySelected) {
       setType(TransactionType.Buy);
       setPrice('');
     }
-  }, [selectedCategoryName, type, cryptoCategorySelected]);
+  }, [type, cryptoCategorySelected]);
+
+  useEffect(() => {
+    if (!selectedAsset) return;
+    const assetCurrency = selectedAsset.currency?.toUpperCase();
+    setCurrency(assetCurrency === 'USD' ? 'USD' : 'VND');
+  }, [selectedAsset]);
+
+  const updateAmountField = (field: TransactionAmountField, value: string) => {
+    const setters = { quantity: setQuantity, price: setPrice, total: setTotal };
+    setters[field](value);
+
+    const nextOrder = [...amountInputOrder.current.filter(item => item !== field), field].slice(-2);
+    amountInputOrder.current = nextOrder;
+    if (nextOrder.length < 2) return;
+
+    const values = {
+      quantity: field === 'quantity' ? Number(value) : Number(quantity),
+      price: field === 'price' ? Number(value) : Number(price),
+      total: field === 'total' ? Number(value) : Number(total),
+    };
+    const [firstField, secondField] = nextOrder;
+    if (values[firstField] <= 0 || values[secondField] <= 0) return;
+
+    const derived = deriveTransactionAmount(values, nextOrder);
+    if (derived.total !== undefined) setTotal(toInputValue(derived.total));
+    if (derived.price !== undefined) setPrice(toInputValue(derived.price));
+    if (derived.quantity !== undefined) setQuantity(toInputValue(derived.quantity));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedPortfolioId || !selectedAssetId || !quantity || !price || !date) return;
+    if (!selectedPortfolioId || !selectedAssetId || quantityValue <= 0 || priceValue < 0 || !date) return;
 
     try {
       setLoading(true);
@@ -150,6 +192,7 @@ export const GlobalCreateTransactionModal: React.FC<GlobalCreateTransactionModal
         quantity: Number(quantity),
         price: Number(price),
         fee: feeValue,
+        currency,
         timestamp: date.toISOString(),
       });
       onSuccess();
@@ -208,7 +251,13 @@ export const GlobalCreateTransactionModal: React.FC<GlobalCreateTransactionModal
             <div className="asset-select-wrap">
             <select 
               value={selectedAssetId} 
-              onChange={e => setSelectedAssetId(e.target.value)}
+              onChange={e => {
+                setSelectedAssetId(e.target.value);
+                setQuantity('');
+                setPrice('');
+                setTotal('');
+                amountInputOrder.current = [];
+              }}
               required
               className="glass-input"
               disabled={assetsLoading || categoryLoading || !selectedCategoryName || filteredAssets.length === 0}
@@ -237,7 +286,15 @@ export const GlobalCreateTransactionModal: React.FC<GlobalCreateTransactionModal
             <select value={type} onChange={e => {
               const nextType = Number(e.target.value);
               setType(nextType);
-              if (nextType === TransactionType.Earn) setPrice('0');
+              if (nextType === TransactionType.Earn) {
+                setPrice('0');
+                setTotal('0');
+                amountInputOrder.current = ['quantity'];
+              } else if (type === TransactionType.Earn) {
+                setPrice('');
+                setTotal('');
+                amountInputOrder.current = [];
+              }
             }} className="glass-input">
               {selectedCategoryName === 'Fiat' ? (
                 <>
@@ -255,32 +312,59 @@ export const GlobalCreateTransactionModal: React.FC<GlobalCreateTransactionModal
             </select>
           </div>
 
-          <div className="form-row" style={{ display: 'flex', gap: '1rem' }}>
-            <div className="form-group" style={{ flex: 1 }}>
+          <div className="transaction-amount-grid">
+            <div className="form-group">
               <label>Quantity</label>
               <NumericFormat
                 value={quantity} 
-                onValueChange={(values) => setQuantity(values.value)}
-                required
+                onValueChange={(values) => updateAmountField('quantity', values.value)}
                 className="glass-input"
                 thousandSeparator="."
                 decimalSeparator=","
                 allowNegative={false}
+                disabled={loading}
               />
             </div>
-            <div className="form-group" style={{ flex: 1 }}>
+            <div className="form-group">
               <label>{type === TransactionType.Dividend ? 'Dividend per unit' : type === TransactionType.Earn ? 'Acquisition cost' : 'Price'}</label>
               <NumericFormat
                 value={price} 
-                onValueChange={(values) => setPrice(values.value)}
-                required
+                onValueChange={(values) => updateAmountField('price', values.value)}
                 className="glass-input"
                 thousandSeparator="."
                 decimalSeparator=","
                 allowNegative={false}
-                disabled={type === TransactionType.Earn}
+                disabled={loading || type === TransactionType.Earn}
               />
               {type === TransactionType.Earn && <small className="field-hint">Rewards add quantity at zero cost and do not create a purchase cash flow.</small>}
+            </div>
+            <div className="form-group transaction-total-input">
+              <label>Transaction total</label>
+              <div className="currency-input-group">
+                <NumericFormat
+                  value={total}
+                  onValueChange={(values) => updateAmountField('total', values.value)}
+                  className="glass-input"
+                  thousandSeparator="."
+                  decimalSeparator=","
+                  allowNegative={false}
+                  disabled={loading || type === TransactionType.Earn}
+                  aria-describedby="transaction-total-hint"
+                />
+                <select
+                  value={currency}
+                  onChange={event => setCurrency(event.target.value as 'VND' | 'USD')}
+                  className="glass-input currency-select"
+                  disabled={loading}
+                  aria-label="Transaction currency"
+                >
+                  <option value="VND">VND</option>
+                  <option value="USD">USD</option>
+                </select>
+              </div>
+              <small id="transaction-total-hint" className="field-hint">
+                Enter any two of quantity, price, and total. The remaining value is calculated automatically.
+              </small>
             </div>
           </div>
 
@@ -332,7 +416,11 @@ export const GlobalCreateTransactionModal: React.FC<GlobalCreateTransactionModal
             <button type="button" className="btn btn-secondary" onClick={onClose} disabled={loading}>
               Cancel
             </button>
-            <button type="submit" className="btn btn-primary" disabled={loading || !selectedAssetId}>
+            <button
+              type="submit"
+              className="btn btn-primary"
+              disabled={loading || !selectedAssetId || quantityValue <= 0 || priceValue < 0}
+            >
               {loading ? 'Saving...' : 'Save'}
             </button>
           </div>

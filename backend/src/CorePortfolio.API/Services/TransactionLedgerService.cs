@@ -43,12 +43,19 @@ public sealed class TransactionLedgerService
         PortfolioAccountingCalculator.Calculate(remaining, 0, AssetCategoryClassifier.IsCrypto(categoryName));
     }
 
-    public async Task SyncLedgerEntryAsync(Transaction transaction, CancellationToken cancellationToken)
+    public async Task SyncLedgerEntryAsync(
+        Transaction transaction,
+        CancellationToken cancellationToken,
+        string? requestedCurrency = null)
     {
-        var currency = await _dbContext.Assets
-            .Where(a => a.Id == transaction.AssetId)
-            .Select(a => a.MarketAsset!.Category!.DefaultCurrency)
-            .SingleAsync(cancellationToken);
+        var currency = requestedCurrency;
+        if (string.IsNullOrWhiteSpace(currency))
+        {
+            currency = await _dbContext.Assets
+                .Where(a => a.Id == transaction.AssetId)
+                .Select(a => a.MarketAsset!.Category!.DefaultCurrency)
+                .SingleAsync(cancellationToken);
+        }
         currency = currency.Trim().ToUpperInvariant();
         if (currency is not ("VND" or "USD"))
             throw new AccountingValidationException("CorePortfolio hiện chỉ hỗ trợ tài khoản tiền VND và USD.");

@@ -72,27 +72,76 @@
 }
 
 .glass-input {
-  background: #ffffff;
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(6, 8, 15, 0.82);
+  border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 8px;
   padding: 0.75rem 1rem;
-  color: #0f172a;
+  color: var(--text-primary);
+  caret-color: var(--focus-color);
   font-family: inherit;
   font-size: 1rem;
-  transition: all 0.2s;
+  transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
   outline: none;
   width: 100%;
 }
 
-.glass-input:focus {
-  border-color: var(--accent-primary);
-  background: #f8fafc;
+.glass-input:hover:not(:disabled) {
+  border-color: rgba(255, 255, 255, 0.24);
+  background: rgba(11, 14, 23, 0.94);
+}
+
+.glass-input:focus,
+.glass-input:focus-visible {
+  border-color: var(--focus-color);
+  background: rgba(11, 14, 23, 0.98);
   box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.4);
 }
 
 .glass-input:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+  background: rgba(6, 8, 15, 0.5);
+}
+
+.glass-input::placeholder {
+  color: var(--text-muted);
+  opacity: 1;
+}
+
+.glass-input:-webkit-autofill,
+.glass-input:-webkit-autofill:hover,
+.glass-input:-webkit-autofill:focus {
+  -webkit-text-fill-color: var(--text-primary);
+  box-shadow: 0 0 0 1000px var(--bg-surface) inset;
+  caret-color: var(--text-primary);
+}
+
+.transaction-amount-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.transaction-total-input {
+  grid-column: 1 / -1;
+}
+
+.currency-input-group {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 96px;
+  gap: 0.65rem;
+}
+
+.currency-select {
+  padding-inline: 0.7rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.field-hint {
+  color: var(--text-muted);
+  font-size: 0.75rem;
+  line-height: 1.45;
 }
 
 .transaction-details-row {
@@ -370,8 +419,8 @@
 }
 
 select.glass-input option {
-  background: #ffffff;
-  color: #0f172a;
+  background: var(--bg-surface);
+  color: var(--text-primary);
 }
 
 .modal-actions {
@@ -456,6 +505,14 @@ select.glass-input option {
 
   .transaction-details-row {
     grid-template-columns: 1fr;
+  }
+
+  .transaction-amount-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .transaction-total-input {
+    grid-column: auto;
   }
 
   .transaction-total-card {

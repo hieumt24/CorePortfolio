@@ -46,7 +46,7 @@ public class CreateTransactionHandler : IRequestHandler<CreateTransactionCommand
         await _ledgerService.ValidateHoldingAsync(transaction, userId, cancellationToken);
         await using var dbTransaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
         _dbContext.Transactions.Add(transaction);
-        await _ledgerService.SyncLedgerEntryAsync(transaction, cancellationToken);
+        await _ledgerService.SyncLedgerEntryAsync(transaction, cancellationToken, request.Currency);
         await _dbContext.SaveChangesAsync(cancellationToken);
         await dbTransaction.CommitAsync(cancellationToken);
 

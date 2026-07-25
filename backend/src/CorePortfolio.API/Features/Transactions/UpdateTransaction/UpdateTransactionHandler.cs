@@ -46,7 +46,7 @@ public class UpdateTransactionHandler : IRequestHandler<UpdateTransactionCommand
         await using var dbTransaction = await _dbContext.Database.BeginTransactionAsync(cancellationToken);
         
         _dbContext.Transactions.Update(transaction);
-        await _ledgerService.SyncLedgerEntryAsync(transaction, cancellationToken);
+        await _ledgerService.SyncLedgerEntryAsync(transaction, cancellationToken, request.Currency);
         
         await _dbContext.SaveChangesAsync(cancellationToken);
         await dbTransaction.CommitAsync(cancellationToken);
