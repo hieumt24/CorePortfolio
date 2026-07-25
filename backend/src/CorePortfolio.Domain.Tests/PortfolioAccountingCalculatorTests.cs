@@ -81,7 +81,7 @@ public class PortfolioAccountingCalculatorTests
     }
 
     [Fact]
-    public void AllowsUntrackedEarnedQuantityOnlyWhenExplicitlyEnabled()
+    public void ExcludesUnknownCostBasisFromRealizedPnlWhenUntrackedQuantityIsAllowed()
     {
         var transactions = new[]
         {
@@ -92,8 +92,22 @@ public class PortfolioAccountingCalculatorTests
         var result = PortfolioAccountingCalculator.Calculate(transactions, 200, allowUntrackedEarnedQuantity: true);
 
         Assert.Equal(0, result.Quantity);
-        Assert.Equal(195, result.RealizedPnl);
+        Assert.Equal(96.66666667m, result.RealizedPnl, 8);
         Assert.Throws<AccountingValidationException>(() => PortfolioAccountingCalculator.Calculate(transactions, 200));
+    }
+
+    [Fact]
+    public void DoesNotReportUntrackedSaleProceedsAsProfit()
+    {
+        var result = PortfolioAccountingCalculator.Calculate(new[]
+        {
+            Tx(TransactionType.Sell, 2, 25_000, 10, new DateTime(2026, 1, 1))
+        }, 20_000, allowUntrackedEarnedQuantity: true);
+
+        Assert.Equal(0, result.Quantity);
+        Assert.Equal(0, result.CostBasis);
+        Assert.Equal(0, result.RealizedPnl);
+        Assert.Equal(10, result.Fees);
     }
 
     [Fact]

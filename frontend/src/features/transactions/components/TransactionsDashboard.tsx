@@ -54,6 +54,12 @@ const matchesAssetGroup = (category: string, group: TransactionAssetGroup) => {
 
 export const TransactionsDashboard: React.FC = () => {
   const [data, setData] = useState<PaginatedResult<GlobalTransactionDto> | null>(null);
+  const [groupCounts, setGroupCounts] = useState<Record<TransactionAssetGroup, number>>({
+    all: 0,
+    crypto: 0,
+    stock: 0,
+    fund: 0,
+  });
   const [loading, setLoading] = useState(true);
   
   // Filters
@@ -81,8 +87,17 @@ export const TransactionsDashboard: React.FC = () => {
       if (startDate) params.startDate = new Date(startDate).toISOString();
       if (endDate) params.endDate = new Date(endDate).toISOString();
 
-      const result = await getAllTransactions(params);
+      const [result, matchingTransactions] = await Promise.all([
+        getAllTransactions(params),
+        fetchEveryTransaction(params),
+      ]);
       setData(result);
+      setGroupCounts({
+        all: matchingTransactions.length,
+        crypto: matchingTransactions.filter(item => matchesAssetGroup(item.categoryName, 'crypto')).length,
+        stock: matchingTransactions.filter(item => matchesAssetGroup(item.categoryName, 'stock')).length,
+        fund: matchingTransactions.filter(item => matchesAssetGroup(item.categoryName, 'fund')).length,
+      });
     } catch (error) {
       showNotification('Failed to fetch transactions', 'error');
     } finally {
@@ -94,13 +109,13 @@ export const TransactionsDashboard: React.FC = () => {
     fetchTransactions();
   }, [page, pageSize, typeFilter, startDate, endDate]);
 
-  const fetchAllTransactions = async () => {
+  const fetchEveryTransaction = async (filters: Parameters<typeof getAllTransactions>[0] = {}) => {
     const allItems: GlobalTransactionDto[] = [];
     let currentPage = 1;
     let totalCount = Number.POSITIVE_INFINITY;
 
     while (allItems.length < totalCount) {
-      const result = await getAllTransactions({ page: currentPage, pageSize: 500 });
+      const result = await getAllTransactions({ ...filters, page: currentPage, pageSize: 500 });
       allItems.push(...result.items);
       totalCount = result.totalCount;
       if (result.items.length === 0) break;
@@ -108,6 +123,8 @@ export const TransactionsDashboard: React.FC = () => {
     }
     return allItems;
   };
+
+  const fetchAllTransactions = () => fetchEveryTransaction();
 
   const downloadBlob = (blob: Blob, filename: string) => {
     const url = URL.createObjectURL(blob);
@@ -173,8 +190,7 @@ export const TransactionsDashboard: React.FC = () => {
   };
 
   const visibleItems = data?.items.filter(item => matchesAssetGroup(item.categoryName, assetGroup)) ?? [];
-  const countFor = (group: Exclude<TransactionAssetGroup, 'all'>) =>
-    data?.items.filter(item => matchesAssetGroup(item.categoryName, group)).length ?? 0;
+  const countFor = (group: TransactionAssetGroup) => groupCounts[group];
 
   const handleDelete = async (id: string) => {
     if (window.confirm('Are you sure you want to delete this transaction?')) {
@@ -336,7 +352,7 @@ export const TransactionsDashboard: React.FC = () => {
         {(['all', 'crypto', 'stock', 'fund'] as const).map(group => (
           <button key={group} className={`group-card ${group} ${assetGroup === group ? 'active' : ''}`} onClick={() => { setAssetGroup(group); setPage(1); }}>
             <span className="group-icon">{group === 'crypto' ? '₿' : group === 'stock' ? '↗' : group === 'fund' ? '◈' : '◎'}</span>
-            <span><strong>{group === 'all' ? 'Tất cả' : group === 'crypto' ? 'Crypto' : group === 'stock' ? 'Cổ phiếu' : 'CCQ / ETF'}</strong><small>{group === 'all' ? data?.totalCount ?? 0 : countFor(group)} giao dịch</small></span>
+            <span><strong>{group === 'all' ? 'Tất cả' : group === 'crypto' ? 'Crypto' : group === 'stock' ? 'Cổ phiếu' : 'CCQ / ETF'}</strong><small>{countFor(group)} giao dịch</small></span>
           </button>
         ))}
       </section>

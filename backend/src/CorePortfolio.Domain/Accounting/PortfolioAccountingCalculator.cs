@@ -39,19 +39,22 @@ public static class PortfolioAccountingCalculator
                     totalBought += transaction.Fee;
                     break;
                 case TransactionType.Sell:
+                    var trackedQuantity = transaction.Quantity;
                     if (transaction.Quantity > quantity)
                     {
                         if (!allowUntrackedEarnedQuantity)
                             throw new AccountingValidationException("Không thể bán vượt quá số lượng đang sở hữu.");
 
-                        // Crypto rewards may have been earned outside the tracked ledger. Treat only the
-                        // missing quantity as a zero-cost reward so the sale and realized PnL stay coherent.
-                        quantity = transaction.Quantity;
+                        // Imported exchange history may start after the asset was acquired. Its missing
+                        // cost basis is unknown, so exclude that part from realized PnL instead of
+                        // incorrectly treating the sale proceeds as pure profit.
+                        trackedQuantity = quantity;
                     }
                     var averageCost = quantity == 0 ? 0 : costBasis / quantity;
-                    var disposedCost = averageCost * transaction.Quantity;
-                    realizedPnl += transaction.Quantity * transaction.Price - transaction.Fee - disposedCost;
-                    quantity -= transaction.Quantity;
+                    var disposedCost = averageCost * trackedQuantity;
+                    var trackedRatio = transaction.Quantity == 0 ? 0 : trackedQuantity / transaction.Quantity;
+                    realizedPnl += trackedQuantity * transaction.Price - transaction.Fee * trackedRatio - disposedCost;
+                    quantity -= trackedQuantity;
                     costBasis -= disposedCost;
                     if (quantity == 0) costBasis = 0;
                     break;
