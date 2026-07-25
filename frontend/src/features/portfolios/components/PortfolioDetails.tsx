@@ -10,6 +10,7 @@ import type { AssetSummaryDto } from '../types';
 import { EditPortfolioModal } from './EditPortfolioModal';
 import { FundPortfolioModal } from './FundPortfolioModal';
 import { HoldingsList } from './HoldingsList';
+import { PortfolioCategoryReport } from './PortfolioCategoryReport';
 import { PortfolioLoadingState } from './PortfolioLoadingState';
 import { PortfolioTransactionHistory } from './PortfolioTransactionHistory';
 import './PortfolioDetails.css';
@@ -199,6 +200,13 @@ export const PortfolioDetails: React.FC = () => {
               </div>
             </section>
           )}
+
+          <PortfolioCategoryReport
+            assets={summary.assets}
+            totalHoldingsVnd={summary.currentTotalValue}
+            usdToVndRate={usdToVndRate}
+            formatCurrency={formatCurrency}
+          />
 
           {summary.assets.length === 0 ? (
             <div className="state-panel glass-panel">
