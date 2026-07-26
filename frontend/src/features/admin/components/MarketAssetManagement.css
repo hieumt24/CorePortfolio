@@ -19,12 +19,24 @@
 .market-assets-actions {
   align-items: center;
   display: flex;
+  flex-wrap: wrap;
   gap: 0.75rem;
+  justify-content: flex-end;
 }
 
 .market-refresh-all {
   border-color: rgba(96, 165, 250, 0.45);
   color: #93c5fd;
+}
+
+.market-sync-vn100 {
+  border-color: rgba(52, 211, 153, 0.45);
+  color: #6ee7b7;
+}
+
+.market-sync-vn100:hover:not(:disabled) {
+  background: rgba(16, 185, 129, 0.12);
+  box-shadow: 0 8px 24px rgba(16, 185, 129, 0.14);
 }
 
 .modern-tabs {

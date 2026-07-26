@@ -24,7 +24,9 @@ public static class DependencyInjection
         services.AddScoped<KbsStockPriceService>();
         services.AddScoped<IStockPriceService>(provider => provider.GetRequiredService<KbsStockPriceService>());
         services.AddScoped<IPriceProvider>(provider => provider.GetRequiredService<KbsStockPriceService>());
-        services.AddScoped<IStockInstrumentService, KbsStockInstrumentService>();
+        services.AddScoped<KbsStockInstrumentService>();
+        services.AddScoped<IStockInstrumentService>(provider => provider.GetRequiredService<KbsStockInstrumentService>());
+        services.AddScoped<IStockUniverseService>(provider => provider.GetRequiredService<KbsStockInstrumentService>());
         return services;
     }
 }

@@ -7,7 +7,7 @@ using Microsoft.Extensions.Logging;
 
 namespace CorePortfolio.KBS;
 
-public sealed class KbsStockInstrumentService : IStockInstrumentService
+public sealed class KbsStockInstrumentService : IStockInstrumentService, IStockUniverseService
 {
     private const string CacheKey = "kbs:instruments";
     private static readonly SemaphoreSlim RequestLock = new(1, 1);
@@ -44,6 +44,50 @@ public sealed class KbsStockInstrumentService : IStockInstrumentService
                 instrument.Symbol.Equals(normalizedQuery, StringComparison.OrdinalIgnoreCase))
             .ThenBy(instrument => instrument.Symbol)
             .Take(Math.Clamp(limit, 1, 50))
+            .ToArray();
+    }
+
+    public async Task<IReadOnlyList<StockInstrument>> GetGroupInstrumentsAsync(
+        string group,
+        CancellationToken cancellationToken = default)
+    {
+        var normalizedGroup = group.Trim().ToUpperInvariant();
+        var groupCode = normalizedGroup switch
+        {
+            "VN100" => "100",
+            _ => throw new ArgumentException($"Nhóm chứng khoán '{group}' chưa được hỗ trợ.", nameof(group))
+        };
+
+        var client = _httpClientFactory.CreateClient(KbsConfiguration.HttpClientName);
+        using var response = await client.GetAsync($"index/{groupCode}/stocks", cancellationToken);
+        response.EnsureSuccessStatusCode();
+
+        await using var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+        using var document = await JsonDocument.ParseAsync(stream, default, cancellationToken);
+        if (!document.RootElement.TryGetProperty("data", out var data)
+            || data.ValueKind != JsonValueKind.Array)
+            return [];
+
+        var symbols = data
+            .EnumerateArray()
+            .Select(item => item.GetString()?.Trim().ToUpperInvariant())
+            .Where(symbol => !string.IsNullOrWhiteSpace(symbol))
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .Cast<string>()
+            .ToArray();
+        var symbolSet = symbols.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        var catalog = await GetInstrumentsAsync(cancellationToken);
+        if (catalog.Count == 0)
+            throw new HttpRequestException("KBS không trả về danh mục chứng khoán để đồng bộ.");
+        var instrumentsBySymbol = catalog
+            .Where(instrument => symbolSet.Contains(instrument.Symbol))
+            .GroupBy(instrument => instrument.Symbol, StringComparer.OrdinalIgnoreCase)
+            .ToDictionary(grouping => grouping.Key, grouping => grouping.First(), StringComparer.OrdinalIgnoreCase);
+
+        return symbols
+            .Select(symbol => instrumentsBySymbol.TryGetValue(symbol, out var instrument)
+                ? instrument
+                : new StockInstrument { Symbol = symbol, Name = symbol, ShortName = symbol })
             .ToArray();
     }
 
@@ -108,10 +152,16 @@ public sealed class KbsStockInstrumentService : IStockInstrumentService
             MarketId = GetString(item, "exchange"),
             SecurityGroupId = GetString(item, "type"),
             ShortName = string.IsNullOrWhiteSpace(name) ? nameEn : name,
-            Name = string.IsNullOrWhiteSpace(name) ? nameEn : name
+            Name = string.IsNullOrWhiteSpace(name) ? nameEn : name,
+            ReferencePrice = GetDecimal(item, "re")
         };
     }
 
     private static string GetString(JsonElement item, string propertyName) =>
         item.TryGetProperty(propertyName, out var value) ? value.GetString() ?? string.Empty : string.Empty;
+
+    private static decimal? GetDecimal(JsonElement item, string propertyName) =>
+        item.TryGetProperty(propertyName, out var value) && value.TryGetDecimal(out var result)
+            ? result
+            : null;
 }

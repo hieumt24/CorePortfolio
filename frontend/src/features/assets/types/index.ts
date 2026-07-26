@@ -29,3 +29,15 @@ export interface CreateAssetRequest {
   portfolioId: string;
   marketAssetId: string;
 }
+
+export interface AvailableMarketAsset {
+  id: string;
+  categoryId: string;
+  categoryName: string;
+  currency: string;
+  symbol: string;
+  name: string;
+  currentPrice: number;
+  priceSource: string;
+  priceStatus: string;
+}

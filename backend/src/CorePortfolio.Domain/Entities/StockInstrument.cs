@@ -7,5 +7,6 @@ public class StockInstrument
     public string SecurityGroupId { get; set; } = string.Empty;
     public string ShortName { get; set; } = string.Empty;
     public string Name { get; set; } = string.Empty;
+    public decimal? ReferencePrice { get; set; }
     public List<string> IndexName { get; set; } = new();
 }

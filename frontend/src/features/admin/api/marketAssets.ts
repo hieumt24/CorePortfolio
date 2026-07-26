@@ -1,5 +1,5 @@
 import { apiClient } from '../../../shared/api/baseClient';
-import type { MarketAsset, CreateMarketAssetRequest, PaginatedResult, PriceRefreshResult } from '../types';
+import type { MarketAsset, CreateMarketAssetRequest, PaginatedResult, PriceRefreshResult, SyncVn100Result } from '../types';
 
 export const marketAssetsApi = {
   getMarketAssets: (
@@ -41,6 +41,12 @@ export const marketAssetsApi = {
 
   searchKbsInstruments: (query: string) =>
     apiClient<import('../types').KbsInstrument[]>(`/admin/market-assets/kbs-instruments?query=${encodeURIComponent(query)}`, { method: 'GET' }),
+
+  syncVn100: (categoryId: string) =>
+    apiClient<SyncVn100Result>('/admin/market-assets/sync-vn100', {
+      method: 'POST',
+      body: JSON.stringify({ categoryId }),
+    }),
 
   refreshPrices: () =>
     apiClient<PriceRefreshResult[]>('/admin/market-assets/refresh', { method: 'POST' }),

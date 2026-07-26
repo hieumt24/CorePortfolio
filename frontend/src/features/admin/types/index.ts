@@ -56,6 +56,14 @@ export interface PriceRefreshResult {
   error: string | null;
 }
 
+export interface SyncVn100Result {
+  providerCount: number;
+  created: number;
+  updated: number;
+  unchanged: number;
+  withReferencePrice: number;
+}
+
 export interface AdminOverview {
   totalUsers: number;
   activeUsers: number;

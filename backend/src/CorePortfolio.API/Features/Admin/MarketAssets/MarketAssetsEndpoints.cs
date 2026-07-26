@@ -10,6 +10,7 @@ public record CreateMarketAssetRequest(Guid CategoryId, string Symbol, string Na
 
 public record UpdateMarketAssetRequest(Guid CategoryId, string Symbol, string Name, decimal CurrentPrice,
     string PriceSource = "Manual", string? ExternalId = null);
+public record SyncVn100MarketAssetsRequest(Guid CategoryId);
 
 public static class MarketAssetsEndpoints
 {
@@ -101,6 +102,23 @@ public static class MarketAssetsEndpoints
             var result = await mediator.Send(new SearchKbsInstrumentsQuery { Query = query ?? string.Empty });
             return Results.Ok(result);
         });
+
+        group.MapPost("/sync-vn100", async (
+            [FromBody] SyncVn100MarketAssetsRequest request,
+            IMediator mediator) =>
+        {
+            try
+            {
+                return Results.Ok(await mediator.Send(new SyncVn100MarketAssetsCommand(request.CategoryId)));
+            }
+            catch (HttpRequestException exception)
+            {
+                return Results.Problem(
+                    statusCode: StatusCodes.Status502BadGateway,
+                    title: "Không thể đồng bộ VN100 từ KBS",
+                    detail: exception.Message);
+            }
+        }).RequireAuthorization("Admin");
 
         group.MapPost("/refresh", async (IMediator mediator) =>
             Results.Ok(await mediator.Send(new RefreshMarketAssetPricesCommand())))

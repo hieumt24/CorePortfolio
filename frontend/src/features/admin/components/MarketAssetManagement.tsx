@@ -39,6 +39,15 @@ const getStatusTone = (status: string) => {
 
 type MarketAssetSort = 'symbol' | 'name' | 'category' | 'source' | 'price' | 'updated' | 'status';
 
+const isStockCategory = (category: AssetCategory) => {
+  const name = category.name
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
+    .replace(/đ/g, 'd')
+    .toLowerCase();
+  return name.includes('stock') || name.includes('co phieu') || name.includes('chung khoan');
+};
+
 export function MarketAssetManagement() {
   const { showNotification } = useNotification();
   const [categories, setCategories] = useState<AssetCategory[]>([]);
@@ -50,6 +59,7 @@ export function MarketAssetManagement() {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [assetToEdit, setAssetToEdit] = useState<MarketAsset | null>(null);
   const [isUpdatingAll, setIsUpdatingAll] = useState(false);
+  const [isSyncingVn100, setIsSyncingVn100] = useState(false);
   const [refreshingAssetId, setRefreshingAssetId] = useState<string | null>(null);
   const [inlineErrors, setInlineErrors] = useState<Record<string, string>>({});
   const [searchInput, setSearchInput] = useState('');
@@ -81,6 +91,12 @@ export function MarketAssetManagement() {
     () => marketAssets.filter(asset => asset.priceSource.toLowerCase() !== 'manual').length,
     [marketAssets]
   );
+  const vn100Category = useMemo(() => {
+    const selectedCategory = categories.find(category => category.id === selectedCategoryId);
+    return selectedCategory && isStockCategory(selectedCategory)
+      ? selectedCategory
+      : categories.find(isStockCategory);
+  }, [categories, selectedCategoryId]);
 
   const loadCategories = async () => {
     try {
@@ -212,6 +228,30 @@ export function MarketAssetManagement() {
     }
   };
 
+  const handleSyncVn100 = async () => {
+    if (!vn100Category) {
+      showNotification('Hãy tạo danh mục Cổ phiếu/Chứng khoán trước khi đồng bộ VN100.', 'info');
+      return;
+    }
+    if (!window.confirm(`Đồng bộ danh sách VN100 vào danh mục "${vn100Category.name}"?`)) return;
+
+    setIsSyncingVn100(true);
+    try {
+      const result = await marketAssetsApi.syncVn100(vn100Category.id);
+      showNotification(
+        `VN100: ${result.created} mã mới, ${result.updated} cập nhật, ${result.unchanged} không đổi.`,
+        'success'
+      );
+      setSelectedCategoryId(vn100Category.id);
+      setCurrentPage(1);
+      await loadMarketAssets(vn100Category.id, 1, pageSize);
+    } catch (error) {
+      showNotification(error instanceof Error ? error.message : 'Không thể đồng bộ VN100.', 'error');
+    } finally {
+      setIsSyncingVn100(false);
+    }
+  };
+
   const totalPages = Math.ceil(totalCount / pageSize);
 
   return (
@@ -223,6 +263,14 @@ export function MarketAssetManagement() {
           <p className="admin-page-subtitle">Manage asset metadata, pricing source, refresh status, and provider errors.</p>
         </div>
         <div className="market-assets-actions">
+          <button
+            className="btn-outline market-sync-vn100"
+            onClick={handleSyncVn100}
+            disabled={isSyncingVn100 || !vn100Category}
+            title={vn100Category ? `Đồng bộ vào ${vn100Category.name}` : 'Cần danh mục Cổ phiếu/Chứng khoán'}
+          >
+            {isSyncingVn100 ? 'Syncing VN100...' : 'Sync VN100'}
+          </button>
           <button className="btn-outline market-refresh-all" onClick={handleUpdateAll} disabled={isUpdatingAll || automaticAssetsCount === 0}>
             {isUpdatingAll ? 'Refreshing...' : `Refresh auto prices (${automaticAssetsCount})`}
           </button>

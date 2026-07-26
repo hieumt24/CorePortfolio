@@ -41,8 +41,14 @@ Operational recommendations:
    `ConnectionStrings__DefaultConnection` explicitly.
 5. Monitor `KBS` warnings and the `PriceStatus`/`LastPriceError` fields. A
    transient failure preserves the last known price and marks it `Stale`.
-6. Validate `/health/live`, `/health/ready`, then use the authenticated Admin
-   Market Assets screen to fetch a known symbol such as `HPG`.
+6. Validate `/health/live` and `/health/ready`.
+7. Open the authenticated **Admin → Market Assets** screen, confirm a
+   Stock/Cổ phiếu/Chứng khoán category exists, then click **Sync VN100**. The
+   operation is idempotent and can be rerun after index rebalancing; it creates
+   new constituents and updates existing metadata/reference prices without
+   deleting assets that left the index.
+8. Open a portfolio, choose **Add Asset**, and verify searching both `HPG` and
+   `Hòa Phát` returns the same Market Asset.
 
 ## If a Python Vnstock worker is introduced later
 

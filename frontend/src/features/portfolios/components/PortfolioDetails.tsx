@@ -271,7 +271,6 @@ export const PortfolioDetails: React.FC = () => {
       {isAssetModalOpen && (
         <CreateAssetModal
           portfolioId={id!}
-          existingAssetIds={summary.assets.map(asset => asset.marketAssetId)}
           onClose={() => setIsAssetModalOpen(false)}
           onSuccess={() => {
             setIsAssetModalOpen(false);
