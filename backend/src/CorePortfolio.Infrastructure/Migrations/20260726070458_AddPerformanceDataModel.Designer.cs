@@ -3,6 +3,7 @@ using System;
 using CorePortfolio.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace CorePortfolio.Infrastructure.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260726070458_AddPerformanceDataModel")]
+    partial class AddPerformanceDataModel
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.9");
@@ -63,118 +66,6 @@ namespace CorePortfolio.Infrastructure.Migrations
                             DefaultCurrency = "VND",
                             Name = "Fiat"
                         });
-                });
-
-            modelBuilder.Entity("CorePortfolio.Domain.Entities.BenchmarkDefinition", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("AssetGroup")
-                        .IsRequired()
-                        .HasMaxLength(20)
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Currency")
-                        .IsRequired()
-                        .HasMaxLength(3)
-                        .HasColumnType("TEXT");
-
-                    b.Property<bool>("IsActive")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<bool>("IsDefault")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<Guid?>("MarketAssetId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Name")
-                        .IsRequired()
-                        .HasMaxLength(100)
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Symbol")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("MarketAssetId");
-
-                    b.HasIndex("AssetGroup", "IsActive", "IsDefault");
-
-                    b.ToTable("BenchmarkDefinitions");
-
-                    b.HasData(
-                        new
-                        {
-                            Id = new Guid("00000000-0000-0000-0005-000000000001"),
-                            AssetGroup = "Stock",
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Currency = "VND",
-                            IsActive = true,
-                            IsDefault = true,
-                            Name = "VN-Index",
-                            Symbol = "VNINDEX"
-                        },
-                        new
-                        {
-                            Id = new Guid("00000000-0000-0000-0005-000000000002"),
-                            AssetGroup = "Crypto",
-                            CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, 0, DateTimeKind.Utc),
-                            Currency = "USD",
-                            IsActive = true,
-                            IsDefault = true,
-                            Name = "Bitcoin",
-                            Symbol = "BTC"
-                        });
-                });
-
-            modelBuilder.Entity("CorePortfolio.Domain.Entities.BenchmarkPricePoint", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("TEXT");
-
-                    b.Property<Guid>("BenchmarkDefinitionId")
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("CapturedAt")
-                        .HasColumnType("TEXT");
-
-                    b.Property<decimal>("ClosePrice")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Currency")
-                        .IsRequired()
-                        .HasMaxLength(3)
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime>("Date")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("QualityStatus")
-                        .IsRequired()
-                        .HasMaxLength(30)
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("Source")
-                        .IsRequired()
-                        .HasMaxLength(40)
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("BenchmarkDefinitionId", "Date")
-                        .IsUnique();
-
-                    b.ToTable("BenchmarkPricePoints");
                 });
 
             modelBuilder.Entity("CorePortfolio.Domain.Entities.Budget", b =>
@@ -1523,27 +1414,6 @@ namespace CorePortfolio.Infrastructure.Migrations
                     b.Navigation("Portfolio");
                 });
 
-            modelBuilder.Entity("CorePortfolio.Domain.Entities.BenchmarkDefinition", b =>
-                {
-                    b.HasOne("CorePortfolio.Domain.Entities.MarketAsset", "MarketAsset")
-                        .WithMany()
-                        .HasForeignKey("MarketAssetId")
-                        .OnDelete(DeleteBehavior.SetNull);
-
-                    b.Navigation("MarketAsset");
-                });
-
-            modelBuilder.Entity("CorePortfolio.Domain.Entities.BenchmarkPricePoint", b =>
-                {
-                    b.HasOne("CorePortfolio.Domain.Entities.BenchmarkDefinition", "BenchmarkDefinition")
-                        .WithMany("PricePoints")
-                        .HasForeignKey("BenchmarkDefinitionId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("BenchmarkDefinition");
-                });
-
             modelBuilder.Entity("CorePortfolio.Domain.Entities.Budget", b =>
                 {
                     b.HasOne("CorePortfolio.Domain.Entities.CashflowCategory", "Category")
@@ -1877,11 +1747,6 @@ namespace CorePortfolio.Infrastructure.Migrations
                     b.Navigation("MarketAsset");
 
                     b.Navigation("User");
-                });
-
-            modelBuilder.Entity("CorePortfolio.Domain.Entities.BenchmarkDefinition", b =>
-                {
-                    b.Navigation("PricePoints");
                 });
 
             modelBuilder.Entity("CorePortfolio.Domain.Entities.CashAccount", b =>

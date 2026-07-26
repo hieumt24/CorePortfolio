@@ -3,6 +3,7 @@ import type {
   CashflowMonthlyAnalyticsDto, 
   AssetAllocationDto, 
   PerformanceAnalyticsDto, 
+  PerformanceDataQualityDto,
   DividendMonthlyAnalyticsDto,
   TargetAllocationDto,
   TargetAllocationInput,
@@ -20,6 +21,21 @@ export const analyticsApi = {
 
   getPerformanceAnalytics: async (currency: string = 'VND'): Promise<PerformanceAnalyticsDto> => {
     return apiClient<PerformanceAnalyticsDto>(`/analytics/performance?currency=${currency}`);
+  },
+
+  getPerformanceDataQuality: async (
+    portfolioId?: string,
+    from?: string,
+    to?: string
+  ): Promise<PerformanceDataQualityDto> => {
+    const params = new URLSearchParams();
+    if (portfolioId) params.set('portfolioId', portfolioId);
+    if (from) params.set('from', from);
+    if (to) params.set('to', to);
+    const query = params.toString();
+    return apiClient<PerformanceDataQualityDto>(
+      `/performance/data-quality${query ? `?${query}` : ''}`
+    );
   },
 
   getDividendAnalytics: async (months: number = 12, currency: string = 'VND'): Promise<DividendMonthlyAnalyticsDto[]> => {

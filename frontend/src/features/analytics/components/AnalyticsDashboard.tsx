@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from 'react';
+import { Link } from 'react-router-dom';
 import { analyticsApi } from '../api/analyticsApi';
 import type { 
   CashflowMonthlyAnalyticsDto, 
@@ -114,6 +115,13 @@ export const AnalyticsDashboard: React.FC = () => {
           <p className="subtitle">Theo dõi hiệu suất và sức khỏe danh mục của bạn</p>
         </div>
         <div className="header-actions">
+          <Link
+            className="btn-secondary"
+            style={{ padding: '0.55rem 0.9rem', fontSize: '0.875rem', textDecoration: 'none' }}
+            to="/analytics/performance"
+          >
+            Performance Center
+          </Link>
           <select 
             className="modern-select"
             value={currency} 

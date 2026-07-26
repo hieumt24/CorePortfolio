@@ -9,8 +9,15 @@ using Microsoft.EntityFrameworkCore;
 namespace CorePortfolio.API.Features.CashAccounts;
 
 public record CashAccountDto(Guid Id, Guid PortfolioId, string Currency, decimal Balance);
-public record CashLedgerEntryDto(Guid Id, decimal Amount, CashLedgerEntryType Type, string Description,
-    DateTime OccurredAt, Guid? TransactionId);
+public record CashLedgerEntryDto(
+    Guid Id,
+    decimal Amount,
+    CashLedgerEntryType Type,
+    CashLedgerEntryClassification Classification,
+    bool IsExternalFlow,
+    string Description,
+    DateTime OccurredAt,
+    Guid? TransactionId);
 public record GetCashAccountsQuery(Guid? PortfolioId) : IRequest<List<CashAccountDto>>;
 public record GetCashLedgerQuery(Guid CashAccountId) : IRequest<List<CashLedgerEntryDto>>;
 public record AddOpeningBalanceCommand(Guid PortfolioId, string Currency, decimal Amount, string? Notes)
@@ -42,7 +49,17 @@ public sealed class CashAccountsHandler :
         if (!exists) throw new ResourceNotFoundException("Không tìm thấy tài khoản tiền.");
         return await _db.CashLedgerEntries.AsNoTracking().Where(e => e.CashAccountId == request.CashAccountId)
             .OrderByDescending(e => e.OccurredAt)
-            .Select(e => new CashLedgerEntryDto(e.Id, e.Amount, e.Type, e.Description, e.OccurredAt, e.TransactionId))
+            .Select(e => new CashLedgerEntryDto(
+                e.Id,
+                e.Amount,
+                e.Type,
+                e.Classification,
+                e.Classification == CashLedgerEntryClassification.Contribution ||
+                e.Classification == CashLedgerEntryClassification.Withdrawal ||
+                e.Classification == CashLedgerEntryClassification.OpeningBalance,
+                e.Description,
+                e.OccurredAt,
+                e.TransactionId))
             .ToListAsync(cancellationToken);
     }
 
@@ -64,6 +81,7 @@ public sealed class CashAccountsHandler :
         }
         _db.CashLedgerEntries.Add(new CashLedgerEntry { Id = Guid.NewGuid(), CashAccount = account,
             Amount = request.Amount, Type = CashLedgerEntryType.OpeningBalance,
+            Classification = CashLedgerEntryClassification.OpeningBalance,
             Description = request.Notes?.Trim() ?? "Số dư đầu kỳ", OccurredAt = DateTime.UtcNow });
         await _db.SaveChangesAsync(cancellationToken);
         var balance = await _db.CashLedgerEntries.Where(e => e.CashAccountId == account.Id).SumAsync(e => e.Amount, cancellationToken);
@@ -104,6 +122,9 @@ public sealed class CashAccountsHandler :
             CashAccount = account,
             Amount = entryAmount,
             Type = entryType,
+            Classification = request.IsDeposit
+                ? CashLedgerEntryClassification.Contribution
+                : CashLedgerEntryClassification.Withdrawal,
             Description = request.Description?.Trim() ?? (request.IsDeposit ? "Nạp tiền" : "Rút tiền"),
             OccurredAt = request.OccurredAt == default ? DateTime.UtcNow : request.OccurredAt
         });

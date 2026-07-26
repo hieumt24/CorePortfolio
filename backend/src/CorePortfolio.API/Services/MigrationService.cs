@@ -86,6 +86,7 @@ public class MigrationService
                     CashAccountId = account.Id,
                     Amount = adjustmentAmount,
                     Type = CashLedgerEntryType.MigratedOpeningBalance,
+                    Classification = CashLedgerEntryClassification.Unknown,
                     Description = "Điều chỉnh số dư âm từ dữ liệu cũ",
                     OccurredAt = transactions.FirstOrDefault()?.Date.AddDays(-1) ?? DateTime.UtcNow
                 };

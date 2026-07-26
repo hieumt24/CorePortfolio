@@ -28,6 +28,15 @@ public static class AssetCategoryClassifier
         return IsFundValue(value);
     }
 
+    public static bool IsFiat(string? categoryName)
+    {
+        var value = Normalize(categoryName);
+        return value.Contains("fiat") ||
+               value.Contains("cash") ||
+               value.Contains("tien mat") ||
+               value.Contains("tien phap dinh");
+    }
+
     private static bool IsFundValue(string value) =>
         value.Contains("fund") ||
         value.Contains("ccq") ||

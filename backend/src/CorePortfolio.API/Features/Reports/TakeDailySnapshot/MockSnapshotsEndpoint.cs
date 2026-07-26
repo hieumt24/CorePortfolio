@@ -1,6 +1,7 @@
-using CorePortfolio.Infrastructure.Data;
+using CorePortfolio.API.Services;
 using CorePortfolio.Domain.Entities;
-using Microsoft.AspNetCore.Mvc;
+using CorePortfolio.Domain.Performance;
+using CorePortfolio.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
 namespace CorePortfolio.API.Features.Reports.TakeDailySnapshot;
@@ -9,43 +10,76 @@ public static class MockSnapshotsEndpoint
 {
     public static void MapMockSnapshotsEndpoint(this IEndpointRouteBuilder app)
     {
-        app.MapPost("/api/reports/snapshots/mock", async (AppDbContext dbContext) =>
+        app.MapPost("/api/reports/snapshots/mock", async (
+            AppDbContext dbContext,
+            ICurrentUserService currentUser,
+            ExchangeRateService exchangeRateService,
+            CancellationToken cancellationToken) =>
         {
-            var portfolios = await dbContext.Portfolios.ToListAsync();
-            if (!portfolios.Any()) return Results.BadRequest("No portfolios to mock.");
+            var userId = currentUser.UserId;
+            if (userId is null)
+                return Results.Unauthorized();
 
-            var random = new Random();
+            var portfolios = await dbContext.Portfolios
+                .Where(portfolio => portfolio.UserId == userId)
+                .ToListAsync(cancellationToken);
+            if (portfolios.Count == 0)
+                return Results.BadRequest("No portfolios to mock.");
+
+            var random = new Random(42);
             var today = DateTime.UtcNow.Date;
+            var usdToVnd = await exchangeRateService.GetUsdToVndAsync(cancellationToken);
 
-            foreach (var p in portfolios)
+            await using var databaseTransaction =
+                await dbContext.Database.BeginTransactionAsync(cancellationToken);
+
+            foreach (var portfolio in portfolios)
             {
-                // Delete existing snapshots
-                var existing = await dbContext.PortfolioSnapshots.Where(s => s.PortfolioId == p.Id).ToListAsync();
+                var existing = await dbContext.PortfolioSnapshots
+                    .Where(snapshot => snapshot.PortfolioId == portfolio.Id)
+                    .ToListAsync(cancellationToken);
                 dbContext.PortfolioSnapshots.RemoveRange(existing);
 
-                decimal baseInvested = 100000000; // 100M VND
-                decimal baseValue = 110000000;
+                decimal totalInvested = 100_000_000m;
+                decimal netAssetValue = 110_000_000m;
 
-                for (int i = 30; i >= 0; i--)
+                for (var dayOffset = 30; dayOffset >= 0; dayOffset--)
                 {
-                    var date = today.AddDays(-i);
-                    // Add some random walk
-                    baseInvested += (decimal)(random.NextDouble() * 2000000 - 500000); // mostly going up
-                    baseValue = baseInvested * (decimal)(1 + (random.NextDouble() * 0.4 - 0.15)); // +/- 15-40% 
+                    var date = today.AddDays(-dayOffset);
+                    totalInvested += (decimal)(random.NextDouble() * 2_000_000 - 500_000);
+                    netAssetValue = totalInvested *
+                        (decimal)(1 + (random.NextDouble() * 0.4 - 0.15));
+                    var cashValue = netAssetValue * 0.1m;
+                    var holdingsValue = netAssetValue - cashValue;
+                    var totalPnl = netAssetValue - totalInvested;
 
-                    var snapshot = new PortfolioSnapshot
+                    dbContext.PortfolioSnapshots.Add(new PortfolioSnapshot
                     {
                         Id = Guid.NewGuid(),
-                        PortfolioId = p.Id,
+                        PortfolioId = portfolio.Id,
                         Date = date,
-                        TotalInvested = baseInvested,
-                        TotalValue = baseValue
-                    };
-                    dbContext.PortfolioSnapshots.Add(snapshot);
+                        TotalInvested = totalInvested,
+                        TotalValue = netAssetValue,
+                        HoldingsValue = holdingsValue,
+                        CashValue = cashValue,
+                        NetAssetValue = netAssetValue,
+                        NetExternalFlow = dayOffset == 30 ? totalInvested : 0,
+                        RealizedPnl = totalPnl * 0.2m,
+                        UnrealizedPnl = totalPnl * 0.8m,
+                        Income = 0,
+                        Fees = 0,
+                        BaseCurrency = "VND",
+                        UsdToVndRate = usdToVnd,
+                        ValuationTimestamp = date.AddHours(23).AddMinutes(55),
+                        QualityStatus = PortfolioSnapshotQuality.Complete,
+                        StaleAssetCount = 0,
+                        UnclassifiedCashFlowCount = 0
+                    });
                 }
             }
 
-            await dbContext.SaveChangesAsync();
+            await dbContext.SaveChangesAsync(cancellationToken);
+            await databaseTransaction.CommitAsync(cancellationToken);
             return Results.Ok(new { Message = "Mock data generated successfully." });
         })
         .WithName("MockSnapshots")

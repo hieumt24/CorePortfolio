@@ -131,20 +131,14 @@ public class GetPerformanceAnalyticsHandler : IRequestHandler<GetPerformanceAnal
             .OrderBy(h => h.Date)
             .ToListAsync(cancellationToken);
 
-        // Group by day for the chart
+        // Keep the legacy analytics chart on the normalized NAV field while the
+        // dedicated TWR/XIRR performance APIs are implemented in Sprint 4.
         var historyPoints = history
             .GroupBy(h => h.Date.Date)
-            .Select(g => 
+            .Select(group => new PortfolioHistoryDataPointDto
             {
-                // In PortfolioSnapshots, TotalValue is saved. We should really save it by Currency, 
-                // but for now let's just use it as is since Snapshot logic might need an overhaul later.
-                // Assuming snapshots are saved in VND if user prefers VND.
-                // For a more accurate history, we just sum TotalValue.
-                return new PortfolioHistoryDataPointDto
-                {
-                    Date = g.Key.ToString("yyyy-MM-dd"),
-                    TotalValue = g.Sum(h => h.TotalValue) 
-                };
+                Date = group.Key.ToString("yyyy-MM-dd"),
+                TotalValue = group.Sum(snapshot => snapshot.NetAssetValue)
             })
             .ToList();
 

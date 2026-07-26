@@ -43,6 +43,22 @@ export interface PerformanceAnalyticsDto {
   totalValueHistory: PortfolioHistoryDataPointDto[];
 }
 
+export interface PerformanceDataQualityDto {
+  from: string;
+  to: string;
+  asOf: string | null;
+  qualityStatus: 'Complete' | 'StalePrices' | 'Partial' | 'Unavailable' | string;
+  portfolioCount: number;
+  snapshotCount: number;
+  expectedSnapshotCount: number;
+  missingSnapshotCount: number;
+  missingSnapshotDays: number;
+  missingDates: string[];
+  staleAssetCount: number;
+  unclassifiedCashFlowCount: number;
+  issues: string[];
+}
+
 export interface DividendMonthlyAnalyticsDto {
   month: string;
   amount: number;

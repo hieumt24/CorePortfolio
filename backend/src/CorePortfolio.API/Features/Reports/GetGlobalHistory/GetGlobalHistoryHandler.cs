@@ -2,6 +2,7 @@ using CorePortfolio.Infrastructure.Data;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using CorePortfolio.API.Services;
+using CorePortfolio.Domain.Performance;
 
 namespace CorePortfolio.API.Features.Reports.GetGlobalHistory;
 
@@ -23,10 +24,39 @@ public class GetGlobalHistoryHandler : IRequestHandler<GetGlobalHistoryQuery, Li
             .Where(s => s.Portfolio != null && s.Portfolio.UserId == _currentUserService.UserId)
             .ToListAsync(cancellationToken);
 
-        return snapshots.GroupBy(s => s.Date.Date).OrderBy(g => g.Key).Select(g => new SnapshotDto(
-            g.Key.ToString("yyyy-MM-dd"), g.Sum(s => s.TotalInvested), g.Sum(s => s.TotalValue), "VND",
-            g.Max(s => s.UsdToVndRate), g.Max(s => s.ValuationTimestamp),
-            g.All(s => s.QualityStatus == "Complete") ? "Complete" : "Partial"
-        )).ToList();
+        return snapshots
+            .GroupBy(snapshot => snapshot.Date.Date)
+            .OrderBy(group => group.Key)
+            .Select(group => new SnapshotDto(
+                group.Key.ToString("yyyy-MM-dd"),
+                group.Sum(snapshot => snapshot.TotalInvested),
+                group.Sum(snapshot => snapshot.NetAssetValue),
+                group.Sum(snapshot => snapshot.HoldingsValue),
+                group.Sum(snapshot => snapshot.CashValue),
+                group.Sum(snapshot => snapshot.NetAssetValue),
+                group.Sum(snapshot => snapshot.NetExternalFlow),
+                group.Sum(snapshot => snapshot.RealizedPnl),
+                group.Sum(snapshot => snapshot.UnrealizedPnl),
+                group.Sum(snapshot => snapshot.Income),
+                group.Sum(snapshot => snapshot.Fees),
+                "VND",
+                group.Max(snapshot => snapshot.UsdToVndRate),
+                group.Max(snapshot => snapshot.ValuationTimestamp),
+                AggregateQualityStatus(group.Select(snapshot => snapshot.QualityStatus)),
+                group.Sum(snapshot => snapshot.StaleAssetCount),
+                group.Sum(snapshot => snapshot.UnclassifiedCashFlowCount)))
+            .ToList();
+    }
+
+    private static string AggregateQualityStatus(IEnumerable<string> statuses)
+    {
+        var values = statuses.ToHashSet(StringComparer.OrdinalIgnoreCase);
+        if (values.Contains(PortfolioSnapshotQuality.Partial))
+            return PortfolioSnapshotQuality.Partial;
+        if (values.Contains(PortfolioSnapshotQuality.Legacy))
+            return PortfolioSnapshotQuality.Legacy;
+        if (values.Contains(PortfolioSnapshotQuality.StalePrices))
+            return PortfolioSnapshotQuality.StalePrices;
+        return PortfolioSnapshotQuality.Complete;
     }
 }

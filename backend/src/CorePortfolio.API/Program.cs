@@ -35,6 +35,7 @@ using CorePortfolio.API.Features.RecurringCashflows;
 using CorePortfolio.API.Features.Notifications;
 using CorePortfolio.API.Features.MarketPrices;
 using CorePortfolio.API.Features.Profile;
+using CorePortfolio.API.Features.Performance;
 using CorePortfolio.API.Services;
 using CorePortfolio.API.Features.Auth;
 using CorePortfolio.Infrastructure.Data;
@@ -99,6 +100,7 @@ builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 builder.Services.Configure<UserActivityOptions>(
     builder.Configuration.GetSection(UserActivityOptions.SectionName));
 builder.Services.AddScoped<IUserActivityService, UserActivityService>();
+builder.Services.AddScoped<PerformanceDataService>();
 builder.Services.AddScoped<IPortfolioReportService, PortfolioReportService>();
 builder.Services.AddScoped<ITelegramCommandProcessor, TelegramCommandProcessor>();
 builder.Services.AddScoped<TransactionLedgerService>();
@@ -305,6 +307,7 @@ app.MapRecurringCashflowsEndpoints();
 app.MapNotificationsEndpoints();
 app.MapMarketPricesEndpoints();
 app.MapProfileEndpoints();
+app.MapPerformanceEndpoints();
 
 // Map fallback to index.html for SPA routing
 app.MapFallbackToFile("index.html");

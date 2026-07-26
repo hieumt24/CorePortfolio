@@ -32,6 +32,8 @@ public class AppDbContext : DbContext
     public DbSet<RecurringCashflowRule> RecurringCashflowRules => Set<RecurringCashflowRule>();
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<NotificationPreference> NotificationPreferences => Set<NotificationPreference>();
+    public DbSet<BenchmarkDefinition> BenchmarkDefinitions => Set<BenchmarkDefinition>();
+    public DbSet<BenchmarkPricePoint> BenchmarkPricePoints => Set<BenchmarkPricePoint>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -124,6 +126,9 @@ public class AppDbContext : DbContext
             .HasIndex(e => e.TransactionId)
             .IsUnique();
 
+        modelBuilder.Entity<CashLedgerEntry>()
+            .HasIndex(e => new { e.CashAccountId, e.Classification, e.OccurredAt });
+
         modelBuilder.Entity<User>()
             .HasMany(u => u.CashflowRecords)
             .WithOne(c => c.User)
@@ -157,6 +162,56 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<PortfolioSnapshot>()
             .HasIndex(snapshot => new { snapshot.PortfolioId, snapshot.Date })
             .IsUnique();
+
+        modelBuilder.Entity<BenchmarkDefinition>(benchmark =>
+        {
+            benchmark.Property(item => item.Name).HasMaxLength(100);
+            benchmark.Property(item => item.Symbol).HasMaxLength(30);
+            benchmark.Property(item => item.AssetGroup).HasMaxLength(20);
+            benchmark.Property(item => item.Currency).HasMaxLength(3);
+            benchmark.HasIndex(item => new { item.AssetGroup, item.IsActive, item.IsDefault });
+            benchmark.HasOne(item => item.MarketAsset)
+                .WithMany()
+                .HasForeignKey(item => item.MarketAssetId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
+
+        modelBuilder.Entity<BenchmarkPricePoint>(pricePoint =>
+        {
+            pricePoint.Property(item => item.Currency).HasMaxLength(3);
+            pricePoint.Property(item => item.Source).HasMaxLength(40);
+            pricePoint.Property(item => item.QualityStatus).HasMaxLength(30);
+            pricePoint.HasIndex(item => new { item.BenchmarkDefinitionId, item.Date })
+                .IsUnique();
+            pricePoint.HasOne(item => item.BenchmarkDefinition)
+                .WithMany(item => item.PricePoints)
+                .HasForeignKey(item => item.BenchmarkDefinitionId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<BenchmarkDefinition>().HasData(
+            new BenchmarkDefinition
+            {
+                Id = Guid.Parse("00000000-0000-0000-0005-000000000001"),
+                Name = "VN-Index",
+                Symbol = "VNINDEX",
+                AssetGroup = "Stock",
+                IsDefault = true,
+                Currency = "VND",
+                IsActive = true,
+                CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+            },
+            new BenchmarkDefinition
+            {
+                Id = Guid.Parse("00000000-0000-0000-0005-000000000002"),
+                Name = "Bitcoin",
+                Symbol = "BTC",
+                AssetGroup = "Crypto",
+                IsDefault = true,
+                Currency = "USD",
+                IsActive = true,
+                CreatedAt = new DateTime(2026, 1, 1, 0, 0, 0, DateTimeKind.Utc)
+            });
 
         modelBuilder.Entity<Budget>()
             .HasOne(b => b.User)

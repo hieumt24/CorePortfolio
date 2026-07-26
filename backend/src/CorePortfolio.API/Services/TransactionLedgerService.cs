@@ -1,6 +1,7 @@
 using CorePortfolio.API.Common;
 using CorePortfolio.Domain.Accounting;
 using CorePortfolio.Domain.Entities;
+using CorePortfolio.Domain.Performance;
 using CorePortfolio.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 
@@ -90,6 +91,7 @@ public sealed class TransactionLedgerService
             TransactionType.Earn => CashLedgerEntryType.Earn,
             _ => throw new AccountingValidationException("Loại giao dịch không hợp lệ.")
         };
+        entry.Classification = CashLedgerEntryClassificationRules.Classify(entry.Type);
         entry.Amount = transaction.Type switch
         {
             TransactionType.Buy => -(gross + transaction.Fee),

@@ -26,5 +26,18 @@ export interface SnapshotDto {
   date: string;
   totalInvested: number;
   totalValue: number;
+  holdingsValue: number;
+  cashValue: number;
+  netAssetValue: number;
+  netExternalFlow: number;
+  realizedPnl: number;
+  unrealizedPnl: number;
+  income: number;
+  fees: number;
+  currency: string;
+  usdToVndRate: number;
+  valuationTimestamp: string;
+  qualityStatus: 'Complete' | 'StalePrices' | 'Partial' | 'Legacy' | string;
+  staleAssetCount: number;
+  unclassifiedCashFlowCount: number;
 }
-

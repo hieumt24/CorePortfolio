@@ -28,11 +28,21 @@ public class GetPortfolioHistoryHandler : IRequestHandler<GetPortfolioHistoryQue
         return snapshots.Select(s => new SnapshotDto(
             s.Date.ToString("yyyy-MM-dd"),
             s.TotalInvested,
-            s.TotalValue,
+            s.NetAssetValue,
+            s.HoldingsValue,
+            s.CashValue,
+            s.NetAssetValue,
+            s.NetExternalFlow,
+            s.RealizedPnl,
+            s.UnrealizedPnl,
+            s.Income,
+            s.Fees,
             s.BaseCurrency,
             s.UsdToVndRate,
             s.ValuationTimestamp,
-            s.QualityStatus
+            s.QualityStatus,
+            s.StaleAssetCount,
+            s.UnclassifiedCashFlowCount
         )).ToList();
     }
 }

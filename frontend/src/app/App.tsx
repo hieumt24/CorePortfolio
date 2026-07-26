@@ -11,6 +11,7 @@ import { TransactionsDashboard } from '../features/transactions/components/Trans
 import { CashflowDashboard } from '../features/cashflows/components/CashflowDashboard';
 import { WatchlistDashboard } from '../features/watchlist/components/WatchlistDashboard';
 import { AnalyticsDashboard } from '../features/analytics/components/AnalyticsDashboard';
+import { PerformanceCenter } from '../features/performance/components/PerformanceCenter';
 import { BudgetsPage } from '../features/budgets/components/BudgetsPage';
 import { DcaPlansPage } from '../features/dcaPlans/components/DcaPlansPage';
 import { RebalancingPlansPage } from '../features/rebalancing/components/RebalancingPlansPage';
@@ -42,6 +43,7 @@ function App() {
           <Route path="/cashflow" element={<ProtectedRoute><CashflowDashboard /></ProtectedRoute>} />
           <Route path="/watchlist" element={<ProtectedRoute><WatchlistDashboard /></ProtectedRoute>} />
           <Route path="/analytics" element={<ProtectedRoute><AnalyticsDashboard /></ProtectedRoute>} />
+          <Route path="/analytics/performance" element={<ProtectedRoute><PerformanceCenter /></ProtectedRoute>} />
           <Route path="/budgets" element={<ProtectedRoute><BudgetsPage /></ProtectedRoute>} />
           <Route path="/saving-goals" element={<ProtectedRoute><SavingGoalsPage /></ProtectedRoute>} />
           <Route path="/rebalancing" element={<ProtectedRoute><RebalancingPlansPage /></ProtectedRoute>} />
