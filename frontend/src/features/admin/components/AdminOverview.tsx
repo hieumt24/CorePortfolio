@@ -6,6 +6,7 @@ import type {
   AuditEvent,
   ProductionOperations,
 } from '../types';
+import { formatVietnamDateTime } from '../../../shared/utils/dateTime';
 import './AdminOperations.css';
 
 const statCards: Array<{ key: keyof AdminOverviewModel; label: string; hint: string; tone: string }> = [
@@ -103,7 +104,7 @@ export function AdminOverview() {
                   <strong>{job.name}</strong>
                   <small>
                     {job.lastSucceededAt
-                      ? `Thành công ${new Date(job.lastSucceededAt).toLocaleString('vi-VN')}`
+                      ? `Thành công ${formatVietnamDateTime(job.lastSucceededAt)}`
                       : 'Chưa có lần chạy thành công'}
                   </small>
                 </div>
@@ -129,7 +130,7 @@ export function AdminOverview() {
                   </small>
                 </div>
                 <time dateTime={event.occurredAt}>
-                  {new Date(event.occurredAt).toLocaleString('vi-VN')}
+                  {formatVietnamDateTime(event.occurredAt)}
                 </time>
               </div>
             ))}
@@ -137,7 +138,7 @@ export function AdminOverview() {
           </div>
         </article>
       </section>
-      <p className="operations-updated">Cập nhật lúc {new Date(overview.generatedAt).toLocaleString('vi-VN')}</p>
+      <p className="operations-updated">Cập nhật lúc {formatVietnamDateTime(overview.generatedAt)}</p>
     </div>
   );
 }

@@ -4,6 +4,7 @@ import type { WatchlistDto } from '../types';
 import { useNotification } from '../../../context/NotificationContext';
 import { AddWatchlistModal } from './AddWatchlistModal';
 import '../../cashflows/components/CashflowDashboard.css'; // Re-use some styles
+import { formatVietnamDate } from '../../../shared/utils/dateTime';
 
 export const WatchlistDashboard: React.FC = () => {
   const { showNotification } = useNotification();
@@ -48,10 +49,10 @@ export const WatchlistDashboard: React.FC = () => {
   };
 
   const formatDate = (dateStr: string) => {
-    return new Date(dateStr).toLocaleDateString('vi-VN', {
+    return formatVietnamDate(dateStr, '—', {
       year: 'numeric',
       month: 'short',
-      day: 'numeric'
+      day: 'numeric',
     });
   };
 

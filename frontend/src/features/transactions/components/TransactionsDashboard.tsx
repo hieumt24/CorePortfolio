@@ -1,12 +1,19 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { deleteAllTransactions, deleteTransaction, getAllTransactions } from '../api/transactionApi';
-import type { GlobalTransactionDto, PaginatedResult, TransactionAssetGroup, TransactionDto } from '../types';
+import type {
+  GlobalTransactionDto,
+  TransactionAssetGroup,
+  TransactionDto,
+  TransactionPageResult,
+  TransactionSearchFilters,
+} from '../types';
 import { TransactionType } from '../types';
 import { useNotification } from '../../../context/NotificationContext';
 import { GlobalCreateTransactionModal } from './GlobalCreateTransactionModal';
 import { EditTransactionModal } from './EditTransactionModal';
 import { TransactionImportPreviewModal } from './TransactionImportPreviewModal';
-import type { AssetSummaryDto } from '../../portfolios/types';
+import type { AssetSummaryDto, PortfolioDto } from '../../portfolios/types';
+import { getPortfolios } from '../../portfolios/api/portfolioApi';
 import {
   parseCsvRows,
   parseExcelRows,
@@ -18,6 +25,7 @@ import {
   transactionsToSpreadsheetXml,
 } from '../utils/transactionFileTransfer';
 import type { TransactionImportRow } from '../utils/transactionFileTransfer';
+import { formatVietnamDateTime } from '../../../shared/utils/dateTime';
 import './TransactionsDashboard.css';
 
 const assetGroupLabels: Record<TransactionAssetGroup, string> = {
@@ -53,7 +61,7 @@ const matchesAssetGroup = (category: string, group: TransactionAssetGroup) => {
 };
 
 export const TransactionsDashboard: React.FC = () => {
-  const [data, setData] = useState<PaginatedResult<GlobalTransactionDto> | null>(null);
+  const [data, setData] = useState<TransactionPageResult | null>(null);
   const [groupCounts, setGroupCounts] = useState<Record<TransactionAssetGroup, number>>({
     all: 0,
     crypto: 0,
@@ -64,12 +72,21 @@ export const TransactionsDashboard: React.FC = () => {
   
   // Filters
   const [page, setPage] = useState(1);
-  const [pageSize] = useState(100);
+  const [pageSize, setPageSize] = useState(20);
   const [typeFilter, setTypeFilter] = useState<number | ''>('');
   const [assetGroup, setAssetGroup] = useState<TransactionAssetGroup>('all');
   const [actionScope, setActionScope] = useState<TransactionAssetGroup>('all');
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [searchInput, setSearchInput] = useState('');
+  const [search, setSearch] = useState('');
+  const [portfolioFilter, setPortfolioFilter] = useState('');
+  const [minAmount, setMinAmount] = useState('');
+  const [maxAmount, setMaxAmount] = useState('');
+  const [sortBy, setSortBy] = useState<TransactionSearchFilters['sortBy']>('date');
+  const [sortDirection, setSortDirection] =
+    useState<TransactionSearchFilters['sortDirection']>('desc');
+  const [portfolios, setPortfolios] = useState<PortfolioDto[]>([]);
 
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [editingTransaction, setEditingTransaction] = useState<GlobalTransactionDto | null>(null);
@@ -79,26 +96,47 @@ export const TransactionsDashboard: React.FC = () => {
   const importInputRef = useRef<HTMLInputElement>(null);
   const { showNotification } = useNotification();
 
+  useEffect(() => {
+    const timeout = window.setTimeout(() => {
+      setSearch(searchInput.trim());
+      setPage(1);
+    }, 300);
+    return () => window.clearTimeout(timeout);
+  }, [searchInput]);
+
+  useEffect(() => {
+    getPortfolios()
+      .then(setPortfolios)
+      .catch(() => showNotification('Không thể tải danh sách portfolio', 'error'));
+  }, [showNotification]);
+
   const fetchTransactions = async () => {
     try {
       setLoading(true);
-      const params: any = { page, pageSize };
+      const params: TransactionSearchFilters = {
+        page,
+        pageSize,
+        assetGroup,
+        sortBy,
+        sortDirection,
+      };
       if (typeFilter !== '') params.type = typeFilter;
-      if (startDate) params.startDate = new Date(startDate).toISOString();
-      if (endDate) params.endDate = new Date(endDate).toISOString();
+      if (startDate) params.startDate = startDate;
+      if (endDate) params.endDate = endDate;
+      if (search) params.search = search;
+      if (portfolioFilter) params.portfolioId = portfolioFilter;
+      if (minAmount) params.minAmount = Number(minAmount);
+      if (maxAmount) params.maxAmount = Number(maxAmount);
 
-      const [result, matchingTransactions] = await Promise.all([
-        getAllTransactions(params),
-        fetchEveryTransaction(params),
-      ]);
+      const result = await getAllTransactions(params);
       setData(result);
       setGroupCounts({
-        all: matchingTransactions.length,
-        crypto: matchingTransactions.filter(item => matchesAssetGroup(item.categoryName, 'crypto')).length,
-        stock: matchingTransactions.filter(item => matchesAssetGroup(item.categoryName, 'stock')).length,
-        fund: matchingTransactions.filter(item => matchesAssetGroup(item.categoryName, 'fund')).length,
+        all: result.facets.all,
+        crypto: result.facets.crypto,
+        stock: result.facets.stock,
+        fund: result.facets.fund,
       });
-    } catch (error) {
+    } catch {
       showNotification('Failed to fetch transactions', 'error');
     } finally {
       setLoading(false);
@@ -107,7 +145,20 @@ export const TransactionsDashboard: React.FC = () => {
 
   useEffect(() => {
     fetchTransactions();
-  }, [page, pageSize, typeFilter, startDate, endDate]);
+  }, [
+    page,
+    pageSize,
+    typeFilter,
+    assetGroup,
+    startDate,
+    endDate,
+    search,
+    portfolioFilter,
+    minAmount,
+    maxAmount,
+    sortBy,
+    sortDirection,
+  ]);
 
   const fetchEveryTransaction = async (filters: Parameters<typeof getAllTransactions>[0] = {}) => {
     const allItems: GlobalTransactionDto[] = [];
@@ -124,7 +175,17 @@ export const TransactionsDashboard: React.FC = () => {
     return allItems;
   };
 
-  const fetchAllTransactions = () => fetchEveryTransaction();
+  const fetchAllTransactions = () => fetchEveryTransaction({
+    type: typeFilter === '' ? undefined : typeFilter,
+    startDate: startDate || undefined,
+    endDate: endDate || undefined,
+    search: search || undefined,
+    portfolioId: portfolioFilter || undefined,
+    minAmount: minAmount ? Number(minAmount) : undefined,
+    maxAmount: maxAmount ? Number(maxAmount) : undefined,
+    sortBy,
+    sortDirection,
+  });
 
   const downloadBlob = (blob: Blob, filename: string) => {
     const url = URL.createObjectURL(blob);
@@ -189,7 +250,7 @@ export const TransactionsDashboard: React.FC = () => {
     }
   };
 
-  const visibleItems = data?.items.filter(item => matchesAssetGroup(item.categoryName, assetGroup)) ?? [];
+  const visibleItems = data?.items ?? [];
   const countFor = (group: TransactionAssetGroup) => groupCounts[group];
 
   const handleDelete = async (id: string) => {
@@ -198,7 +259,7 @@ export const TransactionsDashboard: React.FC = () => {
         await deleteTransaction(id);
         showNotification('Transaction deleted successfully', 'success');
         fetchTransactions();
-      } catch (error) {
+      } catch {
         showNotification('Failed to delete transaction', 'error');
       }
     }
@@ -358,6 +419,36 @@ export const TransactionsDashboard: React.FC = () => {
       </section>
 
       <div className="filters-toolbar glass-panel">
+        <div className="toolbar-group toolbar-search">
+          <label htmlFor="transactionSearch" className="sr-only">Tìm giao dịch</label>
+          <input
+            id="transactionSearch"
+            type="search"
+            className="filter-input"
+            value={searchInput}
+            onChange={(event) => setSearchInput(event.target.value)}
+            placeholder="Tìm mã, tên, portfolio, ghi chú..."
+          />
+        </div>
+
+        <div className="toolbar-group">
+          <label htmlFor="portfolioFilter" className="sr-only">Portfolio</label>
+          <select
+            id="portfolioFilter"
+            className="filter-select"
+            value={portfolioFilter}
+            onChange={(event) => {
+              setPortfolioFilter(event.target.value);
+              setPage(1);
+            }}
+          >
+            <option value="">Tất cả portfolio</option>
+            {portfolios.map((portfolio) => (
+              <option key={portfolio.id} value={portfolio.id}>{portfolio.name}</option>
+            ))}
+          </select>
+        </div>
+
         <div className="toolbar-group">
           <label htmlFor="typeFilter" className="sr-only">Type</label>
           <select 
@@ -400,6 +491,73 @@ export const TransactionsDashboard: React.FC = () => {
             title="End Date"
           />
         </div>
+
+        <div className="toolbar-group amount-filter">
+          <label htmlFor="minAmount" className="sr-only">Giá trị tối thiểu</label>
+          <input
+            id="minAmount"
+            type="number"
+            min="0"
+            className="filter-input"
+            value={minAmount}
+            onChange={(event) => { setMinAmount(event.target.value); setPage(1); }}
+            placeholder="Giá trị từ"
+          />
+          <span className="toolbar-sep">–</span>
+          <label htmlFor="maxAmount" className="sr-only">Giá trị tối đa</label>
+          <input
+            id="maxAmount"
+            type="number"
+            min="0"
+            className="filter-input"
+            value={maxAmount}
+            onChange={(event) => { setMaxAmount(event.target.value); setPage(1); }}
+            placeholder="đến"
+          />
+        </div>
+
+        <div className="toolbar-group">
+          <label htmlFor="sortBy" className="sr-only">Sắp xếp</label>
+          <select
+            id="sortBy"
+            className="filter-select"
+            value={`${sortBy}:${sortDirection}`}
+            onChange={(event) => {
+              const [nextSort, nextDirection] = event.target.value.split(':');
+              setSortBy(nextSort as TransactionSearchFilters['sortBy']);
+              setSortDirection(nextDirection as TransactionSearchFilters['sortDirection']);
+              setPage(1);
+            }}
+          >
+            <option value="date:desc">Mới nhất</option>
+            <option value="date:asc">Cũ nhất</option>
+            <option value="amount:desc">Giá trị cao nhất</option>
+            <option value="amount:asc">Giá trị thấp nhất</option>
+            <option value="symbol:asc">Mã A–Z</option>
+            <option value="fee:desc">Phí cao nhất</option>
+          </select>
+        </div>
+
+        <button
+          type="button"
+          className="filter-reset"
+          onClick={() => {
+            setSearchInput('');
+            setSearch('');
+            setPortfolioFilter('');
+            setTypeFilter('');
+            setStartDate('');
+            setEndDate('');
+            setMinAmount('');
+            setMaxAmount('');
+            setSortBy('date');
+            setSortDirection('desc');
+            setAssetGroup('all');
+            setPage(1);
+          }}
+        >
+          Xóa lọc
+        </button>
       </div>
 
       <div className="table-container glass-panel">
@@ -429,7 +587,7 @@ export const TransactionsDashboard: React.FC = () => {
               <tbody>
                 {visibleItems.map(t => (
                   <tr key={t.id}>
-                    <td className="date-cell">{new Date(t.date).toLocaleDateString()}</td>
+                    <td className="date-cell">{formatVietnamDateTime(t.date)}</td>
                     <td>{t.portfolioName}</td>
                     <td className="asset-cell">
                       <span className="asset-name">{t.assetName}</span>
@@ -471,6 +629,20 @@ export const TransactionsDashboard: React.FC = () => {
           <span className="page-info">
             {page} / {Math.ceil(data.totalCount / data.pageSize)} <span className="page-total">({data.totalCount} total)</span>
           </span>
+          <label className="page-size">
+            <span>Hiển thị</span>
+            <select
+              value={pageSize}
+              onChange={(event) => {
+                setPageSize(Number(event.target.value));
+                setPage(1);
+              }}
+            >
+              <option value={20}>20</option>
+              <option value={50}>50</option>
+              <option value={100}>100</option>
+            </select>
+          </label>
           <button 
             className="btn btn-outline"
             disabled={page >= Math.ceil(data.totalCount / data.pageSize)}

@@ -28,6 +28,7 @@ using CorePortfolio.API.Features.Rebalancing.ExecutionPlans;
 using CorePortfolio.API.Features.Analytics;
 using CorePortfolio.API.Features.Budgets;
 using CorePortfolio.API.Features.CashAccounts;
+using CorePortfolio.API.Features.MarketIndices;
 using CorePortfolio.API.Features.DcaPlans;
 using CorePortfolio.API.Features.SavingGoals;
 using CorePortfolio.API.Features.Dashboard;
@@ -347,6 +348,7 @@ app.MapDashboardEndpoints();
 app.MapRecurringCashflowsEndpoints();
 app.MapNotificationsEndpoints();
 app.MapMarketPricesEndpoints();
+app.MapMarketIndicesEndpoints();
 app.MapProfileEndpoints();
 app.MapPerformanceEndpoints();
 

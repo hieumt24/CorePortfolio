@@ -9,7 +9,7 @@ import { MarketAssetManagement } from '../features/admin/components/MarketAssetM
 import { GlobalReportDashboard } from '../features/reports/components/GlobalReportDashboard';
 import { TransactionsDashboard } from '../features/transactions/components/TransactionsDashboard';
 import { CashflowDashboard } from '../features/cashflows/components/CashflowDashboard';
-import { WatchlistDashboard } from '../features/watchlist/components/WatchlistDashboard';
+import { WatchlistPage } from '../features/watchlist/components/WatchlistPage';
 import { AnalyticsDashboard } from '../features/analytics/components/AnalyticsDashboard';
 import { PerformanceCenter } from '../features/performance/components/PerformanceCenter';
 import { BudgetsPage } from '../features/budgets/components/BudgetsPage';
@@ -41,7 +41,7 @@ function App() {
           <Route path="/transactions" element={<ProtectedRoute><TransactionsDashboard /></ProtectedRoute>} />
           <Route path="/reports" element={<ProtectedRoute><GlobalReportDashboard /></ProtectedRoute>} />
           <Route path="/cashflow" element={<ProtectedRoute><CashflowDashboard /></ProtectedRoute>} />
-          <Route path="/watchlist" element={<ProtectedRoute><WatchlistDashboard /></ProtectedRoute>} />
+          <Route path="/watchlist" element={<ProtectedRoute><WatchlistPage /></ProtectedRoute>} />
           <Route path="/analytics" element={<ProtectedRoute><AnalyticsDashboard /></ProtectedRoute>} />
           <Route path="/analytics/performance" element={<ProtectedRoute><PerformanceCenter /></ProtectedRoute>} />
           <Route path="/budgets" element={<ProtectedRoute><BudgetsPage /></ProtectedRoute>} />

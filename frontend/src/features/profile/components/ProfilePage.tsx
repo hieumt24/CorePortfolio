@@ -2,18 +2,14 @@ import { useEffect, useMemo, useState } from 'react';
 import { useAuth } from '../../../context/AuthContext';
 import { profileApi } from '../api/profileApi';
 import type { UserProfile } from '../types';
+import { formatVietnamDateTime } from '../../../shared/utils/dateTime';
 import './ProfilePage.css';
 
 type FieldErrors = Partial<Record<'displayName' | 'username' | 'email', string>>;
 type PasswordErrors = Partial<Record<'currentPassword' | 'newPassword' | 'confirmPassword', string>>;
 
-const formatDate = (value: string | null) => {
-  if (!value) return 'Chưa có dữ liệu';
-  return new Intl.DateTimeFormat('vi-VN', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(new Date(value));
-};
+const formatDate = (value: string | null) =>
+  formatVietnamDateTime(value, 'Chưa có dữ liệu');
 
 const getInitials = (name: string) =>
   name

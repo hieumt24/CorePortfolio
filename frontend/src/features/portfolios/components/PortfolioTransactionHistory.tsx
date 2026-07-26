@@ -3,6 +3,7 @@ import { getAllTransactions, deleteTransaction } from '../../transactions/api/tr
 import type { GlobalTransactionDto, PaginatedResult } from '../../transactions/types';
 import { TransactionType } from '../../transactions/types';
 import { useNotification } from '../../../context/NotificationContext';
+import { formatVietnamDateTime } from '../../../shared/utils/dateTime';
 import './PortfolioTransactionHistory.css';
 
 interface Props {
@@ -127,7 +128,7 @@ export const PortfolioTransactionHistory: React.FC<Props> = ({ portfolioId }) =>
               <tbody>
                 {data.items.map(t => (
                   <tr key={t.id}>
-                    <td className="date-cell">{new Date(t.date).toLocaleDateString()}</td>
+                    <td className="date-cell">{formatVietnamDateTime(t.date)}</td>
                     <td className="asset-cell">
                       <span className="asset-name">{t.assetName}</span>
                       <span className="asset-sym">{t.symbol}</span>

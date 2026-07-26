@@ -1,6 +1,7 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import type { PortfolioDto } from '../types';
+import { formatVietnamDate } from '../../../shared/utils/dateTime';
 import './PortfolioCard.css';
 
 interface Props {
@@ -36,7 +37,7 @@ export const PortfolioCard: React.FC<Props> = ({ portfolio }) => {
       </div>
       <div className="card-footer">
         <span className="card-meta">
-          Created {new Date(portfolio.createdAt).toLocaleDateString()}
+          Created {formatVietnamDate(portfolio.createdAt)}
         </span>
       </div>
     </article>

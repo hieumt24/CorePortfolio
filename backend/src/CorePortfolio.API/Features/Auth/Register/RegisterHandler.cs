@@ -4,6 +4,7 @@ using CorePortfolio.Infrastructure.Data;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using System.Net.Mail;
+using CorePortfolio.API.Services;
 
 namespace CorePortfolio.API.Features.Auth.Register;
 
@@ -24,10 +25,14 @@ public class RegisterResult
 public class RegisterHandler : IRequestHandler<RegisterCommand, RegisterResult>
 {
     private readonly AppDbContext _dbContext;
+    private readonly NotificationWriter _notificationWriter;
 
-    public RegisterHandler(AppDbContext dbContext)
+    public RegisterHandler(
+        AppDbContext dbContext,
+        NotificationWriter notificationWriter)
     {
         _dbContext = dbContext;
+        _notificationWriter = notificationWriter;
     }
 
     public async Task<RegisterResult> Handle(RegisterCommand request, CancellationToken cancellationToken)
@@ -61,6 +66,32 @@ public class RegisterHandler : IRequestHandler<RegisterCommand, RegisterResult>
         };
 
         _dbContext.Users.Add(user);
+        var activeAdminIds = await _dbContext.Users
+            .AsNoTracking()
+            .Where(item => item.Role == "Admin" && item.IsActive)
+            .Select(item => item.Id)
+            .ToListAsync(cancellationToken);
+        foreach (var adminId in activeAdminIds)
+        {
+            await _notificationWriter.QueueAsync(
+                new NotificationWriteRequest(
+                    adminId,
+                    NotificationType.System,
+                    NotificationSeverity.Info,
+                    "Có người dùng mới đăng ký",
+                    $"Tài khoản {user.Username} vừa được tạo.",
+                    $"system:user-registered:{user.Id:N}",
+                    $"/admin/users?search={Uri.EscapeDataString(user.Username)}",
+                    "User",
+                    user.Id,
+                    "Xem người dùng",
+                    Metadata: new Dictionary<string, string?>
+                    {
+                        ["username"] = user.Username,
+                        ["registeredAt"] = user.CreatedAt.ToString("O")
+                    }),
+                cancellationToken);
+        }
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         return new RegisterResult

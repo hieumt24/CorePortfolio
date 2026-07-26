@@ -6,7 +6,18 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CorePortfolio.API.Features.Watchlist;
 
-public record WatchlistDto(Guid Id, Guid MarketAssetId, string Symbol, string Name, decimal CurrentPrice, decimal? TargetPrice, DateTime AddedAt, string AssetCategoryName);
+public record WatchlistDto(
+    Guid Id,
+    Guid MarketAssetId,
+    string Symbol,
+    string Name,
+    decimal CurrentPrice,
+    decimal? TargetPrice,
+    DateTime AddedAt,
+    string AssetCategoryName,
+    string Currency,
+    DateTime PriceUpdatedAt,
+    string PriceStatus);
 
 public record GetWatchlistQuery : IRequest<List<WatchlistDto>>;
 
@@ -39,7 +50,10 @@ public class GetWatchlistHandler : IRequestHandler<GetWatchlistQuery, List<Watch
                 w.MarketAsset != null ? w.MarketAsset.CurrentPrice : 0,
                 w.TargetPrice,
                 w.AddedAt,
-                w.MarketAsset != null && w.MarketAsset.Category != null ? w.MarketAsset.Category.Name : ""
+                w.MarketAsset != null && w.MarketAsset.Category != null ? w.MarketAsset.Category.Name : "",
+                w.MarketAsset != null && w.MarketAsset.Category != null ? w.MarketAsset.Category.DefaultCurrency : "USD",
+                w.MarketAsset != null ? w.MarketAsset.LastUpdated : DateTime.MinValue,
+                w.MarketAsset != null ? w.MarketAsset.PriceStatus : "Unknown"
             ))
             .ToListAsync(cancellationToken);
     }

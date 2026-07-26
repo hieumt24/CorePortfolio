@@ -8,6 +8,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Hosting;
+using Microsoft.Extensions.Logging;
 
 namespace CorePortfolio.API.IntegrationTests.Infrastructure;
 
@@ -27,6 +28,12 @@ public sealed class CorePortfolioApiFactory : WebApplicationFactory<Program>
             .UseSetting("Jwt:Audience", "CorePortfolio.IntegrationTests")
             .UseSetting("MarketPrices:Enabled", "false")
             .UseSetting("Telegram:Enabled", "false");
+
+        builder.ConfigureLogging(logging =>
+        {
+            logging.ClearProviders();
+            logging.AddDebug();
+        });
 
         builder.ConfigureServices(services =>
         {

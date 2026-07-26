@@ -3,24 +3,14 @@ import { categoriesApi } from '../api/categories';
 import { marketAssetsApi } from '../api/marketAssets';
 import { useNotification } from '../../../context/NotificationContext';
 import type { AssetCategory, MarketAsset, PriceRefreshResult } from '../types';
+import { formatVietnamDateTime } from '../../../shared/utils/dateTime';
 import { MarketAssetModal } from './MarketAssetModal';
 import './MarketAssetManagement.css';
 
 const formatPrice = (value: number) =>
   new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 8 }).format(value);
 
-const formatDateTime = (value: string) => {
-  if (!value) return 'Never';
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return 'Never';
-  return new Intl.DateTimeFormat('vi-VN', {
-    day: '2-digit',
-    month: '2-digit',
-    year: 'numeric',
-    hour: '2-digit',
-    minute: '2-digit',
-  }).format(date);
-};
+const formatDateTime = (value: string) => formatVietnamDateTime(value, 'Never');
 
 const getSourceTone = (source: string) => {
   const normalized = source.toLowerCase();

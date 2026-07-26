@@ -27,6 +27,7 @@ public static class DependencyInjection
         services.AddScoped<KbsStockInstrumentService>();
         services.AddScoped<IStockInstrumentService>(provider => provider.GetRequiredService<KbsStockInstrumentService>());
         services.AddScoped<IStockUniverseService>(provider => provider.GetRequiredService<KbsStockInstrumentService>());
+        services.AddScoped<IMarketIndexService, KbsMarketIndexService>();
         return services;
     }
 }

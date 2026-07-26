@@ -1,5 +1,5 @@
 import { apiClient } from '../../../shared/api/baseClient';
-import type { PortfolioDto, PortfolioSummaryDto } from '../types';
+import type { MarketIndexQuote, PortfolioDto, PortfolioSummaryDto } from '../types';
 
 export const getPortfolios = (): Promise<PortfolioDto[]> => {
   return apiClient<PortfolioDto[]>('/portfolios');
@@ -8,6 +8,9 @@ export const getPortfolios = (): Promise<PortfolioDto[]> => {
 export const getPortfolioSummary = (id: string): Promise<PortfolioSummaryDto> => {
   return apiClient<PortfolioSummaryDto>(`/portfolios/${id}/summary`);
 };
+
+export const getMarketIndices = (): Promise<MarketIndexQuote[]> =>
+  apiClient<MarketIndexQuote[]>('/market-indices?symbols=VNINDEX,VN30');
 
 export const createPortfolio = (data: { name: string; description: string }): Promise<{ id: string }> => {
   return apiClient<{ id: string }>('/portfolios', {

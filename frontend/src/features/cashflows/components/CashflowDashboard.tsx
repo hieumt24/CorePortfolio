@@ -10,6 +10,7 @@ import type { CashflowRecord } from '../types/cashflows';
 import { cashflowsApi } from '../api/cashflowsApi';
 import { getBudgetsProgress, type BudgetProgress } from '../../budgets/api/budgetApi';
 import { useNotification } from '../../../context/NotificationContext';
+import { formatVietnamDate, formatVietnamTime } from '../../../shared/utils/dateTime';
 import './CashflowDashboard.css';
 
 const getDateRange = (filter: string) => {
@@ -436,8 +437,8 @@ export const CashflowDashboard: React.FC = () => {
                       return (
                       <div key={record.id} className={`cf-ledger-item ${recordBudget?.isExceeded ? 'budget-exceeded' : recordBudget && recordBudget.rawProgressPercentage >= 80 ? 'budget-warning' : ''}`}>
                         <div className="cf-ledger-date">
-                          <div className="date-main">{new Date(record.date).toLocaleDateString('vi-VN', { day: '2-digit', month: 'short' })}</div>
-                          <div className="time-sub">{new Date(record.date).toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' })}</div>
+                          <div className="date-main">{formatVietnamDate(record.date, '—', { day: '2-digit', month: 'short' })}</div>
+                          <div className="time-sub">{formatVietnamTime(record.date)}</div>
                         </div>
                         
                         <div className="cf-ledger-icon" style={{ backgroundColor: `${record.categoryColor}15`, color: record.categoryColor }}>

@@ -6,6 +6,7 @@ import {
   type RebalanceExecutionPlan,
 } from '../types';
 import './RebalancingPlansPage.css';
+import { formatVietnamDateTime } from '../../../shared/utils/dateTime';
 
 const formatCurrency = (amount: number, currency: string) =>
   new Intl.NumberFormat(currency === 'VND' ? 'vi-VN' : 'en-US', {
@@ -92,7 +93,7 @@ export const RebalancingPlansPage: React.FC = () => {
           <section className="rebalance-summary glass-panel">
             <div>
               <span>Plan gần nhất</span>
-              <strong>{new Date(latestPlan.createdAt).toLocaleString()}</strong>
+              <strong>{formatVietnamDateTime(latestPlan.createdAt)}</strong>
             </div>
             <div>
               <span>Trạng thái</span>
@@ -170,7 +171,7 @@ export const RebalancingPlansPage: React.FC = () => {
               <h2>Lịch sử plan</h2>
               {plans.slice(1).map(plan => (
                 <div key={plan.id} className="history-row">
-                  <span>{new Date(plan.createdAt).toLocaleString()}</span>
+                  <span>{formatVietnamDateTime(plan.createdAt)}</span>
                   <span>{plan.currency}</span>
                   <span>{plan.status === RebalanceExecutionPlanStatus.Applied ? 'Đã áp dụng' : 'Mô phỏng'}</span>
                   <span>{plan.items.length} bước</span>

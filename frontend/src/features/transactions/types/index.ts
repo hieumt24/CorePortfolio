@@ -65,3 +65,30 @@ export interface PaginatedResult<T> {
   page: number;
   pageSize: number;
 }
+
+export interface TransactionFacetCounts {
+  all: number;
+  crypto: number;
+  stock: number;
+  fund: number;
+}
+
+export interface TransactionPageResult extends PaginatedResult<GlobalTransactionDto> {
+  facets: TransactionFacetCounts;
+}
+
+export interface TransactionSearchFilters {
+  portfolioId?: string;
+  assetId?: string;
+  type?: number;
+  startDate?: string;
+  endDate?: string;
+  search?: string;
+  assetGroup?: TransactionAssetGroup;
+  minAmount?: number;
+  maxAmount?: number;
+  sortBy?: 'date' | 'amount' | 'quantity' | 'fee' | 'symbol';
+  sortDirection?: 'asc' | 'desc';
+  page?: number;
+  pageSize?: number;
+}

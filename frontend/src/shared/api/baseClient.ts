@@ -1,4 +1,12 @@
-export const API_URL = import.meta.env.VITE_API_URL || '/api';
+const PRODUCTION_API_URL =
+  'https://coreportfolio-api-cdbchffjhtg2hgda.southeastasia-01.azurewebsites.net/api';
+
+const configuredApiUrl = import.meta.env.VITE_API_URL?.trim();
+
+export const API_URL = (
+  configuredApiUrl
+  || (import.meta.env.PROD ? PRODUCTION_API_URL : '/api')
+).replace(/\/+$/, '');
 
 export const apiClient = async <T>(endpoint: string, options?: RequestInit): Promise<T> => {
   const token = localStorage.getItem('token');
@@ -36,6 +44,18 @@ export const apiClient = async <T>(endpoint: string, options?: RequestInit): Pro
 
   if (response.status === 204) {
     return {} as T;
+  }
+
+  const contentType = response.headers.get('content-type')?.toLowerCase() ?? '';
+  if (!contentType.includes('application/json')) {
+    const responsePreview = (await response.text()).trim().slice(0, 80).toLowerCase();
+    const looksLikeHtml = responsePreview.startsWith('<!doctype')
+      || responsePreview.startsWith('<html');
+    throw new Error(
+      looksLikeHtml
+        ? 'API đang trả về trang HTML. Hãy kiểm tra VITE_API_URL hoặc cấu hình proxy /api.'
+        : `API trả về định dạng không được hỗ trợ (${contentType || 'unknown'}).`,
+    );
   }
 
   return response.json();

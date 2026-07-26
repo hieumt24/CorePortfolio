@@ -1,74 +1,185 @@
+using CorePortfolio.API.Features.Transactions.DeleteAllTransactions;
+using CorePortfolio.API.Services;
+using CorePortfolio.Domain.Accounting;
+using CorePortfolio.Domain.Entities;
 using CorePortfolio.Infrastructure.Data;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
-using CorePortfolio.API.Common.Models;
-using CorePortfolio.API.Services;
 
 namespace CorePortfolio.API.Features.Transactions.GetAllTransactions;
 
-public class GetAllTransactionsHandler : IRequestHandler<GetAllTransactionsQuery, PaginatedResult<GlobalTransactionDto>>
+public sealed class GetAllTransactionsHandler(
+    AppDbContext dbContext,
+    ICurrentUserService currentUserService)
+    : IRequestHandler<GetAllTransactionsQuery, TransactionPageDto>
 {
-    private readonly AppDbContext _dbContext;
-    private readonly ICurrentUserService _currentUserService;
-
-    public GetAllTransactionsHandler(AppDbContext dbContext, ICurrentUserService currentUserService)
+    public async Task<TransactionPageDto> Handle(
+        GetAllTransactionsQuery request,
+        CancellationToken cancellationToken)
     {
-        _dbContext = dbContext;
-        _currentUserService = currentUserService;
-    }
+        if (request.MinAmount is < 0 || request.MaxAmount is < 0)
+            throw new ArgumentException("Khoảng giá trị giao dịch không được âm.");
+        if (request.MinAmount.HasValue &&
+            request.MaxAmount.HasValue &&
+            request.MinAmount > request.MaxAmount)
+            throw new ArgumentException("Giá trị tối thiểu không được lớn hơn giá trị tối đa.");
 
-    public async Task<PaginatedResult<GlobalTransactionDto>> Handle(GetAllTransactionsQuery request, CancellationToken cancellationToken)
-    {
-        var query = _dbContext.Transactions
-            .Include(t => t.Portfolio)
-            .Include(t => t.Asset)
-                .ThenInclude(a => a!.MarketAsset)
-                    .ThenInclude(ma => ma!.Category)
+        var query = dbContext.Transactions
             .AsNoTracking()
-            .Where(t => t.Portfolio != null && t.Portfolio.UserId == _currentUserService.UserId);
+            .Where(transaction =>
+                transaction.Portfolio != null &&
+                transaction.Portfolio.UserId == currentUserService.UserId);
 
-        // Apply filters
         if (request.PortfolioId.HasValue)
-            query = query.Where(t => t.PortfolioId == request.PortfolioId.Value);
-
+            query = query.Where(transaction => transaction.PortfolioId == request.PortfolioId.Value);
         if (request.AssetId.HasValue)
-            query = query.Where(t => t.AssetId == request.AssetId.Value);
-
+            query = query.Where(transaction => transaction.AssetId == request.AssetId.Value);
         if (request.Type.HasValue)
-            query = query.Where(t => t.Type == request.Type.Value);
-
+            query = query.Where(transaction => transaction.Type == request.Type.Value);
         if (request.StartDate.HasValue)
-            query = query.Where(t => t.Date >= request.StartDate.Value);
-
+            query = query.Where(transaction => transaction.Date >= request.StartDate.Value);
         if (request.EndDate.HasValue)
-            query = query.Where(t => t.Date <= request.EndDate.Value);
+        {
+            var endDate = request.EndDate.Value;
+            if (endDate.TimeOfDay == TimeSpan.Zero)
+            {
+                var exclusiveEnd = endDate.Date.AddDays(1);
+                query = query.Where(transaction => transaction.Date < exclusiveEnd);
+            }
+            else
+            {
+                query = query.Where(transaction => transaction.Date <= endDate);
+            }
+        }
 
-        // Get total count for pagination
-        int totalCount = await query.CountAsync(cancellationToken);
+        var search = request.Search?.Trim();
+        if (!string.IsNullOrWhiteSpace(search))
+        {
+            query = query.Where(transaction =>
+                (transaction.Asset != null &&
+                 transaction.Asset.MarketAsset != null &&
+                 (transaction.Asset.MarketAsset.Symbol.Contains(search) ||
+                  transaction.Asset.MarketAsset.Name.Contains(search))) ||
+                (transaction.Portfolio != null && transaction.Portfolio.Name.Contains(search)) ||
+                transaction.Notes.Contains(search));
+        }
 
-        // Apply ordering and pagination
+        if (request.MinAmount.HasValue)
+            query = query.Where(transaction =>
+                transaction.Quantity * transaction.Price + transaction.Fee >= request.MinAmount.Value);
+        if (request.MaxAmount.HasValue)
+            query = query.Where(transaction =>
+                transaction.Quantity * transaction.Price + transaction.Fee <= request.MaxAmount.Value);
+
+        var categoryCounts = await query
+            .GroupBy(transaction =>
+                transaction.Asset != null &&
+                transaction.Asset.MarketAsset != null &&
+                transaction.Asset.MarketAsset.Category != null
+                    ? transaction.Asset.MarketAsset.Category.Name
+                    : string.Empty)
+            .Select(group => new { CategoryName = group.Key, Count = group.Count() })
+            .ToListAsync(cancellationToken);
+        var facets = new TransactionFacetCounts(
+            categoryCounts.Sum(item => item.Count),
+            categoryCounts.Where(item => AssetCategoryClassifier.IsCrypto(item.CategoryName))
+                .Sum(item => item.Count),
+            categoryCounts.Where(item => AssetCategoryClassifier.IsStock(item.CategoryName))
+                .Sum(item => item.Count),
+            categoryCounts.Where(item => AssetCategoryClassifier.IsFund(item.CategoryName))
+                .Sum(item => item.Count));
+
+        if (request.AssetGroup != TransactionAssetGroup.All)
+        {
+            var categoryIds = await dbContext.AssetCategories
+                .AsNoTracking()
+                .Select(category => new { category.Id, category.Name })
+                .ToListAsync(cancellationToken);
+            var matchingCategoryIds = categoryIds
+                .Where(category => MatchesGroup(category.Name, request.AssetGroup))
+                .Select(category => category.Id)
+                .ToArray();
+            query = query.Where(transaction =>
+                transaction.Asset != null &&
+                transaction.Asset.MarketAsset != null &&
+                matchingCategoryIds.Contains(transaction.Asset.MarketAsset.CategoryId));
+        }
+
+        var totalCount = await query.CountAsync(cancellationToken);
+        query = ApplyOrdering(query, request.SortBy, request.SortDirection);
+
+        var page = Math.Max(request.Page, 1);
+        var pageSize = Math.Clamp(request.PageSize, 1, 200);
         var items = await query
-            .OrderByDescending(t => t.Date)
-            .Skip((request.Page - 1) * request.PageSize)
-            .Take(request.PageSize)
-            .Select(t => new GlobalTransactionDto(
-                t.Id,
-                t.PortfolioId,
-                t.Portfolio != null ? t.Portfolio.Name : "N/A",
-                t.AssetId,
-                t.Asset != null && t.Asset.MarketAsset != null ? t.Asset.MarketAsset.Symbol : "N/A",
-                t.Asset != null && t.Asset.MarketAsset != null ? t.Asset.MarketAsset.Name : "N/A",
-                t.Asset != null && t.Asset.MarketAsset != null && t.Asset.MarketAsset.Category != null ? t.Asset.MarketAsset.Category.Name : "N/A",
-                t.Asset != null && t.Asset.MarketAsset != null && t.Asset.MarketAsset.Category != null ? t.Asset.MarketAsset.Category.DefaultCurrency : "USD",
-                t.Type,
-                t.Quantity,
-                t.Price,
-                t.Fee,
-                t.Notes,
-                t.Date
-            ))
+            .Skip((page - 1) * pageSize)
+            .Take(pageSize)
+            .Select(transaction => new GlobalTransactionDto(
+                transaction.Id,
+                transaction.PortfolioId,
+                transaction.Portfolio != null ? transaction.Portfolio.Name : "N/A",
+                transaction.AssetId,
+                transaction.Asset != null && transaction.Asset.MarketAsset != null
+                    ? transaction.Asset.MarketAsset.Symbol
+                    : "N/A",
+                transaction.Asset != null && transaction.Asset.MarketAsset != null
+                    ? transaction.Asset.MarketAsset.Name
+                    : "N/A",
+                transaction.Asset != null &&
+                transaction.Asset.MarketAsset != null &&
+                transaction.Asset.MarketAsset.Category != null
+                    ? transaction.Asset.MarketAsset.Category.Name
+                    : "N/A",
+                transaction.Asset != null &&
+                transaction.Asset.MarketAsset != null &&
+                transaction.Asset.MarketAsset.Category != null
+                    ? transaction.Asset.MarketAsset.Category.DefaultCurrency
+                    : "USD",
+                transaction.Type,
+                transaction.Quantity,
+                transaction.Price,
+                transaction.Fee,
+                transaction.Notes,
+                transaction.Date))
             .ToListAsync(cancellationToken);
 
-        return new PaginatedResult<GlobalTransactionDto>(items, totalCount, request.Page, request.PageSize);
+        return new TransactionPageDto(items, totalCount, page, pageSize, facets);
     }
+
+    private static IQueryable<Transaction> ApplyOrdering(
+        IQueryable<Transaction> query,
+        string sortBy,
+        string sortDirection)
+    {
+        var descending = !sortDirection.Equals("asc", StringComparison.OrdinalIgnoreCase);
+        return sortBy.Trim().ToLowerInvariant() switch
+        {
+            "amount" => descending
+                ? query.OrderByDescending(item => item.Quantity * item.Price + item.Fee)
+                    .ThenByDescending(item => item.Date)
+                : query.OrderBy(item => item.Quantity * item.Price + item.Fee)
+                    .ThenBy(item => item.Date),
+            "quantity" => descending
+                ? query.OrderByDescending(item => item.Quantity).ThenByDescending(item => item.Date)
+                : query.OrderBy(item => item.Quantity).ThenBy(item => item.Date),
+            "fee" => descending
+                ? query.OrderByDescending(item => item.Fee).ThenByDescending(item => item.Date)
+                : query.OrderBy(item => item.Fee).ThenBy(item => item.Date),
+            "symbol" => descending
+                ? query.OrderByDescending(item => item.Asset!.MarketAsset!.Symbol)
+                    .ThenByDescending(item => item.Date)
+                : query.OrderBy(item => item.Asset!.MarketAsset!.Symbol).ThenBy(item => item.Date),
+            _ => descending
+                ? query.OrderByDescending(item => item.Date).ThenByDescending(item => item.Id)
+                : query.OrderBy(item => item.Date).ThenBy(item => item.Id)
+        };
+    }
+
+    private static bool MatchesGroup(string? categoryName, TransactionAssetGroup assetGroup) =>
+        assetGroup switch
+        {
+            TransactionAssetGroup.Crypto => AssetCategoryClassifier.IsCrypto(categoryName),
+            TransactionAssetGroup.Stock => AssetCategoryClassifier.IsStock(categoryName),
+            TransactionAssetGroup.Fund => AssetCategoryClassifier.IsFund(categoryName),
+            _ => true
+        };
 }

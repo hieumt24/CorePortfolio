@@ -66,6 +66,79 @@
   gap: 1.5rem;
 }
 
+.market-indices {
+  display: flex;
+  flex-direction: column;
+  gap: .9rem;
+}
+
+.market-indices-heading,
+.index-card-top,
+.index-change {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.market-indices-heading h2 {
+  margin: .15rem 0 0;
+  font-size: 1.15rem;
+}
+
+.section-eyebrow,
+.index-symbol {
+  color: var(--text-secondary);
+  font-size: .68rem;
+  font-weight: 800;
+  letter-spacing: .12em;
+}
+
+.market-index-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 1rem;
+}
+
+.market-index-card {
+  min-height: 170px;
+  padding: 1.25rem;
+  position: relative;
+  overflow: hidden;
+}
+
+.market-index-card::after {
+  content: '';
+  position: absolute;
+  width: 130px;
+  height: 130px;
+  right: -55px;
+  bottom: -75px;
+  border-radius: 50%;
+  background: rgba(99, 102, 241, .22);
+  filter: blur(24px);
+  pointer-events: none;
+}
+
+.market-index-card.positive::after { background: rgba(52, 211, 153, .2); }
+.market-index-card.negative::after { background: rgba(248, 113, 113, .2); }
+.market-index-card h3 { margin: .2rem 0 0; font-size: 1rem; }
+.index-value { display: block; margin-top: 1.2rem; font-size: clamp(1.65rem, 3vw, 2.25rem); }
+.index-change { justify-content: flex-start; gap: .8rem; margin: .35rem 0; font-weight: 700; }
+.positive .index-change { color: #6ee7b7; }
+.negative .index-change { color: #fca5a5; }
+.neutral .index-change { color: var(--text-secondary); }
+.market-index-card small { color: var(--text-muted); }
+.index-status { padding: .3rem .55rem; border-radius: 999px; background: rgba(99,102,241,.12); font-size: .7rem; font-weight: 800; }
+.index-status.error, .index-error { color: #fca5a5; }
+.index-retry { border: 0; background: transparent; color: #a5b4fc; cursor: pointer; font-weight: 700; }
+.index-skeleton { animation: index-pulse 1.4s ease-in-out infinite; }
+.index-error-state { color: var(--text-secondary); display: grid; place-items: center; }
+
+@keyframes index-pulse {
+  0%, 100% { opacity: .5; }
+  50% { opacity: .85; }
+}
+
 /* State Panels */
 .state-panel {
   padding: 4rem 2rem;
@@ -116,6 +189,10 @@
   }
 
   .portfolios-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .market-index-grid {
     grid-template-columns: 1fr;
   }
 }

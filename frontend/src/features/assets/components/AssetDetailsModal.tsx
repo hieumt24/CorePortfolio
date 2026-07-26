@@ -10,6 +10,7 @@ import { deleteTransaction } from '../../transactions/api/transactionApi';
 import { deleteAsset } from '../api/assetApi';
 import { useNotification } from '../../../context/NotificationContext';
 import { useAuth } from '../../../context/AuthContext';
+import { formatVietnamDateTime } from '../../../shared/utils/dateTime';
 import './AssetDetailsModal.css';
 
 interface AssetDetailsModalProps {
@@ -143,7 +144,7 @@ export const AssetDetailsModal: React.FC<AssetDetailsModalProps> = ({ asset, por
                 <tbody>
                   {transactions.map(tx => (
                     <tr key={tx.id}>
-                      <td className="date-cell">{new Date(tx.timestamp).toLocaleString()}</td>
+                      <td className="date-cell">{formatVietnamDateTime(tx.timestamp)}</td>
                       <td>
                         <span className={`badge ${
                           tx.type === TransactionType.Buy ? 'buy' : 

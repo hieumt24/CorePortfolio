@@ -37,3 +37,15 @@ export interface AssetSummaryDto {
   fees: number;
   priceUpdatedAt: string;
 }
+
+export interface MarketIndexQuote {
+  symbol: 'VNINDEX' | 'VN30';
+  name: string;
+  value: number;
+  change: number;
+  changePercent: number;
+  asOf: string;
+  source: string;
+  status: 'Fresh' | 'Stale' | 'Error';
+  error?: string | null;
+}

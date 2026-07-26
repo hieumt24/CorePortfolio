@@ -13,6 +13,7 @@ import { HoldingsList } from './HoldingsList';
 import { PortfolioCategoryReport } from './PortfolioCategoryReport';
 import { PortfolioLoadingState } from './PortfolioLoadingState';
 import { PortfolioTransactionHistory } from './PortfolioTransactionHistory';
+import { formatVietnamDateTime } from '../../../shared/utils/dateTime';
 import './PortfolioDetails.css';
 
 export const PortfolioDetails: React.FC = () => {
@@ -117,7 +118,7 @@ export const PortfolioDetails: React.FC = () => {
             <p className="portfolio-eyebrow">My portfolio</p>
             <h1>{summary.name}</h1>
             <p className="portfolio-as-of">
-              Updated {new Date(summary.asOf).toLocaleString()} · 1 USD = {usdToVndRate.toLocaleString('vi-VN')} VND
+              Updated {formatVietnamDateTime(summary.asOf)} · 1 USD = {usdToVndRate.toLocaleString('vi-VN')} VND
             </p>
           </div>
         </div>

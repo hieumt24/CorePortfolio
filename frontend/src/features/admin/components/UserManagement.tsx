@@ -1,23 +1,26 @@
 import { useCallback, useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
 import { useNotification } from '../../../context/NotificationContext';
 import { adminApi } from '../api/adminApi';
 import type { AdminUser } from '../types';
+import { formatVietnamDateTime } from '../../../shared/utils/dateTime';
 import './AdminOperations.css';
 
 const PAGE_SIZE = 20;
 const PRESENCE_REFRESH_INTERVAL_MS = 60_000;
 
-const formatDate = (value: string | null, fallback = 'Chưa ghi nhận') => value
-  ? new Date(value).toLocaleString('vi-VN', { dateStyle: 'short', timeStyle: 'short' })
-  : fallback;
+const formatDate = (value: string | null, fallback = 'Chưa ghi nhận') =>
+  formatVietnamDateTime(value, fallback);
 
 export function UserManagement() {
+  const [urlSearchParams] = useSearchParams();
+  const initialSearch = urlSearchParams.get('search')?.trim() ?? '';
   const { user: currentUser } = useAuth();
   const { showNotification } = useNotification();
   const [users, setUsers] = useState<AdminUser[]>([]);
-  const [searchInput, setSearchInput] = useState('');
-  const [search, setSearch] = useState('');
+  const [searchInput, setSearchInput] = useState(initialSearch);
+  const [search, setSearch] = useState(initialSearch);
   const [role, setRole] = useState('');
   const [accountStatus, setAccountStatus] = useState('');
   const [presence, setPresence] = useState('');

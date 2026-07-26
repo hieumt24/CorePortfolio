@@ -7,6 +7,9 @@ export interface WatchlistDto {
   targetPrice?: number;
   addedAt: string;
   assetCategoryName: string;
+  currency: string;
+  priceUpdatedAt: string;
+  priceStatus: string;
 }
 
 export interface AddToWatchlistCommand {

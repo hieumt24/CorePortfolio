@@ -39,6 +39,38 @@ public sealed class NotificationWriter(
         NotificationWriteRequest request,
         CancellationToken cancellationToken)
     {
+        var queued = await QueueAsync(request, cancellationToken);
+        if (queued.Outcome != NotificationWriteOutcome.Created ||
+            !queued.NotificationId.HasValue)
+            return queued;
+
+        var notification = dbContext.Notifications.Local
+            .Single(item => item.Id == queued.NotificationId.Value);
+        try
+        {
+            await dbContext.SaveChangesAsync(cancellationToken);
+            return queued;
+        }
+        catch (DbUpdateException)
+        {
+            dbContext.Entry(notification).State = EntityState.Detached;
+            var existingId = await dbContext.Notifications
+                .AsNoTracking()
+                .Where(item =>
+                    item.UserId == request.UserId &&
+                    item.DedupeKey == request.DedupeKey)
+                .Select(item => (Guid?)item.Id)
+                .SingleOrDefaultAsync(cancellationToken);
+            if (existingId.HasValue)
+                return new NotificationWriteResult(NotificationWriteOutcome.Duplicate, existingId);
+            throw;
+        }
+    }
+
+    public async Task<NotificationWriteResult> QueueAsync(
+        NotificationWriteRequest request,
+        CancellationToken cancellationToken)
+    {
         Validate(request);
         var isEnabled = await dbContext.NotificationPreferences
             .AsNoTracking()
@@ -82,26 +114,7 @@ public sealed class NotificationWriter(
             ExpiresAt = request.ExpiresAt?.ToUniversalTime()
         };
         dbContext.Notifications.Add(notification);
-
-        try
-        {
-            await dbContext.SaveChangesAsync(cancellationToken);
-            return new NotificationWriteResult(NotificationWriteOutcome.Created, notification.Id);
-        }
-        catch (DbUpdateException)
-        {
-            dbContext.Entry(notification).State = EntityState.Detached;
-            existingId = await dbContext.Notifications
-                .AsNoTracking()
-                .Where(item =>
-                    item.UserId == request.UserId &&
-                    item.DedupeKey == request.DedupeKey)
-                .Select(item => (Guid?)item.Id)
-                .SingleOrDefaultAsync(cancellationToken);
-            if (existingId.HasValue)
-                return new NotificationWriteResult(NotificationWriteOutcome.Duplicate, existingId);
-            throw;
-        }
+        return new NotificationWriteResult(NotificationWriteOutcome.Created, notification.Id);
     }
 
     private static void Validate(NotificationWriteRequest request)

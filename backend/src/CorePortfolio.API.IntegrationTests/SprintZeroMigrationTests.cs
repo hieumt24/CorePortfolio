@@ -57,7 +57,11 @@ public sealed class SprintZeroMigrationTests
         await migrator.MigrateAsync(cancellationToken: cancellationToken);
 
         Assert.Equal(1, await db.PortfolioSnapshots.CountAsync(cancellationToken));
-        Assert.Equal(1_100m, await db.PortfolioSnapshots.Select(snapshot => snapshot.TotalValue).SingleAsync(cancellationToken));
+        var snapshot = await db.PortfolioSnapshots.SingleAsync(cancellationToken);
+        Assert.Equal(1_100m, snapshot.HoldingsValue);
+        Assert.Equal(1_000m, snapshot.CashValue);
+        Assert.Equal(2_100m, snapshot.NetAssetValue);
+        Assert.Equal(snapshot.NetAssetValue, snapshot.TotalValue);
 
         await using var command = connection.CreateCommand();
         command.CommandText = """
