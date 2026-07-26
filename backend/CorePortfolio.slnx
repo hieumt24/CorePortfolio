@@ -1,8 +1,11 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/CorePortfolio.API/CorePortfolio.API.csproj" />
+    <Project Path="src/CorePortfolio.API.IntegrationTests/CorePortfolio.API.IntegrationTests.csproj" />
     <Project Path="src/CorePortfolio.Coingecko/CorePortfolio.Coingecko.csproj" />
     <Project Path="src/CorePortfolio.DNSE/CorePortfolio.DNSE.csproj" />
     <Project Path="src/CorePortfolio.Domain/CorePortfolio.Domain.csproj" />
+    <Project Path="src/CorePortfolio.Domain.Tests/CorePortfolio.Domain.Tests.csproj" />
     <Project Path="src/CorePortfolio.Infrastructure/CorePortfolio.Infrastructure.csproj" />
     <Project Path="src/CorePortfolio.Telegram/CorePortfolio.Telegram.csproj" />
   </Folder>

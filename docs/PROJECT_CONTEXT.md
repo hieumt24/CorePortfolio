@@ -23,6 +23,7 @@ CorePortfolio is a personal portfolio and cashflow application. It combines inve
 - Database migration failures are logged as critical startup diagnostics but do not terminate the process; liveness remains reachable and readiness reports the database failure.
 - Add entities to `AppDbContext`, configure relationships/indexes in `OnModelCreating`, and create an EF migration for schema changes.
 - Preserve the vertical-slice + MediatR pattern; do not introduce MVC controllers.
+- Sprint 0 data-integrity foundation: portfolio snapshots enforce one row per portfolio/day. Migration `AddSprintZeroDataIntegrity` removes legacy duplicate snapshots, normalizes legacy cash-account/ledger GUID casing once, and replaces the previous startup-time repair. API integration tests boot the real Minimal API against isolated in-memory SQLite databases and cover user isolation, transaction/ledger atomicity, snapshot uniqueness, and upgrading legacy data through the Sprint 0 migration.
 
 ## Frontend conventions
 
@@ -60,15 +61,18 @@ CorePortfolio is a personal portfolio and cashflow application. It combines inve
 ```powershell
 dotnet build backend/src/CorePortfolio.API/CorePortfolio.API.csproj
 dotnet test backend/src/CorePortfolio.Domain.Tests/CorePortfolio.Domain.Tests.csproj
+dotnet test backend/src/CorePortfolio.API.IntegrationTests/CorePortfolio.API.IntegrationTests.csproj
+npm run check:encoding
 cd frontend
 npm run build
 ```
 
 ## CI/CD
 
-- `.github/workflows/backend-ci.yml` restores and builds the API project directly, runs domain tests, and verifies the EF snapshot.
+- `.github/workflows/backend-ci.yml` restores and builds the API project directly, runs domain and API integration tests, and verifies the EF snapshot.
 - `.github/workflows/frontend-ci.yml` runs blocking `npm ci`, Vitest, and the production build; ESLint runs as an advisory step while legacy lint violations are migrated.
-- `.github/workflows/main_coreportfolio-api.yml` restores the API with the `linux-x64` runtime target, builds/tests it, publishes a self-contained Linux artifact, transfers it as a tar archive to preserve executable permissions, checks `/health/live` as a blocking smoke test, and logs `/health/ready` database status.
+- `.github/workflows/text-encoding-ci.yml` validates source files as strict UTF-8 and rejects common mojibake markers across backend, frontend, documentation, workflows, and agent instructions.
+- `.github/workflows/main_coreportfolio-api.yml` restores the API with the `linux-x64` runtime target, builds it, runs domain and API integration tests, publishes a self-contained Linux artifact, transfers it as a tar archive to preserve executable permissions, checks `/health/live` as a blocking smoke test, and logs `/health/ready` database status.
 - Production deployment requires the Azure publish-profile secret and the API App Service CORS configuration described above. Vercel frontend deployment remains managed by Vercel; frontend CI is the merge gate.
 
 If an environment prevents backend restore/build, report the exact limitation; do not claim the backend is verified.

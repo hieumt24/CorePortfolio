@@ -1,4 +1,7 @@
 {
+  "scripts": {
+    "check:encoding": "node scripts/check-text-encoding.mjs"
+  },
   "dependencies": {
     "pm2": "^7.0.1"
   }

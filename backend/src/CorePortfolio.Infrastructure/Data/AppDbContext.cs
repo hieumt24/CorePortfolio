@@ -130,6 +130,10 @@ public class AppDbContext : DbContext
             .HasForeignKey(t => t.CategoryId)
             .OnDelete(DeleteBehavior.Restrict);
 
+        modelBuilder.Entity<PortfolioSnapshot>()
+            .HasIndex(snapshot => new { snapshot.PortfolioId, snapshot.Date })
+            .IsUnique();
+
         modelBuilder.Entity<Budget>()
             .HasOne(b => b.User)
             .WithMany()

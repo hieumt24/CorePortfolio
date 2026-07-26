@@ -29,14 +29,18 @@ jobs:
 
       - name: Restore dependencies
         run: |
-          dotnet restore backend/src/CorePortfolio.API/CorePortfolio.API.csproj --runtime linux-x64
           dotnet restore backend/src/CorePortfolio.Domain.Tests/CorePortfolio.Domain.Tests.csproj
+          dotnet restore backend/src/CorePortfolio.API.IntegrationTests/CorePortfolio.API.IntegrationTests.csproj
+          dotnet restore backend/src/CorePortfolio.API/CorePortfolio.API.csproj --runtime linux-x64
 
       - name: Build with dotnet
         run: dotnet build backend/src/CorePortfolio.API/CorePortfolio.API.csproj --configuration Release --no-restore
 
       - name: Run domain tests
         run: dotnet test backend/src/CorePortfolio.Domain.Tests/CorePortfolio.Domain.Tests.csproj --configuration Release --no-restore --verbosity normal
+
+      - name: Run API integration tests
+        run: dotnet test backend/src/CorePortfolio.API.IntegrationTests/CorePortfolio.API.IntegrationTests.csproj --configuration Release --no-restore --verbosity normal
 
       - name: dotnet publish
         run: dotnet publish backend/src/CorePortfolio.API/CorePortfolio.API.csproj -c Release -r linux-x64 --self-contained true --no-restore -o ${{env.DOTNET_ROOT}}/myapp

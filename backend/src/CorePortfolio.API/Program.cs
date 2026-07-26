@@ -190,12 +190,6 @@ try
     using var scope = app.Services.CreateScope();
     var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     dbContext.Database.Migrate();
-
-    // Fix lowercase GUIDs caused by raw SQL migration
-    dbContext.Database.ExecuteSqlRaw("PRAGMA foreign_keys = OFF;");
-    dbContext.Database.ExecuteSqlRaw("UPDATE CashAccounts SET Id = UPPER(Id) WHERE Id != UPPER(Id);");
-    dbContext.Database.ExecuteSqlRaw("UPDATE CashLedgerEntries SET Id = UPPER(Id), CashAccountId = UPPER(CashAccountId) WHERE Id != UPPER(Id) OR CashAccountId != UPPER(CashAccountId);");
-    dbContext.Database.ExecuteSqlRaw("PRAGMA foreign_keys = ON;");
 }
 catch (Exception exception)
 {
@@ -285,3 +279,5 @@ app.MapMarketPricesEndpoints();
 app.MapFallbackToFile("index.html");
 
 app.Run();
+
+public partial class Program;

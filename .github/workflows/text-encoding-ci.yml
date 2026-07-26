@@ -1,0 +1,36 @@
+name: Text Encoding CI
+
+on:
+  push:
+    branches: [main, master]
+    paths:
+      - '.agents/**'
+      - '.github/**'
+      - 'backend/**'
+      - 'docs/**'
+      - 'frontend/**'
+      - 'scripts/check-text-encoding.mjs'
+      - 'package.json'
+  pull_request:
+    branches: [main, master]
+    paths:
+      - '.agents/**'
+      - '.github/**'
+      - 'backend/**'
+      - 'docs/**'
+      - 'frontend/**'
+      - 'scripts/check-text-encoding.mjs'
+      - 'package.json'
+
+permissions:
+  contents: read
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: npm run check:encoding
