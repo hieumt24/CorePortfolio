@@ -23,11 +23,12 @@ public static class AdminEndpoints
             [FromQuery] string? search,
             [FromQuery] string? role,
             [FromQuery] bool? isActive,
+            [FromQuery] bool? isOnline,
             [FromQuery] int page = 1,
             [FromQuery] int pageSize = 20,
             CancellationToken cancellationToken = default) =>
             Results.Ok(await sender.Send(
-                new GetAdminUsersQuery(search, role, isActive, page, pageSize), cancellationToken)));
+                new GetAdminUsersQuery(search, role, isActive, isOnline, page, pageSize), cancellationToken)));
 
         group.MapPut("/users/{id:guid}/access", async (
             Guid id,

@@ -2,12 +2,16 @@ using CorePortfolio.API.Services;
 using CorePortfolio.Infrastructure.Data;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace CorePortfolio.API.Features.Admin.Users;
 
 public record UpdateUserAccessCommand(Guid UserId, string Role, bool IsActive) : IRequest<AdminUserDto?>;
 
-public sealed class UpdateUserAccessHandler(AppDbContext dbContext, ICurrentUserService currentUser)
+public sealed class UpdateUserAccessHandler(
+    AppDbContext dbContext,
+    ICurrentUserService currentUser,
+    IOptions<UserActivityOptions> activityOptions)
     : IRequestHandler<UpdateUserAccessCommand, AdminUserDto?>
 {
     public async Task<AdminUserDto?> Handle(UpdateUserAccessCommand request, CancellationToken cancellationToken)
@@ -43,8 +47,14 @@ public sealed class UpdateUserAccessHandler(AppDbContext dbContext, ICurrentUser
         user.IsActive = request.IsActive;
         await dbContext.SaveChangesAsync(cancellationToken);
 
+        var onlineCutoff = UserPresence.GetOnlineCutoff(activityOptions.Value);
+        var isOnline = user.IsActive &&
+            user.LastActivityAt is not null &&
+            user.LastActivityAt >= onlineCutoff;
+
         return new AdminUserDto(user.Id, user.Username, user.Role, user.IsActive, user.CreatedAt,
-            user.LastLoginAt, user.Portfolios.Count,
+            user.LastLoginAt, user.LastLoginIpAddress, user.LastActivityAt, isOnline,
+            user.Portfolios.Count,
             user.Portfolios.SelectMany(portfolio => portfolio.Transactions).Count());
     }
 }

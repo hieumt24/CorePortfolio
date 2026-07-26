@@ -11,6 +11,8 @@ public class User
     public bool IsActive { get; set; } = true;
     public DateTime CreatedAt { get; set; }
     public DateTime? LastLoginAt { get; set; }
+    public string? LastLoginIpAddress { get; set; }
+    public DateTime? LastActivityAt { get; set; }
     
     public ICollection<Portfolio> Portfolios { get; set; } = new List<Portfolio>();
     public ICollection<CashflowRecord> CashflowRecords { get; set; } = new List<CashflowRecord>();

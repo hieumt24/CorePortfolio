@@ -1,7 +1,9 @@
 using CorePortfolio.API.Common.Models;
+using CorePortfolio.API.Services;
 using CorePortfolio.Infrastructure.Data;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 
 namespace CorePortfolio.API.Features.Admin.Users;
 
@@ -12,6 +14,9 @@ public record AdminUserDto(
     bool IsActive,
     DateTime CreatedAt,
     DateTime? LastLoginAt,
+    string? LastLoginIpAddress,
+    DateTime? LastActivityAt,
+    bool IsOnline,
     int PortfolioCount,
     int TransactionCount);
 
@@ -19,10 +24,13 @@ public record GetAdminUsersQuery(
     string? Search,
     string? Role,
     bool? IsActive,
+    bool? IsOnline,
     int Page = 1,
     int PageSize = 20) : IRequest<PaginatedResult<AdminUserDto>>;
 
-public sealed class GetAdminUsersHandler(AppDbContext dbContext)
+public sealed class GetAdminUsersHandler(
+    AppDbContext dbContext,
+    IOptions<UserActivityOptions> activityOptions)
     : IRequestHandler<GetAdminUsersQuery, PaginatedResult<AdminUserDto>>
 {
     public async Task<PaginatedResult<AdminUserDto>> Handle(GetAdminUsersQuery request, CancellationToken cancellationToken)
@@ -34,7 +42,10 @@ public sealed class GetAdminUsersHandler(AppDbContext dbContext)
         if (!string.IsNullOrWhiteSpace(request.Search))
         {
             var search = request.Search.Trim().ToLower();
-            query = query.Where(user => user.Username.ToLower().Contains(search));
+            query = query.Where(user =>
+                user.Username.ToLower().Contains(search) ||
+                (user.DisplayName != null && user.DisplayName.ToLower().Contains(search)) ||
+                (user.Email != null && user.Email.ToLower().Contains(search)));
         }
 
         if (request.Role is "Admin" or "User")
@@ -42,6 +53,18 @@ public sealed class GetAdminUsersHandler(AppDbContext dbContext)
 
         if (request.IsActive.HasValue)
             query = query.Where(user => user.IsActive == request.IsActive.Value);
+
+        var onlineCutoff = UserPresence.GetOnlineCutoff(activityOptions.Value);
+        if (request.IsOnline == true)
+            query = query.Where(user =>
+                user.IsActive &&
+                user.LastActivityAt != null &&
+                user.LastActivityAt >= onlineCutoff);
+        else if (request.IsOnline == false)
+            query = query.Where(user =>
+                !user.IsActive ||
+                user.LastActivityAt == null ||
+                user.LastActivityAt < onlineCutoff);
 
         var totalCount = await query.CountAsync(cancellationToken);
         var items = await query
@@ -55,6 +78,9 @@ public sealed class GetAdminUsersHandler(AppDbContext dbContext)
                 user.IsActive,
                 user.CreatedAt,
                 user.LastLoginAt,
+                user.LastLoginIpAddress,
+                user.LastActivityAt,
+                user.IsActive && user.LastActivityAt != null && user.LastActivityAt >= onlineCutoff,
                 user.Portfolios.Count,
                 user.Portfolios.SelectMany(portfolio => portfolio.Transactions).Count()))
             .ToListAsync(cancellationToken);

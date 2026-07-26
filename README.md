@@ -29,6 +29,8 @@ The project is built using a modern full-stack architecture:
 
 Production market-data settings and secret-handling guidance are documented in
 [`docs/PRODUCTION_MARKET_DATA.md`](docs/PRODUCTION_MARKET_DATA.md).
+Production client-IP, reverse-proxy, and user-presence settings are documented in
+[`docs/PRODUCTION_USER_ACTIVITY.md`](docs/PRODUCTION_USER_ACTIVITY.md).
 
 ### Running the Frontend
 1. Navigate to the `frontend` directory.

@@ -84,6 +84,9 @@ export interface AdminUser {
   isActive: boolean;
   createdAt: string;
   lastLoginAt: string | null;
+  lastLoginIpAddress: string | null;
+  lastActivityAt: string | null;
+  isOnline: boolean;
   portfolioCount: number;
   transactionCount: number;
 }
@@ -92,6 +95,7 @@ export interface AdminUserFilters {
   search?: string;
   role?: string;
   isActive?: boolean;
+  isOnline?: boolean;
   page?: number;
   pageSize?: number;
 }

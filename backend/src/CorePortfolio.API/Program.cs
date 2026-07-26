@@ -49,6 +49,7 @@ using CorePortfolio.KBS;
 using CorePortfolio.API.Common;
 using CorePortfolio.Domain.Accounting;
 using Microsoft.AspNetCore.Diagnostics;
+using Microsoft.AspNetCore.HttpOverrides;
 using System.Security.Claims;
 using CorePortfolio.API.Features.Cashflows.CreateCashflowRecord;
 
@@ -95,6 +96,9 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
+builder.Services.Configure<UserActivityOptions>(
+    builder.Configuration.GetSection(UserActivityOptions.SectionName));
+builder.Services.AddScoped<IUserActivityService, UserActivityService>();
 builder.Services.AddScoped<IPortfolioReportService, PortfolioReportService>();
 builder.Services.AddScoped<ITelegramCommandProcessor, TelegramCommandProcessor>();
 builder.Services.AddScoped<TransactionLedgerService>();
@@ -140,14 +144,14 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                     return;
                 }
 
-                var dbContext = context.HttpContext.RequestServices.GetRequiredService<AppDbContext>();
-                var userAccess = await dbContext.Users
-                    .AsNoTracking()
-                    .Where(user => user.Id == userId)
-                    .Select(user => new { user.IsActive, user.Role })
-                    .SingleOrDefaultAsync(context.HttpContext.RequestAborted);
+                var userActivityService = context.HttpContext.RequestServices
+                    .GetRequiredService<IUserActivityService>();
+                var hasAccess = await userActivityService.ValidateAccessAndTrackAsync(
+                    userId,
+                    tokenRole,
+                    context.HttpContext.RequestAborted);
 
-                if (userAccess is null || !userAccess.IsActive || userAccess.Role != tokenRole)
+                if (!hasAccess)
                     context.Fail("User access has changed. Please sign in again.");
             }
         };
@@ -162,6 +166,27 @@ builder.Services.AddAuthorization(options =>
 });
 
 var app = builder.Build();
+
+var forwardedHeadersEnabled = builder.Configuration.GetValue<bool>("ForwardedHeaders:Enabled");
+if (forwardedHeadersEnabled)
+{
+    var forwardedHeadersOptions = new ForwardedHeadersOptions
+    {
+        ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto,
+        ForwardLimit = Math.Clamp(
+            builder.Configuration.GetValue<int?>("ForwardedHeaders:ForwardLimit") ?? 1,
+            1,
+            5)
+    };
+
+    if (builder.Configuration.GetValue<bool>("ForwardedHeaders:TrustAllProxies"))
+    {
+        forwardedHeadersOptions.KnownIPNetworks.Clear();
+        forwardedHeadersOptions.KnownProxies.Clear();
+    }
+
+    app.UseForwardedHeaders(forwardedHeadersOptions);
+}
 
 app.Use(async (context, next) =>
 {

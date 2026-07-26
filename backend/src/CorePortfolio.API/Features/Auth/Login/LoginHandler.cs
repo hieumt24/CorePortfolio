@@ -1,6 +1,7 @@
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
+using CorePortfolio.API.Common;
 using CorePortfolio.Infrastructure.Data;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -28,11 +29,16 @@ public class LoginHandler : IRequestHandler<LoginCommand, LoginResult?>
 {
     private readonly AppDbContext _dbContext;
     private readonly IConfiguration _configuration;
+    private readonly IHttpContextAccessor _httpContextAccessor;
 
-    public LoginHandler(AppDbContext dbContext, IConfiguration configuration)
+    public LoginHandler(
+        AppDbContext dbContext,
+        IConfiguration configuration,
+        IHttpContextAccessor httpContextAccessor)
     {
         _dbContext = dbContext;
         _configuration = configuration;
+        _httpContextAccessor = httpContextAccessor;
     }
 
     public async Task<LoginResult?> Handle(LoginCommand request, CancellationToken cancellationToken)
@@ -70,7 +76,10 @@ public class LoginHandler : IRequestHandler<LoginCommand, LoginResult?>
             return null;
         }
 
-        user.LastLoginAt = DateTime.UtcNow;
+        var loginTime = DateTime.UtcNow;
+        user.LastLoginAt = loginTime;
+        user.LastActivityAt = loginTime;
+        user.LastLoginIpAddress = ClientIpAddress.Resolve(_httpContextAccessor.HttpContext);
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         var tokenHandler = new JwtSecurityTokenHandler();

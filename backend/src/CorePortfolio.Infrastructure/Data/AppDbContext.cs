@@ -58,7 +58,14 @@ public class AppDbContext : DbContext
             .HasMaxLength(160);
 
         modelBuilder.Entity<User>()
+            .Property(u => u.LastLoginIpAddress)
+            .HasMaxLength(45);
+
+        modelBuilder.Entity<User>()
             .HasIndex(u => new { u.Role, u.IsActive });
+
+        modelBuilder.Entity<User>()
+            .HasIndex(u => u.LastActivityAt);
         
         // Configuration for relationships and constraints
         modelBuilder.Entity<User>()
