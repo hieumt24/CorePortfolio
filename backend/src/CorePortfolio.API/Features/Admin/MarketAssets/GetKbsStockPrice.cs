@@ -3,18 +3,18 @@ using MediatR;
 
 namespace CorePortfolio.API.Features.Admin.MarketAssets;
 
-public record GetDnseStockPriceQuery(string Symbol) : IRequest<decimal?>;
+public record GetKbsStockPriceQuery(string Symbol) : IRequest<decimal?>;
 
-public class GetDnseStockPriceHandler : IRequestHandler<GetDnseStockPriceQuery, decimal?>
+public class GetKbsStockPriceHandler : IRequestHandler<GetKbsStockPriceQuery, decimal?>
 {
     private readonly IStockPriceService _stockPriceService;
 
-    public GetDnseStockPriceHandler(IStockPriceService stockPriceService)
+    public GetKbsStockPriceHandler(IStockPriceService stockPriceService)
     {
         _stockPriceService = stockPriceService;
     }
 
-    public async Task<decimal?> Handle(GetDnseStockPriceQuery request, CancellationToken cancellationToken)
+    public async Task<decimal?> Handle(GetKbsStockPriceQuery request, CancellationToken cancellationToken)
     {
         return await _stockPriceService.GetStockPriceAsync(request.Symbol, cancellationToken);
     }

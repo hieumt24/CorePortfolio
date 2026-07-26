@@ -24,7 +24,7 @@ const formatDateTime = (value: string) => {
 
 const getSourceTone = (source: string) => {
   const normalized = source.toLowerCase();
-  if (normalized === 'dnse') return 'dnse';
+  if (normalized === 'kbs') return 'kbs';
   if (normalized === 'coingecko') return 'coingecko';
   return 'manual';
 };
@@ -269,7 +269,7 @@ export function MarketAssetManagement() {
               <option value="">All sources</option>
               <option value="Manual">Manual</option>
               <option value="CoinGecko">CoinGecko</option>
-              <option value="DNSE">DNSE</option>
+              <option value="KBS">KBS</option>
             </select>
           </label>
           <label>

@@ -62,10 +62,11 @@ public sealed class RefreshMarketAssetPricesHandler : IRequestHandler<RefreshMar
         {
             decimal? price = null;
             string? error = null;
+            Exception? providerException = null;
             try
             {
-                if (asset.PriceSource.Equals("DNSE", StringComparison.OrdinalIgnoreCase))
-                    price = await _stocks.GetStockPriceAsync(asset.Symbol, cancellationToken);
+                if (asset.PriceSource.Equals("KBS", StringComparison.OrdinalIgnoreCase))
+                    price = await _stocks.GetStockPriceAsync(asset.ExternalId ?? asset.Symbol, cancellationToken);
                 else if (asset.PriceSource.Equals("CoinGecko", StringComparison.OrdinalIgnoreCase))
                     price = !string.IsNullOrWhiteSpace(asset.ExternalId) && cryptoPrices.TryGetValue(asset.ExternalId, out var cryptoPrice)
                         ? cryptoPrice : null;
@@ -74,7 +75,11 @@ public sealed class RefreshMarketAssetPricesHandler : IRequestHandler<RefreshMar
                     error ??= string.IsNullOrWhiteSpace(asset.ExternalId) && asset.PriceSource.Equals("CoinGecko", StringComparison.OrdinalIgnoreCase)
                         ? "Thiếu CoinGecko coin ID." : "Nguồn giá không trả về dữ liệu hợp lệ.";
             }
-            catch (Exception exception) { error = exception.Message; }
+            catch (Exception exception)
+            {
+                providerException = exception;
+                error = exception.Message;
+            }
 
             if (error == null)
             {
@@ -85,7 +90,9 @@ public sealed class RefreshMarketAssetPricesHandler : IRequestHandler<RefreshMar
             }
             else
             {
-                asset.PriceStatus = IsTransientProviderError(error) ? "Stale" : "Error";
+                asset.PriceStatus = providerException is not null && IsTransientProviderError(providerException)
+                    ? "Stale"
+                    : "Error";
                 asset.LastPriceError = error.Length > 500 ? error[..500] : error;
             }
             results.Add(new(asset.Id, asset.Symbol, asset.PriceStatus, price, error));
@@ -94,10 +101,18 @@ public sealed class RefreshMarketAssetPricesHandler : IRequestHandler<RefreshMar
         return results;
     }
 
-    private static bool IsTransientProviderError(string error) =>
-        error.Contains("timeout", StringComparison.OrdinalIgnoreCase)
-        || error.Contains("timed out", StringComparison.OrdinalIgnoreCase)
-        || error.Contains(((int)HttpStatusCode.BadGateway).ToString(), StringComparison.OrdinalIgnoreCase)
-        || error.Contains(((int)HttpStatusCode.GatewayTimeout).ToString(), StringComparison.OrdinalIgnoreCase)
-        || error.Contains(((int)HttpStatusCode.ServiceUnavailable).ToString(), StringComparison.OrdinalIgnoreCase);
+    private static bool IsTransientProviderError(Exception exception)
+    {
+        if (exception is TimeoutException or OperationCanceledException)
+            return true;
+        if (exception is not HttpRequestException httpException)
+            return false;
+
+        return httpException.StatusCode is null
+            or HttpStatusCode.RequestTimeout
+            or HttpStatusCode.TooManyRequests
+            or HttpStatusCode.BadGateway
+            or HttpStatusCode.ServiceUnavailable
+            or HttpStatusCode.GatewayTimeout;
+    }
 }

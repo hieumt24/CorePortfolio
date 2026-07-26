@@ -25,7 +25,7 @@
     <ProjectReference Include="..\CorePortfolio.Infrastructure\CorePortfolio.Infrastructure.csproj" />
     <ProjectReference Include="..\CorePortfolio.Coingecko\CorePortfolio.Coingecko.csproj" />
     <ProjectReference Include="..\CorePortfolio.Telegram\CorePortfolio.Telegram.csproj" />
-    <ProjectReference Include="..\CorePortfolio.DNSE\CorePortfolio.DNSE.csproj" />
+    <ProjectReference Include="..\CorePortfolio.KBS\CorePortfolio.KBS.csproj" />
   </ItemGroup>
 
 </Project>

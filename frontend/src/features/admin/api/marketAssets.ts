@@ -36,11 +36,11 @@ export const marketAssetsApi = {
   fetchCoinGeckoPrice: (coinId: string) =>
     apiClient<{ price: number }>(`/admin/market-assets/coingecko-price/${coinId}`, { method: 'GET' }),
 
-  fetchDnsePrice: (symbol: string) =>
-    apiClient<{ price: number }>(`/admin/market-assets/dnse-price/${symbol}`, { method: 'GET' }),
+  fetchKbsPrice: (symbol: string) =>
+    apiClient<{ price: number }>(`/admin/market-assets/kbs-price/${symbol}`, { method: 'GET' }),
 
-  searchDnseInstruments: (query: string) =>
-    apiClient<import('../types').DnseInstrument[]>(`/admin/market-assets/dnse-instruments?query=${encodeURIComponent(query)}`, { method: 'GET' }),
+  searchKbsInstruments: (query: string) =>
+    apiClient<import('../types').KbsInstrument[]>(`/admin/market-assets/kbs-instruments?query=${encodeURIComponent(query)}`, { method: 'GET' }),
 
   refreshPrices: () =>
     apiClient<PriceRefreshResult[]>('/admin/market-assets/refresh', { method: 'POST' }),

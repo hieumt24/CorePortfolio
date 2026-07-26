@@ -17,7 +17,7 @@ export interface MarketAsset {
   name: string;
   currentPrice: number;
   lastUpdated: string;
-  priceSource: 'Manual' | 'DNSE' | 'CoinGecko' | string;
+  priceSource: 'Manual' | 'KBS' | 'CoinGecko' | string;
   externalId: string | null;
   priceStatus: 'Manual' | 'Fresh' | 'Stale' | 'Error' | string;
   lastPriceError: string | null;
@@ -32,7 +32,7 @@ export interface CreateMarketAssetRequest {
   externalId?: string | null;
 }
 
-export interface DnseInstrument {
+export interface KbsInstrument {
   symbol: string;
   marketId: string;
   securityGroupId: string;

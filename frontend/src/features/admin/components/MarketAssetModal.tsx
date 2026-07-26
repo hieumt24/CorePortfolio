@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import { useNotification } from '../../../context/NotificationContext';
 import { marketAssetsApi } from '../api/marketAssets';
-import type { AssetCategory, MarketAsset, DnseInstrument } from '../types';
+import type { AssetCategory, MarketAsset, KbsInstrument } from '../types';
 import { NumericFormat } from 'react-number-format';
 
 interface MarketAssetModalProps {
@@ -25,7 +25,7 @@ export function MarketAssetModal({ isOpen, onClose, onSaved, assetToEdit, catego
   const [externalId, setExternalId] = useState('');
   const [isFetchingPrice, setIsFetchingPrice] = useState(false);
 
-  const [instrumentSuggestions, setInstrumentSuggestions] = useState<DnseInstrument[]>([]);
+  const [instrumentSuggestions, setInstrumentSuggestions] = useState<KbsInstrument[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [preventSearch, setPreventSearch] = useState(false);
 
@@ -57,15 +57,22 @@ export function MarketAssetModal({ isOpen, onClose, onSaved, assetToEdit, catego
     return cat && (cat.name.toLowerCase().includes('crypto') || cat.name.toLowerCase().includes('coin'));
   };
 
-  const isStockOrFundCategory = () => {
+  const isKbsCategory = (() => {
     const cat = categories.find(c => c.id === categoryId);
     if (!cat) return false;
-    const name = cat.name.toLowerCase();
-    return name.includes('stock') || name.includes('fund') || name.includes('cổ phiếu') || name.includes('chứng khoán') || name.includes('chứng chỉ quỹ');
-  };
+    const name = cat.name
+      .normalize('NFD')
+      .replace(/\p{Diacritic}/gu, '')
+      .replace(/đ/g, 'd')
+      .toLowerCase();
+    return name.includes('stock')
+      || name.includes('co phieu')
+      || name.includes('chung khoan')
+      || name.includes('etf');
+  })();
 
   useEffect(() => {
-    if (!isOpen || !isStockOrFundCategory() || !symbol || symbol.length < 2 || preventSearch) {
+    if (!isOpen || !isKbsCategory || !symbol || symbol.length < 2 || preventSearch) {
       setInstrumentSuggestions([]);
       setShowSuggestions(false);
       return;
@@ -73,7 +80,7 @@ export function MarketAssetModal({ isOpen, onClose, onSaved, assetToEdit, catego
 
     const timer = setTimeout(async () => {
       try {
-        const results = await marketAssetsApi.searchDnseInstruments(symbol);
+        const results = await marketAssetsApi.searchKbsInstruments(symbol);
         if (!preventSearch) {
           setInstrumentSuggestions(results || []);
           setShowSuggestions(true);
@@ -84,7 +91,7 @@ export function MarketAssetModal({ isOpen, onClose, onSaved, assetToEdit, catego
     }, 500);
 
     return () => clearTimeout(timer);
-  }, [symbol, categoryId, preventSearch, isOpen]);
+  }, [symbol, categoryId, preventSearch, isOpen, isKbsCategory]);
 
   if (!isOpen) return null;
 
@@ -93,7 +100,7 @@ export function MarketAssetModal({ isOpen, onClose, onSaved, assetToEdit, catego
     setSymbol(val);
   };
 
-  const handleSelectSuggestion = (inst: DnseInstrument) => {
+  const handleSelectSuggestion = (inst: KbsInstrument) => {
     setPreventSearch(true);
     setSymbol(inst.symbol);
     setName(`${inst.shortName || inst.name}`);
@@ -127,7 +134,7 @@ export function MarketAssetModal({ isOpen, onClose, onSaved, assetToEdit, catego
     }
   };
 
-  const fetchDnsePrice = async () => {
+  const fetchKbsPrice = async () => {
     if (!symbol) {
       showNotification('Please enter the Symbol first (e.g. HPG)', 'info');
       return;
@@ -136,33 +143,33 @@ export function MarketAssetModal({ isOpen, onClose, onSaved, assetToEdit, catego
     try {
       setIsFetchingPrice(true);
       const symbolUpper = symbol.trim().toUpperCase();
-      const data = await marketAssetsApi.fetchDnsePrice(symbolUpper);
+      const data = await marketAssetsApi.fetchKbsPrice(symbolUpper);
       
       if (data && data.price) {
         setPrice(data.price.toString());
-        setPriceSource('DNSE');
+        setPriceSource('KBS');
         setExternalId(symbolUpper);
         
-        // Auto-fill Asset Full Name using DNSE instrument search
+        // Auto-fill the asset name from the cached KBS instrument catalog.
         try {
-          const instruments = await marketAssetsApi.searchDnseInstruments(symbolUpper);
+          const instruments = await marketAssetsApi.searchKbsInstruments(symbolUpper);
           const exactMatch = instruments?.find(i => i.symbol.toUpperCase() === symbolUpper);
           if (exactMatch) {
             setName(`${exactMatch.shortName || exactMatch.name}`);
-            showNotification(`Đã lấy giá và tên từ DNSE: ${data.price}`, 'success');
+            showNotification(`Đã lấy giá và tên từ KBS: ${data.price}`, 'success');
           } else {
-            showNotification(`Đã lấy giá DNSE: ${data.price}`, 'success');
+            showNotification(`Đã lấy giá KBS: ${data.price}`, 'success');
           }
         } catch (searchErr) {
           console.error('Failed to search instrument for name filling', searchErr);
-          showNotification(`Đã lấy giá DNSE: ${data.price}`, 'success');
+          showNotification(`Đã lấy giá KBS: ${data.price}`, 'success');
         }
       } else {
         showNotification(`Không tìm thấy giá cho Symbol "${symbol}".`, 'error');
       }
     } catch (error) {
-      console.error('DNSE API error', error);
-      showNotification(error instanceof Error ? error.message : 'Lỗi kết nối tới Backend để lấy giá DNSE', 'error');
+      console.error('KBS API error', error);
+      showNotification(error instanceof Error ? error.message : 'Lỗi kết nối tới Backend để lấy giá KBS', 'error');
     } finally {
       setIsFetchingPrice(false);
     }
@@ -289,17 +296,17 @@ export function MarketAssetModal({ isOpen, onClose, onSaved, assetToEdit, catego
                     {isFetchingPrice ? 'Fetching...' : '⚡ Fetch CoinGecko Price'}
                   </button>
                 )}
-                {isStockOrFundCategory() && (
+                {isKbsCategory && (
                   <button 
                     type="button" 
-                    onClick={fetchDnsePrice}
+                    onClick={fetchKbsPrice}
                     disabled={isFetchingPrice}
                     style={{ 
                       background: 'rgba(59, 130, 246, 0.1)', border: '1px solid rgba(59, 130, 246, 0.3)', color: '#3b82f6', 
                       cursor: isFetchingPrice ? 'wait' : 'pointer', fontSize: '0.8rem', padding: '0.5rem', borderRadius: '6px', fontWeight: 600, opacity: isFetchingPrice ? 0.6 : 1, flex: 1
                     }}
                   >
-                    {isFetchingPrice ? 'Fetching...' : '⚡ Fetch DNSE Price'}
+                    {isFetchingPrice ? 'Fetching...' : '⚡ Fetch KBS Price'}
                   </button>
                 )}
             </div>
@@ -314,7 +321,7 @@ export function MarketAssetModal({ isOpen, onClose, onSaved, assetToEdit, catego
                 className="admin-input admin-select"
               >
                 <option value="Manual">Manual</option>
-                <option value="DNSE">DNSE</option>
+                <option value="KBS">KBS</option>
                 <option value="CoinGecko">CoinGecko</option>
               </select>
             </div>

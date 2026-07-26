@@ -23,6 +23,29 @@ public static class MarketPriceSourceResolver
 
     public static bool Normalize(MarketAsset asset)
     {
+        if (asset.PriceSource.Equals("DNSE", StringComparison.OrdinalIgnoreCase))
+        {
+            asset.PriceSource = "KBS";
+            asset.ExternalId = string.IsNullOrWhiteSpace(asset.ExternalId)
+                ? asset.Symbol.ToUpperInvariant()
+                : asset.ExternalId.ToUpperInvariant();
+            asset.PriceStatus = "Stale";
+            asset.LastPriceError = null;
+            return true;
+        }
+
+        if (asset.PriceSource.Equals("KBS", StringComparison.OrdinalIgnoreCase))
+        {
+            var externalId = string.IsNullOrWhiteSpace(asset.ExternalId)
+                ? asset.Symbol.ToUpperInvariant()
+                : asset.ExternalId.ToUpperInvariant();
+            if (asset.PriceSource == "KBS" && asset.ExternalId == externalId)
+                return false;
+            asset.PriceSource = "KBS";
+            asset.ExternalId = externalId;
+            return true;
+        }
+
         if (asset.PriceSource.Equals("CoinGecko", StringComparison.OrdinalIgnoreCase))
         {
             if (CoinGeckoIds.TryGetValue(asset.Symbol, out var mappedId) && !string.Equals(asset.ExternalId, mappedId, StringComparison.OrdinalIgnoreCase))
@@ -50,7 +73,8 @@ public static class MarketPriceSourceResolver
 
         if (category.Contains("chung khoan") || category.Contains("stock") || category.Contains("etf"))
         {
-            asset.PriceSource = "DNSE";
+            asset.PriceSource = "KBS";
+            asset.ExternalId = asset.Symbol.ToUpperInvariant();
             asset.PriceStatus = "Stale";
             asset.LastPriceError = null;
             return true;

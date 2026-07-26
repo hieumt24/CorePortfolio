@@ -14,6 +14,7 @@
   <ItemGroup>
     <ProjectReference Include="..\CorePortfolio.Domain\CorePortfolio.Domain.csproj" />
     <ProjectReference Include="..\CorePortfolio.Coingecko\CorePortfolio.Coingecko.csproj" />
+    <ProjectReference Include="..\CorePortfolio.KBS\CorePortfolio.KBS.csproj" />
     <ProjectReference Include="..\CorePortfolio.Telegram\CorePortfolio.Telegram.csproj" />
   </ItemGroup>
 </Project>

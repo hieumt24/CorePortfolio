@@ -74,31 +74,31 @@ public static class MarketAssetsEndpoints
             return price.HasValue ? Results.Ok(new { Price = price.Value }) : Results.NotFound();
         });
 
-        group.MapGet("/dnse-price/{symbol}", async (string symbol, IMediator mediator) =>
+        group.MapGet("/kbs-price/{symbol}", async (string symbol, IMediator mediator) =>
         {
             try
             {
-                var price = await mediator.Send(new GetDnseStockPriceQuery(symbol));
+                var price = await mediator.Send(new GetKbsStockPriceQuery(symbol));
                 return price.HasValue
                     ? Results.Ok(new { Price = price.Value })
-                    : Results.NotFound(new { message = $"DNSE không trả về giá hợp lệ cho mã {symbol.ToUpperInvariant()}." });
-            }
-            catch (InvalidOperationException ex)
-            {
-                return Results.Problem(statusCode: StatusCodes.Status503ServiceUnavailable, title: "DNSE chưa được cấu hình", detail: ex.Message);
+                    : Results.NotFound(new { message = $"KBS không trả về giá hợp lệ cho mã {symbol.ToUpperInvariant()}." });
             }
             catch (HttpRequestException ex)
             {
                 var statusCode = ex.StatusCode == HttpStatusCode.NotFound
                     ? StatusCodes.Status404NotFound
                     : StatusCodes.Status502BadGateway;
-                return Results.Problem(statusCode: statusCode, title: "Không lấy được giá từ DNSE", detail: ex.Message);
+                return Results.Problem(statusCode: statusCode, title: "Không lấy được giá từ KBS", detail: ex.Message);
+            }
+            catch (ArgumentException ex)
+            {
+                return Results.Problem(statusCode: StatusCodes.Status400BadRequest, title: "Mã chứng khoán không hợp lệ", detail: ex.Message);
             }
         });
 
-        group.MapGet("/dnse-instruments", async ([FromQuery] string? query, IMediator mediator) =>
+        group.MapGet("/kbs-instruments", async ([FromQuery] string? query, IMediator mediator) =>
         {
-            var result = await mediator.Send(new SearchDnseInstrumentsQuery { Query = query ?? string.Empty });
+            var result = await mediator.Send(new SearchKbsInstrumentsQuery { Query = query ?? string.Empty });
             return Results.Ok(result);
         });
 

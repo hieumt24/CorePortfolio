@@ -18,3 +18,10 @@ These rules apply to all AI agents working within the CorePortfolio workspace. Y
    - For backend: Do NOT just run `dotnet build` at the root folder as it might hide errors. Explicitly build the modified project (e.g., `dotnet build src/CorePortfolio.API/CorePortfolio.API.csproj`) or use `dotnet run` to catch startup DI errors.
    - For frontend: Always run `npm run build` in the frontend directory.
 4. **Vietnamese Localization & String Matching**: This project uses Vietnamese data. When writing hardcoded logic that checks or matches entity names (e.g. Categories, Asset Types), you MUST account for both English keywords and their Vietnamese equivalents (e.g. checking both "stock" and "chứng khoán", "fund" and "chứng chỉ quỹ"). Do not assume English-only data.
+
+## Market Data Provider Rules
+1. **Vietnamese Stocks/ETFs**: Use the keyless KBS adapter in `CorePortfolio.KBS` for Vietnamese stock and ETF prices and instrument lookup. Persist the source as `KBS`; `DNSE` is a legacy source value that must be normalized to `KBS`.
+2. **Price Unit**: KBS raw daily OHLC `c` values are already absolute VND (for example `22400` means 22,400 VND). Never apply vnstock's display-oriented `/ 1000` conversion when persisting CorePortfolio prices.
+3. **Failure Safety**: Cache provider results, validate symbols, and preserve the last known price with `Stale` status on transient upstream failures.
+4. **Provider Boundary**: Keep the integration as a small typed .NET HTTP adapter. Do not add a Python runtime or copy vnstock implementation code into this repository. The current KBS integration is intended for CorePortfolio's personal-use scope; re-check upstream data terms before commercial deployment.
+5. **Vnstock Account Keys**: `VNSTOCK_API_KEY` activates the Python `vnstock`/`vnai` runtime and is not a KBS credential. Never forward it to KBS, commit it, place it in frontend configuration, or log it. If a future Python market-data worker is approved, inject the key into that isolated worker through a secret store and keep the .NET adapter keyless.
