@@ -1,6 +1,6 @@
 namespace CorePortfolio.Domain.Entities;
 
-public class NotificationPreference
+public class NotificationPreference : IConcurrencyTracked
 {
     public Guid Id { get; set; } = Guid.NewGuid();
     public Guid UserId { get; set; }
@@ -10,4 +10,5 @@ public class NotificationPreference
     public decimal? WarningThreshold { get; set; }
     public decimal? CriticalThreshold { get; set; }
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+    public int Version { get; set; } = 1;
 }

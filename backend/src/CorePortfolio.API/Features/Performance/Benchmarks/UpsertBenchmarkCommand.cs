@@ -3,6 +3,7 @@ using CorePortfolio.Domain.Entities;
 using CorePortfolio.Infrastructure.Data;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using CorePortfolio.API.Services;
 
 namespace CorePortfolio.API.Features.Performance.Benchmarks;
 
@@ -16,7 +17,7 @@ public sealed record UpsertBenchmarkCommand(
     string Currency,
     bool IsActive) : IRequest<BenchmarkDefinitionDto>;
 
-public sealed class UpsertBenchmarkHandler(AppDbContext dbContext)
+public sealed class UpsertBenchmarkHandler(AppDbContext dbContext, AuditWriter auditWriter)
     : IRequestHandler<UpsertBenchmarkCommand, BenchmarkDefinitionDto>
 {
     public async Task<BenchmarkDefinitionDto> Handle(
@@ -78,6 +79,11 @@ public sealed class UpsertBenchmarkHandler(AppDbContext dbContext)
         benchmark.IsDefault = request.IsDefault;
         benchmark.Currency = currency;
         benchmark.IsActive = request.IsActive;
+        auditWriter.Add(
+            request.Id.HasValue ? "BenchmarkUpdated" : "BenchmarkCreated",
+            "BenchmarkDefinition",
+            benchmark.Id.ToString(),
+            new { benchmark.Symbol, benchmark.AssetGroup, benchmark.IsDefault, benchmark.IsActive });
         await dbContext.SaveChangesAsync(cancellationToken);
 
         var pointStats = await dbContext.BenchmarkPricePoints

@@ -34,6 +34,32 @@ public class AppDbContext : DbContext
     public DbSet<NotificationPreference> NotificationPreferences => Set<NotificationPreference>();
     public DbSet<BenchmarkDefinition> BenchmarkDefinitions => Set<BenchmarkDefinition>();
     public DbSet<BenchmarkPricePoint> BenchmarkPricePoints => Set<BenchmarkPricePoint>();
+    public DbSet<AuditEvent> AuditEvents => Set<AuditEvent>();
+
+    public override int SaveChanges(bool acceptAllChangesOnSuccess)
+    {
+        AdvanceConcurrencyVersions();
+        return base.SaveChanges(acceptAllChangesOnSuccess);
+    }
+
+    public override Task<int> SaveChangesAsync(
+        bool acceptAllChangesOnSuccess,
+        CancellationToken cancellationToken = default)
+    {
+        AdvanceConcurrencyVersions();
+        return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
+    }
+
+    private void AdvanceConcurrencyVersions()
+    {
+        foreach (var entry in ChangeTracker.Entries<IConcurrencyTracked>())
+        {
+            if (entry.State == EntityState.Added && entry.Entity.Version < 1)
+                entry.Entity.Version = 1;
+            else if (entry.State == EntityState.Modified)
+                entry.Entity.Version++;
+        }
+    }
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -68,6 +94,36 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<User>()
             .HasIndex(u => u.LastActivityAt);
+
+        foreach (var entityType in new[]
+        {
+            typeof(MarketAsset),
+            typeof(Budget),
+            typeof(SavingGoal),
+            typeof(DcaPlan),
+            typeof(RebalanceExecutionPlan),
+            typeof(NotificationPreference)
+        })
+        {
+            modelBuilder.Entity(entityType)
+                .Property(nameof(IConcurrencyTracked.Version))
+                .IsConcurrencyToken()
+                .HasDefaultValue(1);
+        }
+
+        modelBuilder.Entity<AuditEvent>(entity =>
+        {
+            entity.Property(item => item.Action).HasMaxLength(100);
+            entity.Property(item => item.EntityType).HasMaxLength(100);
+            entity.Property(item => item.EntityId).HasMaxLength(100);
+            entity.Property(item => item.Outcome).HasMaxLength(30);
+            entity.Property(item => item.IpAddress).HasMaxLength(45);
+            entity.Property(item => item.CorrelationId).HasMaxLength(100);
+            entity.Property(item => item.MetadataJson).HasMaxLength(4000);
+            entity.HasIndex(item => item.OccurredAt);
+            entity.HasIndex(item => new { item.ActorUserId, item.OccurredAt });
+            entity.HasIndex(item => new { item.Action, item.OccurredAt });
+        });
         
         // Configuration for relationships and constraints
         modelBuilder.Entity<User>()

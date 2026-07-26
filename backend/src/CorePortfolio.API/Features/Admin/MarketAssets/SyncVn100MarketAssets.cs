@@ -6,6 +6,7 @@ using CorePortfolio.Domain.Interfaces;
 using CorePortfolio.Infrastructure.Data;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using CorePortfolio.API.Services;
 
 namespace CorePortfolio.API.Features.Admin.MarketAssets;
 
@@ -24,11 +25,16 @@ public sealed class SyncVn100MarketAssetsHandler
     private static readonly SemaphoreSlim SyncLock = new(1, 1);
     private readonly AppDbContext _db;
     private readonly IStockUniverseService _stockUniverse;
+    private readonly AuditWriter _auditWriter;
 
-    public SyncVn100MarketAssetsHandler(AppDbContext db, IStockUniverseService stockUniverse)
+    public SyncVn100MarketAssetsHandler(
+        AppDbContext db,
+        IStockUniverseService stockUniverse,
+        AuditWriter auditWriter)
     {
         _db = db;
         _stockUniverse = stockUniverse;
+        _auditWriter = auditWriter;
     }
 
     public async Task<SyncVn100MarketAssetsResult> Handle(
@@ -134,6 +140,18 @@ public sealed class SyncVn100MarketAssetsHandler
             else unchanged++;
         }
 
+        _auditWriter.Add(
+            "Vn100MarketAssetsSynchronized",
+            "MarketAssetUniverse",
+            "VN100",
+            new
+            {
+                ProviderCount = normalizedInstruments.Length,
+                Created = created,
+                Updated = updated,
+                Unchanged = unchanged,
+                WithReferencePrice = withReferencePrice
+            });
         await _db.SaveChangesAsync(cancellationToken);
         return new SyncVn100MarketAssetsResult(
             normalizedInstruments.Length,

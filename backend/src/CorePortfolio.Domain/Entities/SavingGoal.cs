@@ -1,6 +1,6 @@
 namespace CorePortfolio.Domain.Entities;
 
-public class SavingGoal
+public class SavingGoal : IConcurrencyTracked
 {
     public Guid Id { get; set; }
     public Guid UserId { get; set; }
@@ -19,4 +19,5 @@ public class SavingGoal
     public DateTime CreatedAt { get; set; }
     public bool IsCompleted { get; set; }
     public DateTime? CompletedAt { get; set; }
+    public int Version { get; set; } = 1;
 }

@@ -1,6 +1,6 @@
 namespace CorePortfolio.Domain.Entities;
 
-public class DcaPlan
+public class DcaPlan : IConcurrencyTracked
 {
     public Guid Id { get; set; }
     public Guid UserId { get; set; }
@@ -18,6 +18,7 @@ public class DcaPlan
     public bool IsActive { get; set; } = true;
     public string Notes { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; }
+    public int Version { get; set; } = 1;
 }
 
 public enum DcaFrequency

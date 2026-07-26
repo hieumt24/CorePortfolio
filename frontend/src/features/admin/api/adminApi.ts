@@ -1,8 +1,18 @@
 import { apiClient } from '../../../shared/api/baseClient';
-import type { AdminOverview, AdminUser, AdminUserFilters, PaginatedResult } from '../types';
+import type {
+  AdminOverview,
+  AdminUser,
+  AdminUserFilters,
+  AuditEventPage,
+  PaginatedResult,
+  ProductionOperations,
+} from '../types';
 
 export const adminApi = {
   getOverview: () => apiClient<AdminOverview>('/admin/overview'),
+  getOperations: () => apiClient<ProductionOperations>('/admin/operations'),
+  getAuditEvents: (pageSize = 8) =>
+    apiClient<AuditEventPage>(`/admin/audit-events?page=1&pageSize=${pageSize}`),
 
   getUsers: (filters: AdminUserFilters) => {
     const params = new URLSearchParams();

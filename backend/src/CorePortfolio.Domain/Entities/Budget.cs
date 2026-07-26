@@ -1,6 +1,6 @@
 namespace CorePortfolio.Domain.Entities;
 
-public class Budget
+public class Budget : IConcurrencyTracked
 {
     public Guid Id { get; set; }
     
@@ -11,4 +11,5 @@ public class Budget
     public CashflowCategory Category { get; set; } = null!;
     
     public decimal MonthlyLimit { get; set; }
+    public int Version { get; set; } = 1;
 }

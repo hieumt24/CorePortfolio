@@ -1,7 +1,10 @@
 using CorePortfolio.API.Services;
+using CorePortfolio.Infrastructure.Data;
 using Microsoft.AspNetCore.Mvc;
 
 namespace CorePortfolio.API.Features.Admin.Migration;
+
+public sealed record RestoreDatabaseRequest(string FileName, string Confirmation);
 
 public static class MigrationEndpoints
 {
@@ -11,16 +14,51 @@ public static class MigrationEndpoints
             .WithTags("Admin - Migration")
             .RequireAuthorization("Admin");
 
-        group.MapPost("/backup", (BackupService backupService) =>
+        group.MapGet("/backups", async (
+            BackupService backupService,
+            CancellationToken cancellationToken) =>
+            Results.Ok(await backupService.ListBackupsAsync(cancellationToken)));
+
+        group.MapPost("/backup", async (
+            BackupService backupService,
+            AuditWriter auditWriter,
+            AppDbContext dbContext,
+            CancellationToken cancellationToken) =>
         {
-            var path = backupService.BackupDatabase();
-            return Results.Ok(new { message = "Backup thành công", path });
+            var backup = await backupService.CreateBackupAsync(cancellationToken);
+            auditWriter.Add("DatabaseBackupCreated", "DatabaseBackup", backup.FileName,
+                new { backup.SizeBytes, backup.Sha256 });
+            await dbContext.SaveChangesAsync(cancellationToken);
+            return Results.Ok(backup);
         });
 
-        group.MapPost("/run-legacy", async (MigrationService migrationService, CancellationToken cancellationToken) =>
+        group.MapPost("/restore", async (
+            [FromBody] RestoreDatabaseRequest request,
+            BackupService backupService,
+            AuditWriter auditWriter,
+            AppDbContext dbContext,
+            CancellationToken cancellationToken) =>
+        {
+            var result = await backupService.RestoreAsync(
+                request.FileName,
+                request.Confirmation,
+                cancellationToken);
+            auditWriter.Add("DatabaseRestored", "DatabaseBackup", result.RestoredFileName,
+                new { result.SafetyBackupFileName });
+            await dbContext.SaveChangesAsync(cancellationToken);
+            return Results.Ok(result);
+        });
+
+        group.MapPost("/run-legacy", async (
+            MigrationService migrationService,
+            AuditWriter auditWriter,
+            AppDbContext dbContext,
+            CancellationToken cancellationToken) =>
         {
             await migrationService.MigrateLegacyTransactionsAsync(cancellationToken);
-            return Results.Ok(new { message = "Migration dữ liệu cũ thành công" });
+            auditWriter.Add("LegacyMigrationRun", "Database", null);
+            await dbContext.SaveChangesAsync(cancellationToken);
+            return Results.Ok(new { message = "Legacy data migration completed." });
         });
     }
 }

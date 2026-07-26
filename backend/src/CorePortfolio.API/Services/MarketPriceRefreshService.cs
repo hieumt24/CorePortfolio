@@ -10,12 +10,18 @@ public sealed class MarketPriceRefreshService : BackgroundService
     private readonly IServiceScopeFactory _scopeFactory;
     private readonly IConfiguration _configuration;
     private readonly ILogger<MarketPriceRefreshService> _logger;
+    private readonly ProductionOperationsState _operationsState;
 
-    public MarketPriceRefreshService(IServiceScopeFactory scopeFactory, IConfiguration configuration, ILogger<MarketPriceRefreshService> logger)
+    public MarketPriceRefreshService(
+        IServiceScopeFactory scopeFactory,
+        IConfiguration configuration,
+        ILogger<MarketPriceRefreshService> logger,
+        ProductionOperationsState operationsState)
     {
         _scopeFactory = scopeFactory;
         _configuration = configuration;
         _logger = logger;
+        _operationsState = operationsState;
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -35,6 +41,7 @@ public sealed class MarketPriceRefreshService : BackgroundService
         int stockIntervalSeconds,
         CancellationToken cancellationToken)
     {
+        var startedAt = _operationsState.StartJob("MarketPriceRefresh");
         try
         {
             using var scope = _scopeFactory.CreateScope();
@@ -122,10 +129,12 @@ public sealed class MarketPriceRefreshService : BackgroundService
 
             if (assets.Count > 0)
                 await db.SaveChangesAsync(cancellationToken);
+            _operationsState.CompleteJob("MarketPriceRefresh", startedAt);
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested) { }
         catch (Exception exception)
         {
+            _operationsState.FailJob("MarketPriceRefresh", startedAt, exception);
             _logger.LogError(exception, "Market price refresh cycle failed.");
         }
     }

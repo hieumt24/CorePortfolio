@@ -1,6 +1,6 @@
 namespace CorePortfolio.Domain.Entities;
 
-public class MarketAsset
+public class MarketAsset : IConcurrencyTracked
 {
     public Guid Id { get; set; }
     public Guid CategoryId { get; set; }
@@ -14,4 +14,5 @@ public class MarketAsset
     public string? ExternalId { get; set; }
     public string PriceStatus { get; set; } = "Manual";
     public string? LastPriceError { get; set; }
+    public int Version { get; set; } = 1;
 }

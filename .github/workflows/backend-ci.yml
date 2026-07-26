@@ -50,7 +50,12 @@ jobs:
     - name: Run API integration tests
       run: dotnet test src/CorePortfolio.API.IntegrationTests/CorePortfolio.API.IntegrationTests.csproj --configuration Release --no-restore --verbosity normal
 
-    - name: Verify EF migration snapshot exists
-      shell: bash
+    - name: Verify EF migrations on an empty SQLite database
       run: |
-        test -f src/CorePortfolio.Infrastructure/Migrations/AppDbContextModelSnapshot.cs
+        dotnet tool install --global dotnet-ef --version 10.0.9
+        dotnet ef database update \
+          --project src/CorePortfolio.Infrastructure/CorePortfolio.Infrastructure.csproj \
+          --startup-project src/CorePortfolio.API/CorePortfolio.API.csproj \
+          --connection "Data Source=${RUNNER_TEMP}/coreportfolio-ci.db" \
+          --configuration Release \
+          --no-build

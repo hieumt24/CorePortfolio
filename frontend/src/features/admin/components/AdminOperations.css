@@ -31,6 +31,21 @@
 .operations-activity div:first-child { border-left: 0; padding-left: 0; }
 .operations-activity strong { font-size: 1.55rem; } .operations-activity span { color: #94a3b8; font-size: .85rem; }
 .operations-updated { color: #64748b; font-size: .78rem; margin: -1rem 0 0; text-align: right; }
+.operations-health { border-radius: 999px; font-size: .7rem !important; letter-spacing: .03em !important; padding: .3rem .55rem; text-transform: none !important; }
+.operations-health.healthy { background: rgba(16,185,129,.12); color: #6ee7b7; }
+.operations-health.failed { background: rgba(244,63,94,.12); color: #fda4af; }
+.job-list, .audit-list { display: grid; }
+.job-row, .audit-row { align-items: center; border-top: 1px solid rgba(255,255,255,.06); display: flex; gap: .7rem; min-height: 58px; padding: .65rem 0; }
+.job-row:first-child, .audit-row:first-child { border-top: 0; }
+.job-row > div, .audit-row > div { display: grid; flex: 1; gap: .15rem; min-width: 0; }
+.job-row small, .audit-row small { color: #64748b; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.job-state { border-radius: 999px; color: #94a3b8; font-size: .68rem; padding: .25rem .48rem; }
+.job-state.succeeded { background: rgba(16,185,129,.1); color: #6ee7b7; }
+.job-state.failed { background: rgba(244,63,94,.1); color: #fda4af; }
+.job-state.running { background: rgba(59,130,246,.1); color: #93c5fd; }
+.audit-mark { background: #8b5cf6; border-radius: 50%; box-shadow: 0 0 0 4px rgba(139,92,246,.1); height: 7px; width: 7px; }
+.audit-row time { color: #64748b; flex: 0 0 auto; font-size: .68rem; }
+.operations-placeholder { color: #64748b; font-size: .82rem; margin: 1rem 0; text-align: center; }
 .admin-loading, .admin-error, .admin-empty { align-items: center; color: #94a3b8; display: flex; gap: .8rem; justify-content: center; min-height: 240px; padding: 2rem; text-align: center; }
 .admin-error, .admin-empty { flex-direction: column; }.admin-error button { background: rgba(99,102,241,.18); border: 1px solid rgba(99,102,241,.35); border-radius: 9px; color: #c7d2fe; cursor: pointer; padding: .55rem .85rem; }
 .admin-loader { animation: adminSpin .8s linear infinite; border: 3px solid rgba(255,255,255,.1); border-top-color: #8b5cf6; border-radius: 50%; height: 28px; width: 28px; } @keyframes adminSpin { to { transform: rotate(360deg); } }

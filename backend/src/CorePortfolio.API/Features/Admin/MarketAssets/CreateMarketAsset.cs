@@ -2,6 +2,7 @@ using CorePortfolio.Domain.Entities;
 using CorePortfolio.Infrastructure.Data;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using CorePortfolio.API.Services;
 
 namespace CorePortfolio.API.Features.Admin.MarketAssets;
 
@@ -11,7 +12,12 @@ public record CreateMarketAssetCommand(Guid CategoryId, string Symbol, string Na
 public class CreateMarketAssetHandler : IRequestHandler<CreateMarketAssetCommand, Guid>
 {
     private readonly AppDbContext _dbContext;
-    public CreateMarketAssetHandler(AppDbContext dbContext) => _dbContext = dbContext;
+    private readonly AuditWriter _auditWriter;
+    public CreateMarketAssetHandler(AppDbContext dbContext, AuditWriter auditWriter)
+    {
+        _dbContext = dbContext;
+        _auditWriter = auditWriter;
+    }
 
     public async Task<Guid> Handle(CreateMarketAssetCommand request, CancellationToken cancellationToken)
     {
@@ -31,6 +37,11 @@ public class CreateMarketAssetHandler : IRequestHandler<CreateMarketAssetCommand
             PriceStatus = "Manual"
         };
         _dbContext.MarketAssets.Add(marketAsset);
+        _auditWriter.Add(
+            "MarketAssetCreated",
+            "MarketAsset",
+            marketAsset.Id.ToString(),
+            new { marketAsset.Symbol, marketAsset.Name, marketAsset.PriceSource });
         await _dbContext.SaveChangesAsync(cancellationToken);
         return marketAsset.Id;
     }

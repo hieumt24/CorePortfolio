@@ -11,7 +11,8 @@ public record UpdateUserAccessCommand(Guid UserId, string Role, bool IsActive) :
 public sealed class UpdateUserAccessHandler(
     AppDbContext dbContext,
     ICurrentUserService currentUser,
-    IOptions<UserActivityOptions> activityOptions)
+    IOptions<UserActivityOptions> activityOptions,
+    AuditWriter auditWriter)
     : IRequestHandler<UpdateUserAccessCommand, AdminUserDto?>
 {
     public async Task<AdminUserDto?> Handle(UpdateUserAccessCommand request, CancellationToken cancellationToken)
@@ -43,8 +44,21 @@ public sealed class UpdateUserAccessHandler(
                 throw new InvalidOperationException("At least one active administrator is required.");
         }
 
+        var previousRole = user.Role;
+        var previousIsActive = user.IsActive;
         user.Role = request.Role;
         user.IsActive = request.IsActive;
+        auditWriter.Add(
+            "UserAccessChanged",
+            "User",
+            user.Id.ToString(),
+            new
+            {
+                PreviousRole = previousRole,
+                PreviousIsActive = previousIsActive,
+                NewRole = user.Role,
+                NewIsActive = user.IsActive
+            });
         await dbContext.SaveChangesAsync(cancellationToken);
 
         var onlineCutoff = UserPresence.GetOnlineCutoff(activityOptions.Value);

@@ -1,6 +1,6 @@
 namespace CorePortfolio.Domain.Entities;
 
-public class RebalanceExecutionPlan
+public class RebalanceExecutionPlan : IConcurrencyTracked
 {
     public Guid Id { get; set; }
     public Guid UserId { get; set; }
@@ -12,6 +12,7 @@ public class RebalanceExecutionPlan
     public DateTime? AppliedAt { get; set; }
     public string Notes { get; set; } = string.Empty;
     public ICollection<RebalanceExecutionPlanItem> Items { get; set; } = new List<RebalanceExecutionPlanItem>();
+    public int Version { get; set; } = 1;
 }
 
 public class RebalanceExecutionPlanItem

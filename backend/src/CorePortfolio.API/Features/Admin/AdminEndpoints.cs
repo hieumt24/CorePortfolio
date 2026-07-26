@@ -2,6 +2,9 @@ using CorePortfolio.API.Features.Admin.Overview;
 using CorePortfolio.API.Features.Admin.Users;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using CorePortfolio.API.Services;
+using CorePortfolio.Infrastructure.Data;
+using Microsoft.EntityFrameworkCore;
 
 namespace CorePortfolio.API.Features.Admin;
 
@@ -17,6 +20,53 @@ public static class AdminEndpoints
 
         group.MapGet("/overview", async (ISender sender, CancellationToken cancellationToken) =>
             Results.Ok(await sender.Send(new GetAdminOverviewQuery(), cancellationToken)));
+
+        group.MapGet("/operations", (ProductionOperationsState operationsState) =>
+            Results.Ok(operationsState.GetSnapshot()));
+
+        group.MapGet("/audit-events", async (
+            AppDbContext dbContext,
+            [FromQuery] string? action,
+            [FromQuery] Guid? actorUserId,
+            [FromQuery] DateTime? from,
+            [FromQuery] DateTime? to,
+            [FromQuery] int page = 1,
+            [FromQuery] int pageSize = 50,
+            CancellationToken cancellationToken = default) =>
+        {
+            page = Math.Max(page, 1);
+            pageSize = Math.Clamp(pageSize, 1, 100);
+            var query = dbContext.AuditEvents.AsNoTracking();
+            if (!string.IsNullOrWhiteSpace(action))
+                query = query.Where(item => item.Action == action.Trim());
+            if (actorUserId.HasValue)
+                query = query.Where(item => item.ActorUserId == actorUserId.Value);
+            if (from.HasValue)
+                query = query.Where(item => item.OccurredAt >= from.Value.ToUniversalTime());
+            if (to.HasValue)
+                query = query.Where(item => item.OccurredAt <= to.Value.ToUniversalTime());
+
+            var total = await query.CountAsync(cancellationToken);
+            var items = await query
+                .OrderByDescending(item => item.OccurredAt)
+                .Skip((page - 1) * pageSize)
+                .Take(pageSize)
+                .Select(item => new
+                {
+                    item.Id,
+                    item.ActorUserId,
+                    item.Action,
+                    item.EntityType,
+                    item.EntityId,
+                    item.Outcome,
+                    item.IpAddress,
+                    item.CorrelationId,
+                    item.MetadataJson,
+                    item.OccurredAt
+                })
+                .ToListAsync(cancellationToken);
+            return Results.Ok(new { items, total, page, pageSize });
+        });
 
         group.MapGet("/users", async (
             ISender sender,

@@ -4,6 +4,7 @@ using CorePortfolio.Domain.Performance;
 using CorePortfolio.Infrastructure.Data;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using CorePortfolio.API.Services;
 
 namespace CorePortfolio.API.Features.Performance.Benchmarks;
 
@@ -13,7 +14,7 @@ public sealed record UpsertBenchmarkPricePointCommand(
     decimal ClosePrice,
     string? Source) : IRequest<bool>;
 
-public sealed class UpsertBenchmarkPricePointHandler(AppDbContext dbContext)
+public sealed class UpsertBenchmarkPricePointHandler(AppDbContext dbContext, AuditWriter auditWriter)
     : IRequestHandler<UpsertBenchmarkPricePointCommand, bool>
 {
     public async Task<bool> Handle(
@@ -50,6 +51,11 @@ public sealed class UpsertBenchmarkPricePointHandler(AppDbContext dbContext)
             : request.Source.Trim();
         pricePoint.QualityStatus = PortfolioSnapshotQuality.Complete;
         pricePoint.CapturedAt = DateTime.UtcNow;
+        auditWriter.Add(
+            "BenchmarkPriceUpserted",
+            "BenchmarkPricePoint",
+            pricePoint.Id.ToString(),
+            new { benchmark.Symbol, Date = date, request.ClosePrice, pricePoint.Source });
         await dbContext.SaveChangesAsync(cancellationToken);
         return true;
     }

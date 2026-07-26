@@ -99,3 +99,42 @@ export interface AdminUserFilters {
   page?: number;
   pageSize?: number;
 }
+
+export interface BackgroundJobStatus {
+  name: string;
+  state: 'NeverRun' | 'Running' | 'Succeeded' | 'Failed' | string;
+  lastStartedAt: string | null;
+  lastSucceededAt: string | null;
+  lastFailedAt: string | null;
+  successCount: number;
+  failureCount: number;
+  lastDurationMilliseconds: number | null;
+  lastError: string | null;
+}
+
+export interface ProductionOperations {
+  isMaintenanceMode: boolean;
+  maintenanceReason: string | null;
+  maintenanceStartedAt: string | null;
+  jobs: BackgroundJobStatus[];
+}
+
+export interface AuditEvent {
+  id: string;
+  actorUserId: string | null;
+  action: string;
+  entityType: string;
+  entityId: string | null;
+  outcome: string;
+  ipAddress: string | null;
+  correlationId: string | null;
+  metadataJson: string | null;
+  occurredAt: string;
+}
+
+export interface AuditEventPage {
+  items: AuditEvent[];
+  total: number;
+  page: number;
+  pageSize: number;
+}

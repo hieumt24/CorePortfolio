@@ -106,7 +106,9 @@ builder.Services.AddScoped<ITelegramCommandProcessor, TelegramCommandProcessor>(
 builder.Services.AddScoped<TransactionLedgerService>();
 builder.Services.AddScoped<CashflowRecordWriter>();
 builder.Services.AddScoped<NotificationWriter>();
+builder.Services.AddScoped<AuditWriter>();
 builder.Services.AddScoped<ExchangeRateService>();
+builder.Services.AddSingleton<ProductionOperationsState>();
 builder.Services.AddHttpClient();
 builder.Services.AddHostedService<TelegramCronService>();
 builder.Services.AddHostedService<DailySnapshotService>();
@@ -205,8 +207,12 @@ app.UseExceptionHandler(errorApp => errorApp.Run(async context =>
     {
         AccountingValidationException => (StatusCodes.Status400BadRequest, "Dữ liệu giao dịch không hợp lệ"),
         RequestValidationException => (StatusCodes.Status400BadRequest, "Dữ liệu yêu cầu không hợp lệ"),
+        ArgumentException => (StatusCodes.Status400BadRequest, "Dữ liệu yêu cầu không hợp lệ"),
+        FileNotFoundException => (StatusCodes.Status404NotFound, "Không tìm thấy tệp"),
+        InvalidDataException => (StatusCodes.Status422UnprocessableEntity, "Dữ liệu sao lưu không hợp lệ"),
         ResourceNotFoundException => (StatusCodes.Status404NotFound, "Không tìm thấy dữ liệu"),
         ResourceConflictException => (StatusCodes.Status409Conflict, "Xung đột dữ liệu"),
+        DbUpdateConcurrencyException => (StatusCodes.Status409Conflict, "Dữ liệu đã được thay đổi bởi yêu cầu khác"),
         UnauthorizedAccessException => (StatusCodes.Status401Unauthorized, "Chưa xác thực"),
         _ => (StatusCodes.Status500InternalServerError, "Đã xảy ra lỗi hệ thống")
     };
@@ -215,6 +221,27 @@ app.UseExceptionHandler(errorApp => errorApp.Run(async context =>
     await Results.Problem(statusCode: status, title: title,
         detail: app.Environment.IsDevelopment() ? exception?.ToString() : null).ExecuteAsync(context);
 }));
+
+app.Use(async (context, next) =>
+{
+    var operationsState = context.RequestServices.GetRequiredService<ProductionOperationsState>();
+    var isMutatingRequest = HttpMethods.IsPost(context.Request.Method)
+        || HttpMethods.IsPut(context.Request.Method)
+        || HttpMethods.IsPatch(context.Request.Method)
+        || HttpMethods.IsDelete(context.Request.Method);
+    if (operationsState.IsMaintenanceMode &&
+        isMutatingRequest &&
+        !context.Request.Path.StartsWithSegments("/health"))
+    {
+        await Results.Problem(
+                statusCode: StatusCodes.Status503ServiceUnavailable,
+                title: "System maintenance is in progress.")
+            .ExecuteAsync(context);
+        return;
+    }
+
+    await next();
+});
 
 try
 {
@@ -255,16 +282,30 @@ app.MapGet("/api", () => "Welcome to CorePortfolio API")
 app.MapGet("/health/live", () => Results.Ok(new { status = "alive" }))
     .AllowAnonymous();
 
-app.MapGet("/health/ready", async (AppDbContext db, CancellationToken cancellationToken) =>
-    await db.Database.CanConnectAsync(cancellationToken)
+app.MapGet("/health/ready", async (
+    AppDbContext db,
+    ProductionOperationsState operationsState,
+    CancellationToken cancellationToken) =>
+{
+    if (operationsState.IsMaintenanceMode)
+        return Results.Problem(statusCode: 503, title: "Maintenance in progress");
+    return await db.Database.CanConnectAsync(cancellationToken)
         ? Results.Ok(new { status = "ready", database = "healthy" })
-        : Results.Problem(statusCode: 503, title: "Database unavailable"))
+        : Results.Problem(statusCode: 503, title: "Database unavailable");
+})
     .AllowAnonymous();
 
-app.MapGet("/health", async (AppDbContext db, CancellationToken cancellationToken) =>
-    await db.Database.CanConnectAsync(cancellationToken)
+app.MapGet("/health", async (
+    AppDbContext db,
+    ProductionOperationsState operationsState,
+    CancellationToken cancellationToken) =>
+{
+    if (operationsState.IsMaintenanceMode)
+        return Results.Problem(statusCode: 503, title: "Maintenance in progress");
+    return await db.Database.CanConnectAsync(cancellationToken)
         ? Results.Ok(new { status = "ready", database = "healthy" })
-        : Results.Problem(statusCode: 503, title: "Database unavailable"))
+        : Results.Problem(statusCode: 503, title: "Database unavailable");
+})
     .AllowAnonymous();
 
 // Map Endpoints

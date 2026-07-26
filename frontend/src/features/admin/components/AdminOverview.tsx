@@ -1,7 +1,11 @@
 import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { adminApi } from '../api/adminApi';
-import type { AdminOverview as AdminOverviewModel } from '../types';
+import type {
+  AdminOverview as AdminOverviewModel,
+  AuditEvent,
+  ProductionOperations,
+} from '../types';
 import './AdminOperations.css';
 
 const statCards: Array<{ key: keyof AdminOverviewModel; label: string; hint: string; tone: string }> = [
@@ -13,6 +17,8 @@ const statCards: Array<{ key: keyof AdminOverviewModel; label: string; hint: str
 
 export function AdminOverview() {
   const [overview, setOverview] = useState<AdminOverviewModel | null>(null);
+  const [operations, setOperations] = useState<ProductionOperations | null>(null);
+  const [auditEvents, setAuditEvents] = useState<AuditEvent[]>([]);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
 
@@ -20,7 +26,14 @@ export function AdminOverview() {
     setLoading(true);
     setError('');
     try {
-      setOverview(await adminApi.getOverview());
+      const [overviewResult, operationsResult, auditResult] = await Promise.all([
+        adminApi.getOverview(),
+        adminApi.getOperations(),
+        adminApi.getAuditEvents(),
+      ]);
+      setOverview(overviewResult);
+      setOperations(operationsResult);
+      setAuditEvents(auditResult.items);
     } catch (loadError) {
       setError(loadError instanceof Error ? loadError.message : 'Không thể tải dữ liệu quản trị.');
     } finally {
@@ -73,6 +86,54 @@ export function AdminOverview() {
             <div><strong>{overview.totalAssets.toLocaleString('vi-VN')}</strong><span>Tài sản trong danh mục</span></div>
             <div><strong>{overview.totalCashflows.toLocaleString('vi-VN')}</strong><span>Dòng tiền đã ghi nhận</span></div>
             <div><strong>{overview.totalPortfolios.toLocaleString('vi-VN')}</strong><span>Danh mục đầu tư</span></div>
+          </div>
+        </article>
+
+        <article className="operations-panel">
+          <div className="operations-panel-heading">
+            <div><span>Background jobs</span><h2>Vận hành nền</h2></div>
+            <span className={`operations-health ${operations?.isMaintenanceMode ? 'failed' : 'healthy'}`}>
+              {operations?.isMaintenanceMode ? 'Maintenance' : 'Ready'}
+            </span>
+          </div>
+          <div className="job-list">
+            {(operations?.jobs ?? []).map(job => (
+              <div className="job-row" key={job.name}>
+                <div>
+                  <strong>{job.name}</strong>
+                  <small>
+                    {job.lastSucceededAt
+                      ? `Thành công ${new Date(job.lastSucceededAt).toLocaleString('vi-VN')}`
+                      : 'Chưa có lần chạy thành công'}
+                  </small>
+                </div>
+                <span className={`job-state ${job.state.toLowerCase()}`}>{job.state}</span>
+              </div>
+            ))}
+            {!operations?.jobs.length && <p className="operations-placeholder">Job chưa chạy từ khi API khởi động.</p>}
+          </div>
+        </article>
+
+        <article className="operations-panel">
+          <div className="operations-panel-heading">
+            <div><span>Audit trail</span><h2>Thao tác nhạy cảm gần đây</h2></div>
+          </div>
+          <div className="audit-list">
+            {auditEvents.map(event => (
+              <div className="audit-row" key={event.id}>
+                <span className="audit-mark" />
+                <div>
+                  <strong>{event.action}</strong>
+                  <small>
+                    {event.entityType}{event.entityId ? ` · ${event.entityId}` : ''}
+                  </small>
+                </div>
+                <time dateTime={event.occurredAt}>
+                  {new Date(event.occurredAt).toLocaleString('vi-VN')}
+                </time>
+              </div>
+            ))}
+            {!auditEvents.length && <p className="operations-placeholder">Chưa có audit event.</p>}
           </div>
         </article>
       </section>
