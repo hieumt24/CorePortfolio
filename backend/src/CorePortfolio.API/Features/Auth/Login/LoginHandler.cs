@@ -48,24 +48,8 @@ public class LoginHandler : IRequestHandler<LoginCommand, LoginResult?>
         
         if (user == null)
         {
-            if (request.Username.ToLower() == "admin" && request.Password == "admin123")
-            {
-                user = new CorePortfolio.Domain.Entities.User
-                {
-                    Id = Guid.NewGuid(),
-                    Username = "admin",
-                    PasswordHash = BCrypt.Net.BCrypt.HashPassword("admin123"),
-                    Role = "Admin",
-                    CreatedAt = DateTime.UtcNow
-                };
-                _dbContext.Users.Add(user);
-                await _dbContext.SaveChangesAsync(cancellationToken);
-            }
-            else
-            {
-                await RecordFailedLoginAsync(null, request.Username, "InvalidCredentials", cancellationToken);
-                return null;
-            }
+            await RecordFailedLoginAsync(null, request.Username, "InvalidCredentials", cancellationToken);
+            return null;
         }
 
         if (!user.IsActive)

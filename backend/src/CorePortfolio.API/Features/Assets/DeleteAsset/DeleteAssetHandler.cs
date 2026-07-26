@@ -1,4 +1,5 @@
 using CorePortfolio.Infrastructure.Data;
+using CorePortfolio.API.Services;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -7,17 +8,26 @@ namespace CorePortfolio.API.Features.Assets.DeleteAsset;
 public class DeleteAssetHandler : IRequestHandler<DeleteAssetCommand, bool>
 {
     private readonly AppDbContext _dbContext;
+    private readonly ICurrentUserService _currentUserService;
 
-    public DeleteAssetHandler(AppDbContext dbContext)
+    public DeleteAssetHandler(AppDbContext dbContext, ICurrentUserService currentUserService)
     {
         _dbContext = dbContext;
+        _currentUserService = currentUserService;
     }
 
     public async Task<bool> Handle(DeleteAssetCommand request, CancellationToken cancellationToken)
     {
-        // 1. Fetch the asset
+        var userId = _currentUserService.UserId ?? throw new UnauthorizedAccessException();
+
+        // 1. Fetch the asset through its owning portfolio.
         var asset = await _dbContext.Assets
-            .FirstOrDefaultAsync(a => a.Id == request.AssetId && a.PortfolioId == request.PortfolioId, cancellationToken);
+            .FirstOrDefaultAsync(a =>
+                a.Id == request.AssetId &&
+                a.PortfolioId == request.PortfolioId &&
+                a.Portfolio != null &&
+                a.Portfolio.UserId == userId,
+                cancellationToken);
 
         if (asset == null)
             return false;
