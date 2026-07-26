@@ -50,6 +50,7 @@ using CorePortfolio.Domain.Interfaces;
 using CorePortfolio.Coingecko;
 using CorePortfolio.Telegram;
 using CorePortfolio.KBS;
+using CorePortfolio.Fmarket;
 using CorePortfolio.API.Common;
 using CorePortfolio.Domain.Accounting;
 using Microsoft.AspNetCore.Diagnostics;
@@ -124,6 +125,7 @@ builder.Services.AddScoped<MigrationService>();
 builder.Services.AddCoinGeckoInfrastructure(builder.Configuration);
 builder.Services.AddTelegramInfrastructure(builder.Configuration);
 builder.Services.AddKbsInfrastructure(builder.Configuration);
+builder.Services.AddFmarketInfrastructure(builder.Configuration);
 
 // Configure JWT Authentication
 var jwtKey = builder.Configuration["Jwt:Key"] ?? throw new InvalidOperationException("Jwt:Key not found.");

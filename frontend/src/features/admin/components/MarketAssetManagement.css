@@ -342,6 +342,12 @@
   color: #6ee7b7;
 }
 
+.source-badge.fmarket {
+  color: #c4b5fd;
+  border-color: rgba(139, 92, 246, .35);
+  background: rgba(139, 92, 246, .12);
+}
+
 .status-badge.fresh {
   background: rgba(16, 185, 129, 0.14);
   color: #34d399;

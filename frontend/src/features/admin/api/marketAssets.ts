@@ -1,5 +1,5 @@
 import { apiClient } from '../../../shared/api/baseClient';
-import type { MarketAsset, CreateMarketAssetRequest, PaginatedResult, PriceRefreshResult, SyncVn100Result } from '../types';
+import type { MarketAsset, CreateMarketAssetRequest, PaginatedResult, PriceRefreshResult, SyncFundsResult, SyncVn100Result } from '../types';
 
 export const marketAssetsApi = {
   getMarketAssets: (
@@ -44,6 +44,12 @@ export const marketAssetsApi = {
 
   syncVn100: (categoryId: string) =>
     apiClient<SyncVn100Result>('/admin/market-assets/sync-vn100', {
+      method: 'POST',
+      body: JSON.stringify({ categoryId }),
+    }),
+
+  syncFunds: (categoryId: string) =>
+    apiClient<SyncFundsResult>('/admin/market-assets/sync-funds', {
       method: 'POST',
       body: JSON.stringify({ categoryId }),
     }),

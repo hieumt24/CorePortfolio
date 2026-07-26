@@ -58,6 +58,13 @@ public static class MarketPriceSourceResolver
             return false;
         }
 
+        if (asset.PriceSource.Equals("Fmarket", StringComparison.OrdinalIgnoreCase))
+        {
+            asset.PriceSource = "Fmarket";
+            asset.PriceStatus = asset.CurrentPrice > 0 ? asset.PriceStatus : "Stale";
+            return false;
+        }
+
         if (!string.IsNullOrWhiteSpace(asset.PriceSource)) return false;
         var category = NormalizeText(asset.Category?.Name ?? string.Empty);
 
@@ -82,8 +89,8 @@ public static class MarketPriceSourceResolver
 
         if (category.Contains("chung chi quy") || category.Contains("fund"))
         {
-            asset.PriceSource = "Manual";
-            asset.PriceStatus = "Manual";
+            asset.PriceSource = "Fmarket";
+            asset.PriceStatus = "Stale";
             asset.LastPriceError = null;
             return true;
         }

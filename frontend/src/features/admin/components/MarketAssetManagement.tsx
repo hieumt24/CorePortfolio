@@ -16,6 +16,7 @@ const getSourceTone = (source: string) => {
   const normalized = source.toLowerCase();
   if (normalized === 'kbs') return 'kbs';
   if (normalized === 'coingecko') return 'coingecko';
+  if (normalized === 'fmarket') return 'fmarket';
   return 'manual';
 };
 
@@ -38,6 +39,11 @@ const isStockCategory = (category: AssetCategory) => {
   return name.includes('stock') || name.includes('co phieu') || name.includes('chung khoan');
 };
 
+const isFundCategory = (category: AssetCategory) => {
+  const name = category.name.normalize('NFD').replace(/\p{Diacritic}/gu, '').toLowerCase();
+  return name.includes('fund') || name.includes('quy') || name.includes('chung chi');
+};
+
 export function MarketAssetManagement() {
   const { showNotification } = useNotification();
   const [categories, setCategories] = useState<AssetCategory[]>([]);
@@ -50,6 +56,7 @@ export function MarketAssetManagement() {
   const [assetToEdit, setAssetToEdit] = useState<MarketAsset | null>(null);
   const [isUpdatingAll, setIsUpdatingAll] = useState(false);
   const [isSyncingVn100, setIsSyncingVn100] = useState(false);
+  const [isSyncingFunds, setIsSyncingFunds] = useState(false);
   const [refreshingAssetId, setRefreshingAssetId] = useState<string | null>(null);
   const [inlineErrors, setInlineErrors] = useState<Record<string, string>>({});
   const [searchInput, setSearchInput] = useState('');
@@ -86,6 +93,12 @@ export function MarketAssetManagement() {
     return selectedCategory && isStockCategory(selectedCategory)
       ? selectedCategory
       : categories.find(isStockCategory);
+  }, [categories, selectedCategoryId]);
+  const fundCategory = useMemo(() => {
+    const selectedCategory = categories.find(category => category.id === selectedCategoryId);
+    return selectedCategory && isFundCategory(selectedCategory)
+      ? selectedCategory
+      : categories.find(isFundCategory);
   }, [categories, selectedCategoryId]);
 
   const loadCategories = async () => {
@@ -242,6 +255,29 @@ export function MarketAssetManagement() {
     }
   };
 
+  const handleSyncFunds = async () => {
+    if (!fundCategory) {
+      showNotification('Hãy tạo danh mục Chứng chỉ quỹ/Fund trước khi đồng bộ.', 'info');
+      return;
+    }
+    if (!window.confirm(`Đồng bộ toàn bộ chứng chỉ quỹ Fmarket vào "${fundCategory.name}"?`)) return;
+    setIsSyncingFunds(true);
+    try {
+      const result = await marketAssetsApi.syncFunds(fundCategory.id);
+      showNotification(
+        `Fmarket: ${result.providerCount} quỹ, ${result.created} mới, ${result.updated} cập nhật, ${result.withNav} có NAV.`,
+        'success',
+      );
+      setSelectedCategoryId(fundCategory.id);
+      setCurrentPage(1);
+      await loadMarketAssets(fundCategory.id, 1, pageSize);
+    } catch (error) {
+      showNotification(error instanceof Error ? error.message : 'Không thể đồng bộ chứng chỉ quỹ.', 'error');
+    } finally {
+      setIsSyncingFunds(false);
+    }
+  };
+
   const totalPages = Math.ceil(totalCount / pageSize);
 
   return (
@@ -253,6 +289,14 @@ export function MarketAssetManagement() {
           <p className="admin-page-subtitle">Manage asset metadata, pricing source, refresh status, and provider errors.</p>
         </div>
         <div className="market-assets-actions">
+          <button
+            className="btn-outline"
+            onClick={handleSyncFunds}
+            disabled={isSyncingFunds || !fundCategory}
+            title={fundCategory ? `Đồng bộ vào ${fundCategory.name}` : 'Cần danh mục Chứng chỉ quỹ/Fund'}
+          >
+            {isSyncingFunds ? 'Syncing funds...' : 'Sync funds'}
+          </button>
           <button
             className="btn-outline market-sync-vn100"
             onClick={handleSyncVn100}

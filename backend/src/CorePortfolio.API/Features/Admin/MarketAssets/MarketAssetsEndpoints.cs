@@ -11,6 +11,7 @@ public record CreateMarketAssetRequest(Guid CategoryId, string Symbol, string Na
 public record UpdateMarketAssetRequest(Guid CategoryId, string Symbol, string Name, decimal CurrentPrice,
     string PriceSource = "Manual", string? ExternalId = null);
 public record SyncVn100MarketAssetsRequest(Guid CategoryId);
+public record SyncFundMarketAssetsRequest(Guid CategoryId);
 
 public static class MarketAssetsEndpoints
 {
@@ -116,6 +117,23 @@ public static class MarketAssetsEndpoints
                 return Results.Problem(
                     statusCode: StatusCodes.Status502BadGateway,
                     title: "Không thể đồng bộ VN100 từ KBS",
+                    detail: exception.Message);
+            }
+        }).RequireAuthorization("Admin");
+
+        group.MapPost("/sync-funds", async (
+            [FromBody] SyncFundMarketAssetsRequest request,
+            IMediator mediator) =>
+        {
+            try
+            {
+                return Results.Ok(await mediator.Send(new SyncFundMarketAssetsCommand(request.CategoryId)));
+            }
+            catch (HttpRequestException exception)
+            {
+                return Results.Problem(
+                    statusCode: StatusCodes.Status502BadGateway,
+                    title: "Không thể đồng bộ chứng chỉ quỹ từ Fmarket",
                     detail: exception.Message);
             }
         }).RequireAuthorization("Admin");

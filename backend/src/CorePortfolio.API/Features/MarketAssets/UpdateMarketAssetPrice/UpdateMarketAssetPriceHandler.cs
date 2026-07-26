@@ -41,8 +41,13 @@ public sealed class RefreshMarketAssetPricesHandler : IRequestHandler<RefreshMar
     private readonly AppDbContext _db;
     private readonly IStockPriceService _stocks;
     private readonly ICryptoPriceService _crypto;
-    public RefreshMarketAssetPricesHandler(AppDbContext db, IStockPriceService stocks, ICryptoPriceService crypto)
-    { _db = db; _stocks = stocks; _crypto = crypto; }
+    private readonly IFundNavService _funds;
+    public RefreshMarketAssetPricesHandler(
+        AppDbContext db,
+        IStockPriceService stocks,
+        ICryptoPriceService crypto,
+        IFundNavService funds)
+    { _db = db; _stocks = stocks; _crypto = crypto; _funds = funds; }
 
     public async Task<List<PriceRefreshResultDto>> Handle(RefreshMarketAssetPricesCommand request, CancellationToken cancellationToken)
     {
@@ -57,6 +62,16 @@ public sealed class RefreshMarketAssetPricesHandler : IRequestHandler<RefreshMar
                 .Where(asset => asset.PriceSource.Equals("CoinGecko", StringComparison.OrdinalIgnoreCase))
                 .Select(asset => asset.ExternalId ?? string.Empty),
             cancellationToken);
+        var fundAssets = assets
+            .Where(asset => asset.PriceSource.Equals("Fmarket", StringComparison.OrdinalIgnoreCase))
+            .ToList();
+        IReadOnlyList<FundNavInstrument> fundUniverse = Array.Empty<FundNavInstrument>();
+        Exception? fundProviderException = null;
+        if (fundAssets.Count > 0)
+        {
+            try { fundUniverse = await _funds.GetFundsAsync(cancellationToken); }
+            catch (Exception exception) { fundProviderException = exception; }
+        }
         var results = new List<PriceRefreshResultDto>();
         foreach (var asset in assets)
         {
@@ -70,6 +85,15 @@ public sealed class RefreshMarketAssetPricesHandler : IRequestHandler<RefreshMar
                 else if (asset.PriceSource.Equals("CoinGecko", StringComparison.OrdinalIgnoreCase))
                     price = !string.IsNullOrWhiteSpace(asset.ExternalId) && cryptoPrices.TryGetValue(asset.ExternalId, out var cryptoPrice)
                         ? cryptoPrice : null;
+                else if (asset.PriceSource.Equals("Fmarket", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (fundProviderException is not null) throw fundProviderException;
+                    var fund = fundUniverse.FirstOrDefault(item =>
+                        (!string.IsNullOrWhiteSpace(asset.ExternalId)
+                            && item.ExternalId.Equals(asset.ExternalId, StringComparison.OrdinalIgnoreCase))
+                        || item.Symbol.Equals(asset.Symbol, StringComparison.OrdinalIgnoreCase));
+                    price = fund?.Nav;
+                }
                 else error = "Nguồn giá không hỗ trợ tự động cập nhật.";
                 if (price is null or <= 0)
                     error ??= string.IsNullOrWhiteSpace(asset.ExternalId) && asset.PriceSource.Equals("CoinGecko", StringComparison.OrdinalIgnoreCase)

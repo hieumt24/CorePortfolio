@@ -64,6 +64,14 @@ export interface SyncVn100Result {
   withReferencePrice: number;
 }
 
+export interface SyncFundsResult {
+  providerCount: number;
+  created: number;
+  updated: number;
+  unchanged: number;
+  withNav: number;
+}
+
 export interface AdminOverview {
   totalUsers: number;
   activeUsers: number;
