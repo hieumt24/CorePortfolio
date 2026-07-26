@@ -1,6 +1,12 @@
-import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { jwtDecode } from 'jwt-decode';
 import { profileApi } from '../features/profile/api/profileApi';
+import {
+  apiClient,
+  getAccessToken,
+  refreshAccessToken,
+  setAccessToken,
+} from '../shared/api/baseClient';
 
 interface AuthUser {
   id: string;
@@ -14,31 +20,95 @@ interface AuthContextType {
   user: AuthUser | null;
   token: string | null;
   login: (token: string) => void;
-  logout: () => void;
+  logout: () => Promise<void>;
+  logoutAll: () => Promise<void>;
   refreshUser: () => Promise<void>;
   isAuthenticated: boolean;
   isAdmin: boolean;
+  isAuthLoading: boolean;
+}
+
+interface JwtClaims {
+  exp?: number;
+  sub?: string;
+  name?: string;
+  unique_name?: string;
+  role?: string;
+  [key: string]: string | number | undefined;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [token, setToken] = useState<string | null>(localStorage.getItem('token'));
-  const [user, setUser] = useState<AuthUser | null>(null);
+const decodeUser = (token: string): AuthUser => {
+  const decoded = jwtDecode<JwtClaims>(token);
+  const username = String(
+    decoded['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name']
+    || decoded.name
+    || decoded.unique_name
+    || 'User',
+  );
+  return {
+    id: String(
+      decoded['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier']
+      || decoded.sub
+      || '',
+    ),
+    username,
+    displayName: username,
+    email: null,
+    role: String(
+      decoded['http://schemas.microsoft.com/ws/2008/06/identity/claims/role']
+      || decoded.role
+      || 'User',
+    ),
+  };
+};
 
-  const logout = useCallback(() => {
-    localStorage.removeItem('token');
-    setToken(null);
-    setUser(null);
+export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
+  const [token, setTokenState] = useState<string | null>(getAccessToken());
+  const [user, setUser] = useState<AuthUser | null>(null);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
+
+  const applyToken = useCallback((nextToken: string | null) => {
+    setAccessToken(nextToken);
+    setTokenState(nextToken);
+    if (!nextToken) {
+      setUser(null);
+      return;
+    }
+    try {
+      setUser(decodeUser(nextToken));
+    } catch {
+      setAccessToken(null);
+      setTokenState(null);
+      setUser(null);
+    }
   }, []);
+
+  const logout = useCallback(async () => {
+    try {
+      await apiClient<void>('/auth/logout', { method: 'POST' });
+    } catch {
+      // Local logout must still complete if the API is unavailable.
+    } finally {
+      applyToken(null);
+    }
+  }, [applyToken]);
+
+  const logoutAll = useCallback(async () => {
+    try {
+      await apiClient('/auth/logout-all', { method: 'POST' });
+    } finally {
+      applyToken(null);
+    }
+  }, [applyToken]);
 
   const login = useCallback((newToken: string) => {
-    localStorage.setItem('token', newToken);
-    setToken(newToken);
-  }, []);
+    applyToken(newToken);
+  }, [applyToken]);
 
   const refreshUser = useCallback(async () => {
-    if (!localStorage.getItem('token')) return;
+    if (!getAccessToken()) return;
     const profile = await profileApi.get();
     setUser({
       id: profile.id,
@@ -50,55 +120,55 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   useEffect(() => {
-    const handleUnauthorized = () => logout();
+    localStorage.removeItem('token');
+    let active = true;
+    void refreshAccessToken()
+      .then(refreshedToken => {
+        if (active) applyToken(refreshedToken);
+      })
+      .finally(() => {
+        if (active) setIsAuthLoading(false);
+      });
+    return () => { active = false; };
+  }, [applyToken]);
+
+  useEffect(() => {
+    const handleUnauthorized = () => applyToken(null);
+    const handleTokenRefreshed = (event: Event) =>
+      applyToken((event as CustomEvent<string>).detail);
     window.addEventListener('auth:unauthorized', handleUnauthorized);
+    window.addEventListener('auth:token-refreshed', handleTokenRefreshed);
+    return () => {
+      window.removeEventListener('auth:unauthorized', handleUnauthorized);
+      window.removeEventListener('auth:token-refreshed', handleTokenRefreshed);
+    };
+  }, [applyToken]);
 
-    if (token) {
-      try {
-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
-        const decoded: any = jwtDecode(token);
-        const username =
-          decoded['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/name']
-          || decoded.name
-          || decoded.unique_name
-          || 'User';
-        const decodedUser: AuthUser = {
-          id: decoded['http://schemas.xmlsoap.org/ws/2005/05/identity/claims/nameidentifier'] || decoded.sub,
-          username,
-          displayName: username,
-          email: null,
-          role: decoded['http://schemas.microsoft.com/ws/2008/06/identity/claims/role'] || decoded.role,
-        };
-
-        if (!decoded.exp || decoded.exp * 1000 <= Date.now()) {
-          // Token expiry is the external event this effect synchronizes into auth state.
-          // eslint-disable-next-line react-hooks/set-state-in-effect
-          logout();
-        } else {
-          // Token replacement is the external event this effect synchronizes into user state.
-          setUser(decodedUser);
-          void refreshUser().catch(() => {
-            // Keep the token-derived identity when profile hydration is temporarily unavailable.
-          });
-          const expiresIn = decoded.exp * 1000 - Date.now();
-          const expiryTimer = window.setTimeout(logout, expiresIn);
-          return () => {
-            window.clearTimeout(expiryTimer);
-            window.removeEventListener('auth:unauthorized', handleUnauthorized);
-          };
-        }
-      } catch (e) {
-        console.error('Invalid token', e);
-        // Invalid token parsing is the external event this effect synchronizes into auth state.
-        logout();
-      }
-    } else {
-      // Removed storage token is the external event this effect synchronizes into user state.
-      setUser(null);
-    }
-
-    return () => window.removeEventListener('auth:unauthorized', handleUnauthorized);
-  }, [token, logout, refreshUser]);
+  useEffect(() => {
+    if (!token) return;
+    void profileApi.get()
+      .then(profile => {
+        setUser({
+          id: profile.id,
+          username: profile.username,
+          displayName: profile.displayName,
+          email: profile.email,
+          role: profile.role,
+        });
+      })
+      .catch(() => {
+        // Keep token-derived identity when profile hydration is temporarily unavailable.
+      });
+    const decoded = jwtDecode<JwtClaims>(token);
+    const expiresAt = (decoded.exp ?? 0) * 1000;
+    const refreshIn = Math.max(expiresAt - Date.now() - 30_000, 1_000);
+    const timer = window.setTimeout(() => {
+      void refreshAccessToken().then(refreshedToken => {
+        if (!refreshedToken) applyToken(null);
+      });
+    }, refreshIn);
+    return () => window.clearTimeout(timer);
+  }, [applyToken, refreshUser, token]);
 
   return (
     <AuthContext.Provider
@@ -107,10 +177,12 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         token,
         login,
         logout,
+        logoutAll,
         refreshUser,
         isAuthenticated: !!token,
         isAdmin: ['Admin', 'SuperAdmin', 'Operations', 'Support', 'MarketDataManager', 'Auditor']
           .includes(user?.role ?? ''),
+        isAuthLoading,
       }}
     >
       {children}
@@ -122,8 +194,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 // eslint-disable-next-line react-refresh/only-export-components
 export const useAuth = () => {
   const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
+  if (context === undefined) throw new Error('useAuth must be used within an AuthProvider');
   return context;
 };

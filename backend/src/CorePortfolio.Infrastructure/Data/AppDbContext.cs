@@ -36,6 +36,7 @@ public class AppDbContext : DbContext
     public DbSet<BenchmarkPricePoint> BenchmarkPricePoints => Set<BenchmarkPricePoint>();
     public DbSet<AuditEvent> AuditEvents => Set<AuditEvent>();
     public DbSet<UserSession> UserSessions => Set<UserSession>();
+    public DbSet<SessionRefreshToken> SessionRefreshTokens => Set<SessionRefreshToken>();
 
     public override int SaveChanges(bool acceptAllChangesOnSuccess)
     {
@@ -107,6 +108,17 @@ public class AppDbContext : DbContext
             session.HasOne(item => item.User)
                 .WithMany(item => item.Sessions)
                 .HasForeignKey(item => item.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<SessionRefreshToken>(refreshToken =>
+        {
+            refreshToken.Property(item => item.TokenHash).HasMaxLength(64);
+            refreshToken.HasIndex(item => item.TokenHash).IsUnique();
+            refreshToken.HasIndex(item => new { item.UserSessionId, item.ExpiresAt });
+            refreshToken.HasOne(item => item.UserSession)
+                .WithMany(item => item.RefreshTokens)
+                .HasForeignKey(item => item.UserSessionId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
 

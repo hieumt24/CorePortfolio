@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
 import { profileApi } from '../api/profileApi';
 import type { UserProfile } from '../types';
@@ -20,7 +21,8 @@ const getInitials = (name: string) =>
     .join('') || 'CP';
 
 export const ProfilePage = () => {
-  const { refreshUser } = useAuth();
+  const { refreshUser, logout } = useAuth();
+  const navigate = useNavigate();
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadError, setLoadError] = useState('');
@@ -152,8 +154,10 @@ export const ProfilePage = () => {
       await profileApi.changePassword(passwordForm);
       setPasswordForm({ currentPassword: '', newPassword: '', confirmPassword: '' });
       setPasswordErrors({});
-      setPasswordStatus('Mật khẩu đã được đổi. Bạn có thể tiếp tục sử dụng phiên hiện tại.');
+      setPasswordStatus('Mật khẩu đã được đổi. Đang đăng xuất các phiên…');
       setPasswordStatusTone('success');
+      await logout();
+      navigate('/login', { replace: true });
     } catch (error) {
       setPasswordStatus(error instanceof Error ? error.message : 'Không thể đổi mật khẩu.');
       setPasswordStatusTone('error');

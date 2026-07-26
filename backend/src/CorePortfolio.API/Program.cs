@@ -56,6 +56,8 @@ using CorePortfolio.Domain.Accounting;
 using Microsoft.AspNetCore.Diagnostics;
 using Microsoft.AspNetCore.HttpOverrides;
 using System.Security.Claims;
+using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.RateLimiting;
 using CorePortfolio.API.Features.Cashflows.CreateCashflowRecord;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -75,13 +77,10 @@ builder.Services.AddCors(options =>
         policy =>
         {
             policy.SetIsOriginAllowed(origin =>
-                configuredOrigins.Contains(origin, StringComparer.OrdinalIgnoreCase)
-                || (builder.Environment.IsProduction() &&
-                    Uri.TryCreate(origin, UriKind.Absolute, out var uri) &&
-                    uri.Scheme == Uri.UriSchemeHttps &&
-                    uri.Host.EndsWith(".vercel.app", StringComparison.OrdinalIgnoreCase)))
+                configuredOrigins.Contains(origin, StringComparer.OrdinalIgnoreCase))
                   .AllowAnyHeader()
                   .AllowAnyMethod()
+                  .AllowCredentials()
                   .SetPreflightMaxAge(TimeSpan.FromMinutes(10));
         });
 });
@@ -115,6 +114,7 @@ builder.Services.AddScoped<TransactionLedgerService>();
 builder.Services.AddScoped<CashflowRecordWriter>();
 builder.Services.AddScoped<NotificationWriter>();
 builder.Services.AddScoped<AuditWriter>();
+builder.Services.AddScoped<AuthSessionService>();
 builder.Services.AddScoped<ExchangeRateService>();
 builder.Services.AddSingleton<ProductionOperationsState>();
 builder.Services.AddHttpClient();
@@ -124,6 +124,37 @@ builder.Services.AddHostedService<MarketPriceRefreshService>();
 builder.Services.AddHostedService<ScheduledBackupService>();
 builder.Services.AddScoped<BackupService>();
 builder.Services.AddScoped<MigrationService>();
+builder.Services.AddRateLimiter(options =>
+{
+    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    options.AddPolicy("auth-login", context => RateLimitPartition.GetFixedWindowLimiter(
+        partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        factory: _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 10,
+            Window = TimeSpan.FromMinutes(1),
+            QueueLimit = 0,
+            AutoReplenishment = true
+        }));
+    options.AddPolicy("auth-register", context => RateLimitPartition.GetFixedWindowLimiter(
+        partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        factory: _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 5,
+            Window = TimeSpan.FromMinutes(1),
+            QueueLimit = 0,
+            AutoReplenishment = true
+        }));
+    options.AddPolicy("auth-refresh", context => RateLimitPartition.GetFixedWindowLimiter(
+        partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        factory: _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 30,
+            Window = TimeSpan.FromMinutes(1),
+            QueueLimit = 0,
+            AutoReplenishment = true
+        }));
+});
 
 // External Infrastructures
 builder.Services.AddCoinGeckoInfrastructure(builder.Configuration);
@@ -142,6 +173,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             ValidateAudience = true,
             ValidateLifetime = true,
             ValidateIssuerSigningKey = true,
+            ClockSkew = TimeSpan.Zero,
             ValidIssuer = builder.Configuration["Jwt:Issuer"],
             ValidAudience = builder.Configuration["Jwt:Audience"],
             IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
@@ -288,6 +320,7 @@ app.UseStaticFiles();
 
 app.UseHttpsRedirection();
 app.UseCors("AllowFrontend");
+app.UseRateLimiter();
 
 app.UseAuthentication();
 app.UseAuthorization();

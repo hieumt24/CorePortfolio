@@ -3,6 +3,8 @@ using CorePortfolio.API.Services;
 using CorePortfolio.Infrastructure.Data;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using CorePortfolio.Domain.Entities;
+using CorePortfolio.API.Features.Auth;
 
 namespace CorePortfolio.API.Features.Profile.ChangePassword;
 
@@ -13,7 +15,8 @@ public sealed record ChangePasswordCommand(
 
 public sealed class ChangePasswordHandler(
     AppDbContext dbContext,
-    ICurrentUserService currentUserService) : IRequestHandler<ChangePasswordCommand>
+    ICurrentUserService currentUserService,
+    AuthSessionService authSessionService) : IRequestHandler<ChangePasswordCommand>
 {
     public async Task Handle(ChangePasswordCommand request, CancellationToken cancellationToken)
     {
@@ -36,6 +39,19 @@ public sealed class ChangePasswordHandler(
             throw new UnauthorizedAccessException("Current password is incorrect.");
 
         user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+        await authSessionService.RevokeAllForUserAsync(
+            userId,
+            "Password changed",
+            cancellationToken);
+        dbContext.AuditEvents.Add(new AuditEvent
+        {
+            ActorUserId = userId,
+            Action = "UserPasswordChanged",
+            EntityType = "User",
+            EntityId = userId.ToString(),
+            Outcome = "Succeeded",
+            OccurredAt = DateTime.UtcNow
+        });
         await dbContext.SaveChangesAsync(cancellationToken);
     }
 }

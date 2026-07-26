@@ -149,9 +149,9 @@ export const Navbar: React.FC = () => {
     setIsMobileMenuOpen(false);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     setOpenPanel(null);
-    logout();
+    await logout();
     navigate('/login');
   };
 
@@ -332,7 +332,7 @@ export const Navbar: React.FC = () => {
                           </span>
                         </NavLink>
                       )}
-                      <button type="button" className="profile-menu-item profile-menu-item--danger" onClick={handleLogout} role="menuitem">
+                      <button type="button" className="profile-menu-item profile-menu-item--danger" onClick={() => void handleLogout()} role="menuitem">
                         <LogoutIcon />
                         <span>
                           <strong>Đăng xuất</strong>

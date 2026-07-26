@@ -11,24 +11,74 @@ export const API_URL = (
   || (import.meta.env.PROD ? PRODUCTION_API_URL : '/api')
 ).replace(/\/+$/, '');
 
-export const apiClient = async <T>(endpoint: string, options?: RequestInit): Promise<T> => {
-  const token = localStorage.getItem('token');
+let accessToken: string | null = null;
+let refreshPromise: Promise<string | null> | null = null;
+
+export const getAccessToken = () => accessToken;
+
+export const setAccessToken = (token: string | null) => {
+  accessToken = token;
+};
+
+export const refreshAccessToken = async (): Promise<string | null> => {
+  if (refreshPromise) return refreshPromise;
+  refreshPromise = (async () => {
+    try {
+      const response = await fetch(`${API_URL}/auth/refresh`, {
+        method: 'POST',
+        credentials: 'include',
+        headers: {
+          'Content-Type': 'application/json',
+          'X-Requested-With': 'CorePortfolio',
+        },
+      });
+      if (!response.ok) {
+        setAccessToken(null);
+        return null;
+      }
+      const result = await response.json() as { token: string };
+      setAccessToken(result.token);
+      window.dispatchEvent(new CustomEvent('auth:token-refreshed', { detail: result.token }));
+      return result.token;
+    } catch {
+      setAccessToken(null);
+      return null;
+    } finally {
+      refreshPromise = null;
+    }
+  })();
+  return refreshPromise;
+};
+
+const sendRequest = (endpoint: string, options?: RequestInit) => {
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
+    'X-Requested-With': 'CorePortfolio',
     ...options?.headers,
   };
-
-  if (token) {
-    (headers as Record<string, string>)['Authorization'] = `Bearer ${token}`;
+  if (accessToken) {
+    (headers as Record<string, string>).Authorization = `Bearer ${accessToken}`;
   }
-
-  const response = await fetch(`${API_URL}${endpoint}`, {
+  return fetch(`${API_URL}${endpoint}`, {
     ...options,
+    credentials: 'include',
     headers,
   });
+};
 
-  if (response.status === 401 && token) {
-    localStorage.removeItem('token');
+export const apiClient = async <T>(endpoint: string, options?: RequestInit): Promise<T> => {
+  let response = await sendRequest(endpoint, options);
+  const isSessionEndpoint = endpoint.startsWith('/auth/login')
+    || endpoint.startsWith('/auth/register')
+    || endpoint.startsWith('/auth/refresh')
+    || endpoint.startsWith('/auth/logout');
+  if (response.status === 401 && accessToken && !isSessionEndpoint) {
+    const refreshedToken = await refreshAccessToken();
+    if (refreshedToken) response = await sendRequest(endpoint, options);
+  }
+
+  if (response.status === 401 && !isSessionEndpoint) {
+    setAccessToken(null);
     window.dispatchEvent(new CustomEvent('auth:unauthorized'));
   }
 
