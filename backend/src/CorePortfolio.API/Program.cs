@@ -33,6 +33,7 @@ using CorePortfolio.API.Features.Dashboard;
 using CorePortfolio.API.Features.RecurringCashflows;
 using CorePortfolio.API.Features.Notifications;
 using CorePortfolio.API.Features.MarketPrices;
+using CorePortfolio.API.Features.Profile;
 using CorePortfolio.API.Services;
 using CorePortfolio.API.Features.Auth;
 using CorePortfolio.Infrastructure.Data;
@@ -276,6 +277,7 @@ app.MapDashboardEndpoints();
 app.MapRecurringCashflowsEndpoints();
 app.MapNotificationsEndpoints();
 app.MapMarketPricesEndpoints();
+app.MapProfileEndpoints();
 
 // Map fallback to index.html for SPA routing
 app.MapFallbackToFile("index.html");

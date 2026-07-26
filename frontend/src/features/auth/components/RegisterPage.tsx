@@ -74,7 +74,7 @@ export const RegisterPage: React.FC = () => {
               onChange={(e) => setPassword(e.target.value)}
               placeholder="Create a strong password"
               required
-              minLength={6}
+              minLength={8}
             />
           </div>
           

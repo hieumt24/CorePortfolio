@@ -19,6 +19,8 @@ public class LoginResult
     public string Token { get; set; } = string.Empty;
     public Guid UserId { get; set; }
     public string Username { get; set; } = string.Empty;
+    public string? DisplayName { get; set; }
+    public string? Email { get; set; }
     public string Role { get; set; } = string.Empty;
 }
 
@@ -63,12 +65,7 @@ public class LoginHandler : IRequestHandler<LoginCommand, LoginResult?>
             return null;
         }
 
-        if (user.Username.ToLower() == "admin" && request.Password == "admin123")
-        {
-            user.PasswordHash = BCrypt.Net.BCrypt.HashPassword("admin123");
-            await _dbContext.SaveChangesAsync(cancellationToken);
-        }
-        else if (!BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
+        if (!BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
         {
             return null;
         }
@@ -102,6 +99,8 @@ public class LoginHandler : IRequestHandler<LoginCommand, LoginResult?>
             Token = tokenHandler.WriteToken(token),
             UserId = user.Id,
             Username = user.Username,
+            DisplayName = user.DisplayName,
+            Email = user.Email,
             Role = user.Role
         };
     }

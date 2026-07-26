@@ -42,6 +42,22 @@ public class AppDbContext : DbContext
             .IsUnique();
 
         modelBuilder.Entity<User>()
+            .HasIndex(u => u.Email)
+            .IsUnique();
+
+        modelBuilder.Entity<User>()
+            .Property(u => u.Username)
+            .HasMaxLength(50);
+
+        modelBuilder.Entity<User>()
+            .Property(u => u.DisplayName)
+            .HasMaxLength(80);
+
+        modelBuilder.Entity<User>()
+            .Property(u => u.Email)
+            .HasMaxLength(160);
+
+        modelBuilder.Entity<User>()
             .HasIndex(u => new { u.Role, u.IsActive });
         
         // Configuration for relationships and constraints

@@ -22,6 +22,7 @@ import { ProtectedRoute } from '../shared/components/ProtectedRoute';
 import { OverviewDashboard } from '../features/dashboard/components/OverviewDashboard';
 import { AdminOverview } from '../features/admin/components/AdminOverview';
 import { UserManagement } from '../features/admin/components/UserManagement';
+import { ProfilePage } from '../features/profile/components/ProfilePage';
 
 function App() {
   return (
@@ -45,6 +46,7 @@ function App() {
           <Route path="/saving-goals" element={<ProtectedRoute><SavingGoalsPage /></ProtectedRoute>} />
           <Route path="/rebalancing" element={<ProtectedRoute><RebalancingPlansPage /></ProtectedRoute>} />
           <Route path="/dca-plans" element={<ProtectedRoute><DcaPlansPage /></ProtectedRoute>} />
+          <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
           
           
           <Route path="/admin" element={<ProtectedRoute requireAdmin={true}><AdminDashboard /></ProtectedRoute>}>
