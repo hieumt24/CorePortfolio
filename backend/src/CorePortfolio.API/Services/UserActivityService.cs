@@ -17,6 +17,7 @@ public interface IUserActivityService
     Task<bool> ValidateAccessAndTrackAsync(
         Guid userId,
         string? tokenRole,
+        string? tokenId,
         CancellationToken cancellationToken);
 }
 
@@ -27,21 +28,28 @@ public sealed class UserActivityService(
     public async Task<bool> ValidateAccessAndTrackAsync(
         Guid userId,
         string? tokenRole,
+        string? tokenId,
         CancellationToken cancellationToken)
     {
         var user = await dbContext.Users
             .SingleOrDefaultAsync(item => item.Id == userId, cancellationToken);
 
-        if (user is null || !user.IsActive || user.Role != tokenRole)
+        if (user is null || !user.IsActive || user.Role != tokenRole || string.IsNullOrWhiteSpace(tokenId))
             return false;
 
         var now = DateTime.UtcNow;
+        var session = await dbContext.UserSessions.SingleOrDefaultAsync(
+            item => item.UserId == userId && item.TokenId == tokenId,
+            cancellationToken);
+        if (session is null || session.RevokedAt.HasValue || session.ExpiresAt <= now)
+            return false;
         var writeIntervalSeconds = Math.Clamp(options.Value.WriteIntervalSeconds, 15, 300);
         var writeCutoff = now.AddSeconds(-writeIntervalSeconds);
 
         if (user.LastActivityAt is null || user.LastActivityAt < writeCutoff)
         {
             user.LastActivityAt = now;
+            session.LastSeenAt = now;
             await dbContext.SaveChangesAsync(cancellationToken);
         }
 

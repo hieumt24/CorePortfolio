@@ -35,6 +35,7 @@ public class AppDbContext : DbContext
     public DbSet<BenchmarkDefinition> BenchmarkDefinitions => Set<BenchmarkDefinition>();
     public DbSet<BenchmarkPricePoint> BenchmarkPricePoints => Set<BenchmarkPricePoint>();
     public DbSet<AuditEvent> AuditEvents => Set<AuditEvent>();
+    public DbSet<UserSession> UserSessions => Set<UserSession>();
 
     public override int SaveChanges(bool acceptAllChangesOnSuccess)
     {
@@ -94,6 +95,20 @@ public class AppDbContext : DbContext
 
         modelBuilder.Entity<User>()
             .HasIndex(u => u.LastActivityAt);
+
+        modelBuilder.Entity<UserSession>(session =>
+        {
+            session.Property(item => item.TokenId).HasMaxLength(100);
+            session.Property(item => item.IpAddress).HasMaxLength(45);
+            session.Property(item => item.UserAgent).HasMaxLength(500);
+            session.Property(item => item.RevokeReason).HasMaxLength(250);
+            session.HasIndex(item => item.TokenId).IsUnique();
+            session.HasIndex(item => new { item.UserId, item.RevokedAt, item.ExpiresAt });
+            session.HasOne(item => item.User)
+                .WithMany(item => item.Sessions)
+                .HasForeignKey(item => item.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
 
         foreach (var entityType in new[]
         {

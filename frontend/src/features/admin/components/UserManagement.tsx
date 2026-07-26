@@ -6,6 +6,7 @@ import { adminApi } from '../api/adminApi';
 import type { AdminUser } from '../types';
 import { formatVietnamDateTime } from '../../../shared/utils/dateTime';
 import './AdminOperations.css';
+import { Link } from 'react-router-dom';
 
 const PAGE_SIZE = 20;
 const PRESENCE_REFRESH_INTERVAL_MS = 60_000;
@@ -133,7 +134,12 @@ export function UserManagement() {
           aria-label="Lọc vai trò"
         >
           <option value="">Mọi vai trò</option>
+          <option value="SuperAdmin">SuperAdmin</option>
           <option value="Admin">Admin</option>
+          <option value="Operations">Operations</option>
+          <option value="Support">Support</option>
+          <option value="MarketDataManager">MarketDataManager</option>
+          <option value="Auditor">Auditor</option>
           <option value="User">User</option>
         </select>
         <select
@@ -221,6 +227,11 @@ export function UserManagement() {
                           >
                             <option value="User">User</option>
                             <option value="Admin">Admin</option>
+                            <option value="SuperAdmin">SuperAdmin</option>
+                            <option value="Operations">Operations</option>
+                            <option value="Support">Support</option>
+                            <option value="MarketDataManager">MarketDataManager</option>
+                            <option value="Auditor">Auditor</option>
                           </select>
                           <span className={`account-state ${user.isActive ? 'active' : 'inactive'}`}>
                             {user.isActive ? 'Được truy cập' : 'Đã khóa'}
@@ -256,6 +267,9 @@ export function UserManagement() {
                         </div>
                       </td>
                       <td>
+                        <Link className="access-toggle" to={`/admin/users/${user.id}`}>
+                          Chi tiết
+                        </Link>
                         <button
                           className={`access-toggle ${user.isActive ? 'danger' : 'success'}`}
                           disabled={busy || isSelf}

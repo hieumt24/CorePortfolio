@@ -17,7 +17,8 @@ public static class MigrationEndpoints
         group.MapGet("/backups", async (
             BackupService backupService,
             CancellationToken cancellationToken) =>
-            Results.Ok(await backupService.ListBackupsAsync(cancellationToken)));
+            Results.Ok(await backupService.ListBackupsAsync(cancellationToken)))
+            .RequireAuthorization("AdminRecovery");
 
         group.MapPost("/backup", async (
             BackupService backupService,
@@ -30,7 +31,7 @@ public static class MigrationEndpoints
                 new { backup.SizeBytes, backup.Sha256 });
             await dbContext.SaveChangesAsync(cancellationToken);
             return Results.Ok(backup);
-        });
+        }).RequireAuthorization("AdminOperationsExecute");
 
         group.MapPost("/restore", async (
             [FromBody] RestoreDatabaseRequest request,
@@ -47,7 +48,7 @@ public static class MigrationEndpoints
                 new { result.SafetyBackupFileName });
             await dbContext.SaveChangesAsync(cancellationToken);
             return Results.Ok(result);
-        });
+        }).RequireAuthorization("AdminRolesManage");
 
         group.MapPost("/run-legacy", async (
             MigrationService migrationService,
@@ -59,6 +60,6 @@ public static class MigrationEndpoints
             auditWriter.Add("LegacyMigrationRun", "Database", null);
             await dbContext.SaveChangesAsync(cancellationToken);
             return Results.Ok(new { message = "Legacy data migration completed." });
-        });
+        }).RequireAuthorization("AdminRolesManage");
     }
 }

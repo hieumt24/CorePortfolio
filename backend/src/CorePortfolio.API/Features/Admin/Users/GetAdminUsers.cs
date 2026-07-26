@@ -48,7 +48,7 @@ public sealed class GetAdminUsersHandler(
                 (user.Email != null && user.Email.ToLower().Contains(search)));
         }
 
-        if (request.Role is "Admin" or "User")
+        if (!string.IsNullOrWhiteSpace(request.Role))
             query = query.Where(user => user.Role == request.Role);
 
         if (request.IsActive.HasValue)

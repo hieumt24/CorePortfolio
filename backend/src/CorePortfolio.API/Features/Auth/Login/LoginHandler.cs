@@ -6,6 +6,7 @@ using CorePortfolio.Infrastructure.Data;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using CorePortfolio.Domain.Entities;
 
 namespace CorePortfolio.API.Features.Auth.Login;
 
@@ -62,24 +63,49 @@ public class LoginHandler : IRequestHandler<LoginCommand, LoginResult?>
             }
             else
             {
+                await RecordFailedLoginAsync(null, request.Username, "InvalidCredentials", cancellationToken);
                 return null;
             }
         }
 
         if (!user.IsActive)
         {
+            await RecordFailedLoginAsync(user, request.Username, "AccountDisabled", cancellationToken);
             return null;
         }
 
         if (!BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
         {
+            await RecordFailedLoginAsync(user, request.Username, "InvalidCredentials", cancellationToken);
             return null;
         }
 
         var loginTime = DateTime.UtcNow;
+        var tokenId = Guid.NewGuid().ToString("N");
+        var expiresAt = DateTime.UtcNow.AddDays(7);
         user.LastLoginAt = loginTime;
         user.LastActivityAt = loginTime;
         user.LastLoginIpAddress = ClientIpAddress.Resolve(_httpContextAccessor.HttpContext);
+        _dbContext.UserSessions.Add(new UserSession
+        {
+            UserId = user.Id,
+            TokenId = tokenId,
+            IpAddress = user.LastLoginIpAddress,
+            UserAgent = _httpContextAccessor.HttpContext?.Request.Headers.UserAgent.ToString(),
+            CreatedAt = loginTime,
+            LastSeenAt = loginTime,
+            ExpiresAt = expiresAt
+        });
+        _dbContext.AuditEvents.Add(new AuditEvent
+        {
+            ActorUserId = user.Id,
+            Action = "UserLoginSucceeded",
+            EntityType = "User",
+            EntityId = user.Id.ToString(),
+            Outcome = "Succeeded",
+            IpAddress = user.LastLoginIpAddress,
+            OccurredAt = loginTime
+        });
         await _dbContext.SaveChangesAsync(cancellationToken);
 
         var tokenHandler = new JwtSecurityTokenHandler();
@@ -89,13 +115,14 @@ public class LoginHandler : IRequestHandler<LoginCommand, LoginResult?>
         {
             new Claim(ClaimTypes.NameIdentifier, user.Id.ToString()),
             new Claim(ClaimTypes.Name, user.Username),
-            new Claim(ClaimTypes.Role, user.Role)
+            new Claim(ClaimTypes.Role, user.Role),
+            new Claim(JwtRegisteredClaimNames.Jti, tokenId)
         };
 
         var tokenDescriptor = new SecurityTokenDescriptor
         {
             Subject = new ClaimsIdentity(claims),
-            Expires = DateTime.UtcNow.AddDays(7),
+            Expires = expiresAt,
             Issuer = _configuration["Jwt:Issuer"],
             Audience = _configuration["Jwt:Audience"],
             SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature)
@@ -112,5 +139,29 @@ public class LoginHandler : IRequestHandler<LoginCommand, LoginResult?>
             Email = user.Email,
             Role = user.Role
         };
+    }
+
+    private async Task RecordFailedLoginAsync(
+        User? user,
+        string attemptedUsername,
+        string reason,
+        CancellationToken cancellationToken)
+    {
+        _dbContext.AuditEvents.Add(new AuditEvent
+        {
+            ActorUserId = user?.Id,
+            Action = "UserLoginFailed",
+            EntityType = "User",
+            EntityId = user?.Id.ToString(),
+            Outcome = "Failed",
+            IpAddress = ClientIpAddress.Resolve(_httpContextAccessor.HttpContext),
+            MetadataJson = System.Text.Json.JsonSerializer.Serialize(new
+            {
+                username = attemptedUsername.Trim()[..Math.Min(attemptedUsername.Trim().Length, 50)],
+                reason
+            }),
+            OccurredAt = DateTime.UtcNow
+        });
+        await _dbContext.SaveChangesAsync(cancellationToken);
     }
 }

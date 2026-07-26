@@ -80,7 +80,7 @@ export interface AdminOverview {
 export interface AdminUser {
   id: string;
   username: string;
-  role: 'Admin' | 'User';
+  role: string;
   isActive: boolean;
   createdAt: string;
   lastLoginAt: string | null;
@@ -130,6 +130,107 @@ export interface AuditEvent {
   correlationId: string | null;
   metadataJson: string | null;
   occurredAt: string;
+  actorUsername?: string | null;
+}
+
+export interface AdminCapabilities {
+  role: string;
+  roles: string[];
+  permissions: string[];
+}
+
+export interface AdminUserDetail extends AdminUser {
+  displayName: string | null;
+  email: string | null;
+  cashflowCount: number;
+  activeSessionCount: number;
+}
+
+export interface UserSession {
+  id: string;
+  ipAddress: string | null;
+  userAgent: string | null;
+  createdAt: string;
+  lastSeenAt: string;
+  expiresAt: string;
+  revokedAt: string | null;
+  revokeReason: string | null;
+  isActive: boolean;
+}
+
+export interface SecurityEvent {
+  id: string;
+  action: string;
+  outcome: string;
+  ipAddress: string | null;
+  metadataJson: string | null;
+  occurredAt: string;
+}
+
+export interface ProviderHealth {
+  provider: string;
+  total: number;
+  fresh: number;
+  stale: number;
+  errors: number;
+  lastUpdated: string;
+}
+
+export interface MarketDataAttention {
+  id: string;
+  symbol: string;
+  name: string;
+  priceSource: string;
+  priceStatus: string;
+  lastUpdated: string;
+  lastPriceError: string | null;
+}
+
+export interface MarketDataHealth {
+  providers: ProviderHealth[];
+  attention: MarketDataAttention[];
+  generatedAt: string;
+}
+
+export interface NotificationCampaign {
+  id: string;
+  title: string;
+  message: string;
+  severity: string;
+  createdAt: string;
+  expiresAt: string | null;
+  recipientCount: number;
+  readCount: number;
+}
+
+export interface IntegrityCheck {
+  key: string;
+  label: string;
+  count: number;
+  severity: string;
+  status: string;
+}
+
+export interface IntegrityReport {
+  checks: IntegrityCheck[];
+  generatedAt: string;
+}
+
+export interface DatabaseBackup {
+  fileName: string;
+  createdAt: string;
+  sizeBytes: number;
+  sha256: string;
+  schemaVersion: string;
+}
+
+export interface AdminSystemConfiguration {
+  settings: Record<string, string>;
+  runtime: {
+    backupDirectoryConfigured: boolean;
+    retentionCount: number;
+    databaseProvider: string;
+  };
 }
 
 export interface AuditEventPage {

@@ -109,7 +109,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         logout,
         refreshUser,
         isAuthenticated: !!token,
-        isAdmin: user?.role === 'Admin',
+        isAdmin: ['Admin', 'SuperAdmin', 'Operations', 'Support', 'MarketDataManager', 'Auditor']
+          .includes(user?.role ?? ''),
       }}
     >
       {children}

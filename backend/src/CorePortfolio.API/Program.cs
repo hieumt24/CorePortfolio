@@ -3,6 +3,7 @@ using CorePortfolio.API.Features.Admin.MarketAssets;
 using CorePortfolio.API.Features.Admin.Migration;
 using CorePortfolio.API.Features.Admin.Settings;
 using CorePortfolio.API.Features.Admin;
+using CorePortfolio.API.Features.Admin.ControlPlane;
 using CorePortfolio.API.Features.Assets.CreateAsset;
 using CorePortfolio.API.Features.Assets.DeleteAsset;
 using CorePortfolio.API.Features.Assets.SearchAvailableMarketAssets;
@@ -43,6 +44,7 @@ using CorePortfolio.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
+using System.IdentityModel.Tokens.Jwt;
 using System.Text;
 using CorePortfolio.Domain.Interfaces;
 using CorePortfolio.Coingecko;
@@ -114,6 +116,7 @@ builder.Services.AddHttpClient();
 builder.Services.AddHostedService<TelegramCronService>();
 builder.Services.AddHostedService<DailySnapshotService>();
 builder.Services.AddHostedService<MarketPriceRefreshService>();
+builder.Services.AddHostedService<ScheduledBackupService>();
 builder.Services.AddScoped<BackupService>();
 builder.Services.AddScoped<MigrationService>();
 
@@ -143,6 +146,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
             {
                 var userIdValue = context.Principal?.FindFirstValue(ClaimTypes.NameIdentifier);
                 var tokenRole = context.Principal?.FindFirstValue(ClaimTypes.Role);
+                var tokenId = context.Principal?.FindFirstValue(JwtRegisteredClaimNames.Jti);
                 if (!Guid.TryParse(userIdValue, out var userId))
                 {
                     context.Fail("Invalid user identity.");
@@ -154,6 +158,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
                 var hasAccess = await userActivityService.ValidateAccessAndTrackAsync(
                     userId,
                     tokenRole,
+                    tokenId,
                     context.HttpContext.RequestAborted);
 
                 if (!hasAccess)
@@ -167,7 +172,17 @@ builder.Services.AddAuthorization(options =>
     options.FallbackPolicy = new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder()
         .RequireAuthenticatedUser()
         .Build();
-    options.AddPolicy("Admin", policy => policy.RequireRole("Admin"));
+    options.AddPolicy("Admin", policy => policy.RequireRole(
+        "Admin", "SuperAdmin", "Operations", "Support", "MarketDataManager", "Auditor"));
+    options.AddPolicy("AdminUsersRead", policy => policy.RequireRole("Admin", "SuperAdmin", "Support", "Auditor"));
+    options.AddPolicy("AdminRolesManage", policy => policy.RequireRole("Admin", "SuperAdmin"));
+    options.AddPolicy("AdminOperations", policy => policy.RequireRole("Admin", "SuperAdmin", "Operations", "Auditor"));
+    options.AddPolicy("AdminOperationsExecute", policy => policy.RequireRole("Admin", "SuperAdmin", "Operations"));
+    options.AddPolicy("AdminMarketData", policy => policy.RequireRole("Admin", "SuperAdmin", "Operations", "MarketDataManager", "Auditor"));
+    options.AddPolicy("AdminMarketDataManage", policy => policy.RequireRole("Admin", "SuperAdmin", "Operations", "MarketDataManager"));
+    options.AddPolicy("AdminNotifications", policy => policy.RequireRole("Admin", "SuperAdmin", "Operations", "Support"));
+    options.AddPolicy("AdminIntegrity", policy => policy.RequireRole("Admin", "SuperAdmin", "Operations", "Auditor"));
+    options.AddPolicy("AdminRecovery", policy => policy.RequireRole("Admin", "SuperAdmin", "Operations", "Auditor"));
 });
 
 var app = builder.Build();
@@ -312,6 +327,7 @@ app.MapGet("/health", async (
 // Map Endpoints
 app.MapAuthEndpoints();
 app.MapAdminEndpoints();
+app.MapAdminControlPlaneEndpoints();
 app.MapCategoriesEndpoints();
 app.MapMarketAssetsEndpoints();
 app.MapSettingsEndpoints();

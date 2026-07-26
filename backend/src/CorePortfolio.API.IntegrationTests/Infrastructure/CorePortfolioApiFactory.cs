@@ -47,7 +47,8 @@ public sealed class CorePortfolioApiFactory : WebApplicationFactory<Program>
                     descriptor.ImplementationType is not null &&
                     (descriptor.ImplementationType == typeof(TelegramCronService) ||
                      descriptor.ImplementationType == typeof(DailySnapshotService) ||
-                     descriptor.ImplementationType == typeof(MarketPriceRefreshService)))
+                     descriptor.ImplementationType == typeof(MarketPriceRefreshService) ||
+                     descriptor.ImplementationType == typeof(ScheduledBackupService)))
                 .ToList();
             foreach (var descriptor in backgroundServices)
                 services.Remove(descriptor);

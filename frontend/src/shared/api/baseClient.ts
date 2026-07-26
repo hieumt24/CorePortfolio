@@ -2,9 +2,12 @@ const PRODUCTION_API_URL =
   'https://coreportfolio-api-cdbchffjhtg2hgda.southeastasia-01.azurewebsites.net/api';
 
 const configuredApiUrl = import.meta.env.VITE_API_URL?.trim();
+const productionConfiguredApiUrl = configuredApiUrl?.startsWith('http')
+  ? configuredApiUrl
+  : undefined;
 
 export const API_URL = (
-  configuredApiUrl
+  (import.meta.env.PROD ? productionConfiguredApiUrl : configuredApiUrl)
   || (import.meta.env.PROD ? PRODUCTION_API_URL : '/api')
 ).replace(/\/+$/, '');
 

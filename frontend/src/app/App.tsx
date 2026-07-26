@@ -24,6 +24,16 @@ import { OverviewDashboard } from '../features/dashboard/components/OverviewDash
 import { AdminOverview } from '../features/admin/components/AdminOverview';
 import { UserManagement } from '../features/admin/components/UserManagement';
 import { ProfilePage } from '../features/profile/components/ProfilePage';
+import {
+  AuditLogPage,
+  OperationsPage,
+  UserDetailPage,
+  MarketDataControlPage,
+  NotificationManagementPage,
+  RolesPermissionsPage,
+  DataIntegrityPage,
+  BackupConfigurationPage,
+} from '../features/admin/components/ControlPlanePages';
 
 function App() {
   return (
@@ -59,6 +69,14 @@ function App() {
             <Route path="categories" element={<CategoryManagement />} />
             <Route path="cashflow-categories" element={<CashflowCategoryManagement />} />
             <Route path="market-assets" element={<MarketAssetManagement />} />
+            <Route path="audit" element={<AuditLogPage />} />
+            <Route path="operations" element={<OperationsPage />} />
+            <Route path="users/:id" element={<UserDetailPage />} />
+            <Route path="market-data" element={<MarketDataControlPage />} />
+            <Route path="notifications" element={<NotificationManagementPage />} />
+            <Route path="roles" element={<RolesPermissionsPage />} />
+            <Route path="integrity" element={<DataIntegrityPage />} />
+            <Route path="system" element={<BackupConfigurationPage />} />
           </Route>
         </Routes>
       </div>

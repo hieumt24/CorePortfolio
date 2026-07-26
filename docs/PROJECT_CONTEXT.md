@@ -36,6 +36,16 @@ CorePortfolio is a personal portfolio and cashflow application. It combines inve
 
 ## Current feature surface
 
+- Admin Control Plane: the Admin Console now includes dedicated Audit Log, Operations, User Security, Market Data, Notification Management, Role & Permission, Data Integrity, and Backup/System pages. Backend contracts live under `Features/Admin/ControlPlane` as MediatR vertical slices and are exposed through `/api/admin/control-plane/*`.
+- Admin audit and operations: audit events support server-side search, actor/entity/outcome/IP/date filters, correlation tracing, pagination, and frontend CSV export. Whitelisted manual operations can run Daily Snapshot or Market Price Refresh while updating `ProductionOperationsState` and writing an audit event.
+- Admin user security: each JWT login now persists a `UserSession` keyed by the JWT `jti`. Token validation rejects revoked/expired sessions, throttles `LastSeenAt` updates, and Admin can inspect devices/IPs, view the security timeline, revoke one/all sessions, or change role. Access/role changes revoke existing sessions immediately.
+- Admin RBAC: supported roles are `SuperAdmin`, `Admin`, `Operations`, `Support`, `MarketDataManager`, `Auditor`, and `User`. `AdminPermissionCatalog` defines least-privilege capabilities, authorization policies protect sensitive control-plane endpoints, and the Admin sidebar hides sections outside the current role's permissions.
+- Admin market-data control: provider health aggregates Fresh/Stale/Error totals and exposes a bounded attention queue. Authorized operators can trigger the existing safe market-price refresh command; KBS remains keyless and prices remain absolute VND.
+- Admin notifications: authorized roles can broadcast in-app System notifications to all active users or a selected role, with severity, optional deep link/expiry, per-user dedupe keys, recipient/read counts, and audit metadata.
+- Admin data integrity: the console scans missing/stale market prices, unclassified ledger entries, orphan asset relations, portfolios without snapshots, and expired sessions. Repairs are whitelist-only; expired-session cleanup supports dry-run and audited idempotent execution.
+- Admin recovery/configuration: the UI lists checksum-validated SQLite backups, creates online backups, performs confirmation-gated safety restore, and manages non-secret operational policy settings. `ScheduledBackupService` evaluates the persisted UTC schedule once per minute, runs at most once per UTC day, and reports status through the operations state. Runtime paths and secrets are never returned to the browser.
+- Migration `AddAdminControlPlane` creates indexed `UserSessions`; it does not invalidate existing data. Existing JWTs issued before this migration must sign in again because they do not have a persisted session/JTI.
+
 - Portfolio, asset, transaction, cashflow, cash account, analytics, report, watchlist, budget, saving goal, rebalancing, and DCA flows are present.
 - Financial Health Center aggregate: `GET /api/dashboard/financial-health` and the dashboard integration.
 - Recurring cashflow foundation: `RecurringCashflowRule` entity, persistence schema, and `/api/recurring-cashflows` list/create/toggle endpoints. Scheduler, idempotent occurrence generation, and management page remain to be completed.
@@ -87,7 +97,7 @@ npm run build
 - `.github/workflows/text-encoding-ci.yml` validates source files as strict UTF-8 and rejects common mojibake markers across backend, frontend, documentation, workflows, and agent instructions.
 - `.github/workflows/main_coreportfolio-api.yml` restores the API with the `linux-x64` runtime target, builds it, runs domain and API integration tests, publishes a self-contained Linux artifact, transfers it as a tar archive to preserve executable permissions, checks `/health/live` as a blocking smoke test, and logs `/health/ready` database status.
 - Production deployment requires the Azure publish-profile secret and the API App Service CORS configuration described above. Vercel frontend deployment remains managed by Vercel; frontend CI is the merge gate.
-- Frontend API routing uses `VITE_API_URL` when configured, falls back to the production Azure API URL in Vite production builds, and only uses same-origin `/api` during development. The shared API client rejects HTML SPA-fallback responses with a configuration-specific error instead of exposing a JSON parse exception.
+- Frontend API routing uses an absolute `VITE_API_URL` when configured, falls back to the production Azure API URL in Vite production builds, and only uses same-origin `/api` during development. Relative production values such as `/api` are ignored to prevent Vercel SPA fallback responses. Vercel also proxies `/api/:path*` to Azure before its catch-all route, while the shared API client rejects any remaining HTML response with a configuration-specific error.
 
 If an environment prevents backend restore/build, report the exact limitation; do not claim the backend is verified.
 

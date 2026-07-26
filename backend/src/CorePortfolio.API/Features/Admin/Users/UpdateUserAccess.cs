@@ -3,6 +3,7 @@ using CorePortfolio.Infrastructure.Data;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using CorePortfolio.API.Features.Admin.ControlPlane;
 
 namespace CorePortfolio.API.Features.Admin.Users;
 
@@ -17,8 +18,10 @@ public sealed class UpdateUserAccessHandler(
 {
     public async Task<AdminUserDto?> Handle(UpdateUserAccessCommand request, CancellationToken cancellationToken)
     {
-        if (request.Role is not ("Admin" or "User"))
-            throw new ArgumentException("Role must be Admin or User.");
+        if (!AdminPermissionCatalog.Roles.Contains(request.Role, StringComparer.OrdinalIgnoreCase))
+            throw new ArgumentException("Role is not supported.");
+        if (!AdminPermissionCatalog.Has(currentUser.Role, "Users.Manage"))
+            throw new UnauthorizedAccessException();
 
         var user = await dbContext.Users
             .Include(item => item.Portfolios)
@@ -29,16 +32,16 @@ public sealed class UpdateUserAccessHandler(
             return null;
 
         var removesOwnAdminAccess = currentUser.UserId == user.Id &&
-            (!request.IsActive || request.Role != "Admin");
+            (!request.IsActive || request.Role is not ("Admin" or "SuperAdmin"));
         if (removesOwnAdminAccess)
             throw new InvalidOperationException("You cannot disable or remove your own administrator access.");
 
-        var removesActiveAdmin = user.Role == "Admin" && user.IsActive &&
-            (request.Role != "Admin" || !request.IsActive);
+        var removesActiveAdmin = user.Role is "Admin" or "SuperAdmin" && user.IsActive &&
+            (request.Role is not ("Admin" or "SuperAdmin") || !request.IsActive);
         if (removesActiveAdmin)
         {
             var hasAnotherActiveAdmin = await dbContext.Users.AnyAsync(
-                item => item.Id != user.Id && item.Role == "Admin" && item.IsActive,
+                item => item.Id != user.Id && (item.Role == "Admin" || item.Role == "SuperAdmin") && item.IsActive,
                 cancellationToken);
             if (!hasAnotherActiveAdmin)
                 throw new InvalidOperationException("At least one active administrator is required.");
@@ -48,6 +51,18 @@ public sealed class UpdateUserAccessHandler(
         var previousIsActive = user.IsActive;
         user.Role = request.Role;
         user.IsActive = request.IsActive;
+        if (previousRole != user.Role || previousIsActive != user.IsActive)
+        {
+            var sessions = await dbContext.UserSessions
+                .Where(item => item.UserId == user.Id && item.RevokedAt == null)
+                .ToListAsync(cancellationToken);
+            foreach (var session in sessions)
+            {
+                session.RevokedAt = DateTime.UtcNow;
+                session.RevokedByUserId = currentUser.UserId;
+                session.RevokeReason = "Account access changed";
+            }
+        }
         auditWriter.Add(
             "UserAccessChanged",
             "User",

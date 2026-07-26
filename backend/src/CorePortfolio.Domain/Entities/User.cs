@@ -19,4 +19,5 @@ public class User
     public ICollection<CashflowCategory> CustomCategories { get; set; } = new List<CashflowCategory>();
     public ICollection<WatchlistItem> WatchlistItems { get; set; } = new List<WatchlistItem>();
     public ICollection<TargetAllocation> TargetAllocations { get; set; } = new List<TargetAllocation>();
+    public ICollection<UserSession> Sessions { get; set; } = new List<UserSession>();
 }
