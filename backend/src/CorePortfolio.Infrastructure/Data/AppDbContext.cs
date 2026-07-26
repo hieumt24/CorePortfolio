@@ -31,6 +31,7 @@ public class AppDbContext : DbContext
     public DbSet<RebalanceExecutionPlanItem> RebalanceExecutionPlanItems => Set<RebalanceExecutionPlanItem>();
     public DbSet<RecurringCashflowRule> RecurringCashflowRules => Set<RecurringCashflowRule>();
     public DbSet<Notification> Notifications => Set<Notification>();
+    public DbSet<NotificationPreference> NotificationPreferences => Set<NotificationPreference>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -210,8 +211,26 @@ public class AppDbContext : DbContext
         modelBuilder.Entity<RecurringCashflowRule>().HasOne(r => r.User).WithMany().HasForeignKey(r => r.UserId).OnDelete(DeleteBehavior.Cascade);
         modelBuilder.Entity<RecurringCashflowRule>().HasOne(r => r.Portfolio).WithMany().HasForeignKey(r => r.PortfolioId).OnDelete(DeleteBehavior.Cascade);
         modelBuilder.Entity<RecurringCashflowRule>().HasOne(r => r.Category).WithMany().HasForeignKey(r => r.CategoryId).OnDelete(DeleteBehavior.Restrict);
-        modelBuilder.Entity<Notification>().HasIndex(n => new { n.UserId, n.CreatedAt });
-        modelBuilder.Entity<Notification>().HasIndex(n => new { n.UserId, n.DedupeKey }).IsUnique();
+        modelBuilder.Entity<Notification>(notification =>
+        {
+            notification.Property(n => n.Type).HasConversion<string>();
+            notification.Property(n => n.Severity).HasConversion<string>();
+            notification.Property(n => n.Title).HasMaxLength(160);
+            notification.Property(n => n.Link).HasMaxLength(500);
+            notification.Property(n => n.DedupeKey).HasMaxLength(300);
+            notification.Property(n => n.EntityType).HasMaxLength(100);
+            notification.Property(n => n.ActionLabel).HasMaxLength(80);
+            notification.HasIndex(n => new { n.UserId, n.CreatedAt });
+            notification.HasIndex(n => new { n.UserId, n.DedupeKey }).IsUnique();
+            notification.HasOne(n => n.User).WithMany().HasForeignKey(n => n.UserId).OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<NotificationPreference>(preference =>
+        {
+            preference.Property(p => p.Type).HasConversion<string>();
+            preference.HasIndex(p => new { p.UserId, p.Type }).IsUnique();
+            preference.HasOne(p => p.User).WithMany().HasForeignKey(p => p.UserId).OnDelete(DeleteBehavior.Cascade);
+        });
 
         modelBuilder.Entity<WatchlistItem>()
             .HasOne(w => w.MarketAsset)

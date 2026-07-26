@@ -9,3 +9,8 @@ public sealed class ResourceConflictException : Exception
 {
     public ResourceConflictException(string message) : base(message) { }
 }
+
+public sealed class RequestValidationException : Exception
+{
+    public RequestValidationException(string message) : base(message) { }
+}

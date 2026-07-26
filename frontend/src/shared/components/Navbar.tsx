@@ -1,7 +1,8 @@
 import React, { useEffect, useState } from 'react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { settingsApi } from '../../features/admin/api/settingsApi';
-import { notificationsApi, type NotificationItem } from '../../features/notifications/api/notificationsApi';
+import { notificationsApi } from '../../features/notifications/api/notificationsApi';
+import type { NotificationItem } from '../../features/notifications/types';
 import { useAuth } from '../../context/AuthContext';
 import './Navbar.css';
 
@@ -25,16 +26,24 @@ export const Navbar: React.FC = () => {
   const { isAuthenticated, isAdmin, user, logout } = useAuth();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
+  const [unreadCount, setUnreadCount] = useState(0);
   const [showNotifications, setShowNotifications] = useState(false);
   const [navigationVisibility, setNavigationVisibility] = useState<Record<string, boolean>>({});
 
   useEffect(() => {
     if (!isAuthenticated) {
       setNavigationVisibility({});
+      setNotifications([]);
+      setUnreadCount(0);
       return;
     }
 
-    notificationsApi.list(true).then(setNotifications).catch(() => setNotifications([]));
+    notificationsApi.list({ unreadOnly: true, page: 1, pageSize: 5 })
+      .then(result => setNotifications(result.items))
+      .catch(() => setNotifications([]));
+    notificationsApi.getUnreadCount()
+      .then(result => setUnreadCount(result.count))
+      .catch(() => setUnreadCount(0));
     settingsApi.getNavigationFeatures()
       .then(features => setNavigationVisibility(
         Object.fromEntries(features.map(feature => [feature.key, feature.isEnabled])),
@@ -49,6 +58,28 @@ export const Navbar: React.FC = () => {
 
   const closeMenu = () => {
     setIsMobileMenuOpen(false);
+  };
+
+  const handleNotificationClick = async (notification: NotificationItem) => {
+    try {
+      await notificationsApi.markRead(notification.id);
+      setNotifications(current => current.filter(item => item.id !== notification.id));
+      setUnreadCount(current => Math.max(0, current - 1));
+      setShowNotifications(false);
+      if (notification.link) navigate(notification.link);
+    } catch {
+      // Keep the notification visible so the user can retry.
+    }
+  };
+
+  const handleMarkAllRead = async () => {
+    try {
+      await notificationsApi.markAllRead();
+      setNotifications([]);
+      setUnreadCount(0);
+    } catch {
+      // Keep the current state so the user can retry.
+    }
   };
 
   return (
@@ -94,7 +125,9 @@ export const Navbar: React.FC = () => {
                   onClick={() => setShowNotifications(value => !value)}
                   aria-label="Notifications"
                 >
-                  🔔{notifications.length > 0 && <span className="notification-badge">{notifications.length}</span>}
+                  🔔{unreadCount > 0 && (
+                    <span className="notification-badge">{unreadCount > 99 ? '99+' : unreadCount}</span>
+                  )}
                 </button>
               </div>
             )}
@@ -123,7 +156,7 @@ export const Navbar: React.FC = () => {
             <div className="notification-popover">
               <div className="notification-popover-header">
                 <strong>Notifications</strong>
-                <button onClick={() => notificationsApi.markAllRead().then(() => setNotifications([]))}>Mark all read</button>
+                <button onClick={handleMarkAllRead}>Mark all read</button>
               </div>
               {notifications.length === 0 ? (
                 <span className="notification-empty">No new alerts</span>
@@ -131,8 +164,7 @@ export const Navbar: React.FC = () => {
                 <button
                   key={item.id}
                   className="notification-item"
-                  onClick={() => notificationsApi.markRead(item.id)
-                    .then(() => setNotifications(current => current.filter(notification => notification.id !== item.id)))}
+                  onClick={() => handleNotificationClick(item)}
                 >
                   <strong>{item.title}</strong>
                   <small>{item.message}</small>

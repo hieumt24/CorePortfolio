@@ -97,6 +97,7 @@ builder.Services.AddScoped<IPortfolioReportService, PortfolioReportService>();
 builder.Services.AddScoped<ITelegramCommandProcessor, TelegramCommandProcessor>();
 builder.Services.AddScoped<TransactionLedgerService>();
 builder.Services.AddScoped<CashflowRecordWriter>();
+builder.Services.AddScoped<NotificationWriter>();
 builder.Services.AddScoped<ExchangeRateService>();
 builder.Services.AddHttpClient();
 builder.Services.AddHostedService<TelegramCronService>();
@@ -174,6 +175,7 @@ app.UseExceptionHandler(errorApp => errorApp.Run(async context =>
     var (status, title) = exception switch
     {
         AccountingValidationException => (StatusCodes.Status400BadRequest, "Dữ liệu giao dịch không hợp lệ"),
+        RequestValidationException => (StatusCodes.Status400BadRequest, "Dữ liệu yêu cầu không hợp lệ"),
         ResourceNotFoundException => (StatusCodes.Status404NotFound, "Không tìm thấy dữ liệu"),
         ResourceConflictException => (StatusCodes.Status409Conflict, "Xung đột dữ liệu"),
         UnauthorizedAccessException => (StatusCodes.Status401Unauthorized, "Chưa xác thực"),
