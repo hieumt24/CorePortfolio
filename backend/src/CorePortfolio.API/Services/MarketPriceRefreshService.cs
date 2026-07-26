@@ -27,7 +27,7 @@ public sealed class MarketPriceRefreshService : BackgroundService
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
         if (!_configuration.GetValue("MarketPrices:Enabled", true)) return;
-        var cryptoInterval = Math.Clamp(_configuration.GetValue("MarketPrices:CryptoRefreshIntervalSeconds", 1800), 300, 86400);
+        var cryptoInterval = Math.Clamp(_configuration.GetValue("MarketPrices:CryptoRefreshIntervalSeconds", 7200), 300, 86400);
         var stockInterval = Math.Clamp(_configuration.GetValue("MarketPrices:StockRefreshIntervalSeconds", 1800), 300, 86400);
         var fundInterval = Math.Clamp(_configuration.GetValue("MarketPrices:FundRefreshIntervalSeconds", 21600), 900, 86400);
         var timerInterval = Math.Min(Math.Min(cryptoInterval, stockInterval), fundInterval);

@@ -12,6 +12,7 @@ public record UpdateMarketAssetRequest(Guid CategoryId, string Symbol, string Na
     string PriceSource = "Manual", string? ExternalId = null);
 public record SyncVn100MarketAssetsRequest(Guid CategoryId);
 public record SyncFundMarketAssetsRequest(Guid CategoryId);
+public record SyncCryptoMarketAssetsRequest(Guid CategoryId, int? Limit = null);
 
 public static class MarketAssetsEndpoints
 {
@@ -137,6 +138,24 @@ public static class MarketAssetsEndpoints
                     detail: exception.Message);
             }
         }).RequireAuthorization("Admin");
+
+        group.MapPost("/sync-crypto", async (
+            [FromBody] SyncCryptoMarketAssetsRequest request,
+            IMediator mediator) =>
+        {
+            try
+            {
+                return Results.Ok(await mediator.Send(
+                    new SyncCryptoMarketAssetsCommand(request.CategoryId, request.Limit)));
+            }
+            catch (HttpRequestException exception)
+            {
+                return Results.Problem(
+                    statusCode: StatusCodes.Status502BadGateway,
+                    title: "Không thể đồng bộ crypto từ CoinGecko",
+                    detail: exception.Message);
+            }
+        }).RequireAuthorization("AdminMarketDataManage");
 
         group.MapPost("/refresh", async (IMediator mediator) =>
             Results.Ok(await mediator.Send(new RefreshMarketAssetPricesCommand())))

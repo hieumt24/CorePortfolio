@@ -57,6 +57,7 @@ export function MarketAssetManagement() {
   const [isUpdatingAll, setIsUpdatingAll] = useState(false);
   const [isSyncingVn100, setIsSyncingVn100] = useState(false);
   const [isSyncingFunds, setIsSyncingFunds] = useState(false);
+  const [isSyncingCrypto, setIsSyncingCrypto] = useState(false);
   const [refreshingAssetId, setRefreshingAssetId] = useState<string | null>(null);
   const [inlineErrors, setInlineErrors] = useState<Record<string, string>>({});
   const [searchInput, setSearchInput] = useState('');
@@ -278,6 +279,33 @@ export function MarketAssetManagement() {
     }
   };
 
+  const handleSyncCrypto = async () => {
+    const cryptoCategory = categories.find(category => {
+      const name = category.name.toLocaleLowerCase('vi-VN');
+      return name.includes('crypto') || name.includes('tiền mã hóa') || name.includes('tiền điện tử');
+    });
+    if (!cryptoCategory) {
+      showNotification('Hãy tạo danh mục Crypto/Tiền mã hóa trước khi đồng bộ.', 'info');
+      return;
+    }
+    if (!window.confirm(`Đồng bộ Top 100 CoinGecko vào "${cryptoCategory.name}"?`)) return;
+    setIsSyncingCrypto(true);
+    try {
+      const result = await marketAssetsApi.syncCrypto(cryptoCategory.id);
+      showNotification(
+        `CoinGecko: ${result.providerCount} coin, ${result.created} mới, ${result.updated} cập nhật, ${result.withPrice} có giá.`,
+        'success',
+      );
+      setSelectedCategoryId(cryptoCategory.id);
+      setCurrentPage(1);
+      await loadMarketAssets(cryptoCategory.id, 1, pageSize);
+    } catch (error) {
+      showNotification(error instanceof Error ? error.message : 'Không thể đồng bộ crypto.', 'error');
+    } finally {
+      setIsSyncingCrypto(false);
+    }
+  };
+
   const totalPages = Math.ceil(totalCount / pageSize);
 
   return (
@@ -289,6 +317,13 @@ export function MarketAssetManagement() {
           <p className="admin-page-subtitle">Manage asset metadata, pricing source, refresh status, and provider errors.</p>
         </div>
         <div className="market-assets-actions">
+          <button
+            className="btn-outline"
+            onClick={handleSyncCrypto}
+            disabled={isSyncingCrypto}
+          >
+            {isSyncingCrypto ? 'Syncing crypto...' : 'Sync Crypto'}
+          </button>
           <button
             className="btn-outline"
             onClick={handleSyncFunds}

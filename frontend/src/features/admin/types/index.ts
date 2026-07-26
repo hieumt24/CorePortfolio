@@ -72,6 +72,14 @@ export interface SyncFundsResult {
   withNav: number;
 }
 
+export interface SyncCryptoResult {
+  providerCount: number;
+  created: number;
+  updated: number;
+  unchanged: number;
+  withPrice: number;
+}
+
 export interface AdminOverview {
   totalUsers: number;
   activeUsers: number;

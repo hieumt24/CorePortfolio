@@ -11,6 +11,8 @@ public static class DependencyInjection
         services.AddMemoryCache();
         services.AddHttpClient("CoinGecko");
         services.AddScoped<ICryptoPriceService, CoinGeckoService>();
+        services.AddScoped<ICryptoMarketService>(provider =>
+            (CoinGeckoService)provider.GetRequiredService<ICryptoPriceService>());
         
         return services;
     }
