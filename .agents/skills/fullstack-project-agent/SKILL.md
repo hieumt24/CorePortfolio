@@ -1,36 +1,91 @@
 ---
 name: fullstack-project-agent
-description: Full-stack implementation workflow for CorePortfolio coordinating backend, frontend, documentation, and verification. Use for new features, cross-layer bugs, and UI redesigns.
+description: Implement, debug, harden, or redesign CorePortfolio features across ASP.NET Core, EF Core, React, production configuration, tests, documentation, and Git handoff. Use for code changes that affect backend, frontend, database, authentication, deployment, or cross-layer contracts.
 ---
 
-# Fullstack Project Agent
+# Full-stack CorePortfolio workflow
 
-Use this skill for every implementation task in CorePortfolio. Treat backend, frontend, documentation, and verification as one deliverable.
+Treat code, database, UI, production configuration, verification, and documentation as one deliverable.
 
-## Required workflow
+## 1. Establish the baseline
 
-1. Read `.agents/AGENTS.md` and `docs/PROJECT_CONTEXT.md` before changing code. If the context document is missing or stale, regenerate it from the source tree before implementation.
-2. Inspect both `backend/` and `frontend/`, even for UI-only or API-only requests. Identify the domain entity, endpoint/query, frontend API client/types, route, and component affected.
-3. Implement backend changes using vertical slices, MediatR, Minimal APIs, and `ICurrentUserService`. Add EF configuration and migration for schema changes.
-4. Implement the frontend contract in the same task: API client, types, loading/error/empty states, route or navigation entry, and responsive styling. Use existing design tokens; read the premium UI skill for visual redesigns.
-5. Update `docs/PROJECT_CONTEXT.md` whenever architecture, routes, API contracts, entities, migrations, or feature status changes.
-6. Verify with `git diff --check`, an explicit backend project build, relevant fast unit/domain tests, and `npm run build` from `frontend`. Skip API integration tests by default because they are slow; run them only when the user explicitly requests them. Report skipped integration coverage, warnings, and failures separately.
-7. For changes involving UI, stop after automated verification and provide the user with a short, task-specific manual smoke-test guide. Do not start local servers, control a browser, perform visual smoke testing, or wait for UI confirmation unless the user explicitly asks for it. The user may run the smoke test and attach screenshots/files for a follow-up review.
+1. Read `.agents/AGENTS.md` and `docs/PROJECT_CONTEXT.md` completely.
+2. Inspect `git status --short`, the current branch, and the latest commit.
+3. Preserve unrelated user changes. Never reset, overwrite, or stage them without confirming they belong to the requested scope.
+4. Trace the complete contract: domain invariant, EF/migration, MediatR slice, Minimal API, TypeScript/API client, route/UI, and production behavior.
+5. For bugs, identify the exact failed boundary before editing.
 
-## Cross-layer checklist
+## 2. Design before editing
 
-- Request/response DTOs match TypeScript types.
-- Every user-owned query filters by current user.
-- Dates use UTC; currency conversion is explicit; recurring operations are idempotent.
-- Loading, error, empty, success, and retry states exist.
-- New user-facing functionality is reachable from a route or Navbar.
-- Documentation is updated in the same change.
-- UI handoff identifies the route, exact interactions to try, expected result, and the most useful screenshot/error details to attach if something fails.
+- Define the smallest end-to-end slice that reaches the user.
+- List schema, API, UI, authorization, migration/backfill, and operational impacts.
+- Separate account access, presence, permissions, and business ownership.
+- Scope user-owned data through `ICurrentUserService`.
+- Persist UTC timestamps; use shared Vietnam-time helpers only for display; keep date-only fields timezone-neutral.
+- Follow `.agents/AGENTS.md` for market data: KBS is keyless, prices are absolute VND, and failures preserve stale values.
+
+## 3. Implement safely
+
+### Backend
+
+- Use Vertical Slice Architecture under `CorePortfolio.API/Features`.
+- Put business logic in MediatR handlers; endpoints only bind and map results.
+- Use Minimal APIs, never MVC controllers.
+- Enforce authorization at endpoints and sensitive invariants again in handlers.
+- Make jobs, imports, broadcasts, migrations, and repairs idempotent.
+- Audit sensitive mutations without passwords, tokens, secrets, or excessive personal data.
+- Use optimistic concurrency where concurrent edits are plausible.
+
+### Database
+
+- Configure entities, relationships, constraints, and indexes explicitly.
+- Generate one focused EF migration per coherent schema change.
+- Backfill conservatively; mark unknown data instead of guessing.
+- Keep the design-time factory independent from JWT and external providers.
+
+### Frontend
+
+- Keep DTO and TypeScript contracts aligned.
+- Provide loading, error, empty, success, retry, disabled, and permission-denied states.
+- Make functionality reachable by route and appropriate navigation.
+- Use shared API/date utilities and existing design tokens.
+- For redesigns, read `premium-glassmorphism-ui`; read `hallmark` only for explicit audit/redesign requests.
+- Preserve keyboard focus, accessibility, 44px touch targets, and responsive behavior.
+
+### Production
+
+- Verify `/api` routing precedes SPA fallback.
+- Never expose secrets, server paths, connection strings, or provider keys to frontend code.
+- Consider reverse proxies, forwarded IPs, persistent SQLite, readiness, maintenance mode, backup, and rollback.
+
+## 4. Verify proportionally
+
+Always run:
+
+- `git diff --check`
+- Explicit Release build of `CorePortfolio.API.csproj`
+- Relevant fast unit/domain tests
+- `npm test` when frontend logic changed
+- `npm run build` from `frontend`
+- `npm run check:encoding` when source text changed
+
+For EF changes, also apply all migrations to a new temporary SQLite database and run `dotnet ef migrations has-pending-model-changes`.
+
+API integration tests are opt-in. Run them only when the user explicitly requests them. For authentication, authorization, user isolation, accounting atomicity, migrations, restore, or other high-risk work, recommend integration coverage and clearly report whether it was skipped.
+
+If Vite/Vitest fails with `spawn EPERM` inside the sandbox, rerun the same approved command with required escalation; do not report it as a code failure.
+
+## 5. Review and hand off
+
+1. Review the final diff for scope, generated files, secrets, and build artifacts.
+2. Update `docs/PROJECT_CONTEXT.md` for changed entities, migrations, routes, contracts, production settings, or feature status.
+3. When commit/push is requested, fetch and compare remote, stage only approved scope, run cached diff check, then confirm remote SHA and a clean worktree.
+4. Lead the final response with the outcome, followed by implemented features, verification, warnings, deployment notes, and a short UI smoke-test checklist.
 
 ## Guardrails
 
-- Do not implement only one stack without documenting why the other is unaffected.
-- Do not add MVC controllers when a feature slice and Minimal API fit the project.
-- Do not hide backend build failures behind a successful frontend-only check.
-- Do not claim integration coverage was verified when integration tests were skipped.
-- Do not make a requested commit or push wait on manual UI smoke testing unless the user explicitly makes that smoke test a completion gate.
+- Never claim tests, migrations, deployment, commit, or push succeeded without confirmation.
+- Never let a frontend success hide a backend failure.
+- Do not expand diagnosis into implementation without authorization.
+- Do not wait for manual UI testing unless the user made it a completion gate.
+- Reuse existing services and slice patterns before adding abstractions.

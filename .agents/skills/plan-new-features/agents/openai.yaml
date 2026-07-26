@@ -1,0 +1,4 @@
+interface:
+  display_name: "CorePortfolio Feature Planner"
+  short_description: "Create source-grounded implementation plans"
+  default_prompt: "Use $plan-new-features to inspect the current CorePortfolio source and produce a prioritized, dependency-aware, implementation-ready plan in Vietnamese."

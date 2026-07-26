@@ -15,6 +15,7 @@ public sealed class KbsMarketIndexService(
 {
     private static readonly HashSet<string> SupportedSymbols =
         new(["VNINDEX", "VN30"], StringComparer.OrdinalIgnoreCase);
+    private static readonly TimeSpan VietnamOffset = TimeSpan.FromHours(7);
 
     public async Task<IReadOnlyList<MarketIndexQuote>> GetQuotesAsync(
         IEnumerable<string> symbols,
@@ -36,6 +37,7 @@ public sealed class KbsMarketIndexService(
         CancellationToken cancellationToken)
     {
         var cacheKey = $"kbs:index:{symbol}";
+        var lastKnownCacheKey = $"{cacheKey}:last-known";
         if (cache.TryGetValue<MarketIndexQuote>(cacheKey, out var cached) && cached is not null)
             return cached;
 
@@ -65,7 +67,9 @@ public sealed class KbsMarketIndexService(
                 latest.Close,
                 change,
                 changePercent,
-                DateTime.SpecifyKind(latest.Time, DateTimeKind.Local).ToUniversalTime(),
+                new DateTimeOffset(
+                    DateTime.SpecifyKind(latest.Time, DateTimeKind.Unspecified),
+                    VietnamOffset).UtcDateTime,
                 "KBS",
                 "Fresh");
 
@@ -73,6 +77,7 @@ public sealed class KbsMarketIndexService(
                 cacheKey,
                 quote,
                 TimeSpan.FromSeconds(KbsConfiguration.GetPriceCacheSeconds(configuration)));
+            cache.Set(lastKnownCacheKey, quote);
             return quote;
         }
         catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
@@ -82,6 +87,16 @@ public sealed class KbsMarketIndexService(
         catch (Exception exception)
         {
             logger.LogWarning(exception, "Unable to load KBS market index {Symbol}.", symbol);
+            if (cache.TryGetValue<MarketIndexQuote>(lastKnownCacheKey, out var lastKnown) &&
+                lastKnown is not null)
+            {
+                return lastKnown with
+                {
+                    Status = "Stale",
+                    Error = $"KBS tạm thời không cập nhật được {symbol}; đang hiển thị dữ liệu gần nhất."
+                };
+            }
+
             return new MarketIndexQuote(
                 symbol,
                 symbol == "VNINDEX" ? "VN-Index" : "VN30",
@@ -106,7 +121,7 @@ public sealed class KbsMarketIndexService(
                 decimal close = 0;
                 DateTime time = default;
                 var hasClose = item.TryGetProperty("c", out var closeElement)
-                               && closeElement.TryGetDecimal(out close)
+                               && TryReadDecimal(closeElement, out close)
                                && close > 0;
                 var hasTime = item.TryGetProperty("t", out var timeElement)
                               && DateTime.TryParseExact(
@@ -122,5 +137,20 @@ public sealed class KbsMarketIndexService(
             .Select(point => (point.Time, point.Close))
             .TakeLast(2)
             .ToArray();
+    }
+
+    private static bool TryReadDecimal(JsonElement element, out decimal value)
+    {
+        value = 0;
+        return element.ValueKind switch
+        {
+            JsonValueKind.Number => element.TryGetDecimal(out value),
+            JsonValueKind.String => decimal.TryParse(
+                element.GetString(),
+                NumberStyles.Number,
+                CultureInfo.InvariantCulture,
+                out value),
+            _ => false
+        };
     }
 }

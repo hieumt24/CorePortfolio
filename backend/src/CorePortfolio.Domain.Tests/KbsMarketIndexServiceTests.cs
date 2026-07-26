@@ -72,6 +72,59 @@ public sealed class KbsMarketIndexServiceTests
         Assert.NotNull(quotes[1].Error);
     }
 
+    [Fact]
+    public async Task GetQuotesAsync_ParsesLiveKbsStringDecimalsAndVietnamTimestamp()
+    {
+        var client = new HttpClient(new LiveShapeStubHandler())
+        {
+            BaseAddress = new Uri("https://kbbuddywts.kbsec.com.vn/iis-server/investment/")
+        };
+        using var cache = new MemoryCache(new MemoryCacheOptions());
+        var service = new KbsMarketIndexService(
+            new StubHttpClientFactory(client),
+            new ConfigurationBuilder().Build(),
+            cache,
+            NullLogger<KbsMarketIndexService>.Instance);
+
+        var quote = Assert.Single(await service.GetQuotesAsync(
+            ["VNINDEX"],
+            TestContext.Current.CancellationToken));
+
+        Assert.Equal(1686.11m, quote.Value);
+        Assert.Equal(-13.27m, quote.Change);
+        Assert.Equal(new DateTime(2026, 7, 24, 0, 0, 0, DateTimeKind.Utc), quote.AsOf);
+        Assert.Equal("Fresh", quote.Status);
+    }
+
+    [Fact]
+    public async Task GetQuotesAsync_ReturnsLastKnownQuoteAsStaleWhenRefreshFails()
+    {
+        var handler = new MutableStubHandler();
+        var client = new HttpClient(handler)
+        {
+            BaseAddress = new Uri("https://kbbuddywts.kbsec.com.vn/iis-server/investment/")
+        };
+        using var cache = new MemoryCache(new MemoryCacheOptions());
+        var service = new KbsMarketIndexService(
+            new StubHttpClientFactory(client),
+            new ConfigurationBuilder().Build(),
+            cache,
+            NullLogger<KbsMarketIndexService>.Instance);
+
+        var fresh = Assert.Single(await service.GetQuotesAsync(
+            ["VN30"],
+            TestContext.Current.CancellationToken));
+        cache.Remove("kbs:index:VN30");
+        handler.ShouldFail = true;
+        var stale = Assert.Single(await service.GetQuotesAsync(
+            ["VN30"],
+            TestContext.Current.CancellationToken));
+
+        Assert.Equal(fresh.Value, stale.Value);
+        Assert.Equal("Stale", stale.Status);
+        Assert.NotNull(stale.Error);
+    }
+
     private sealed class StubHttpClientFactory(HttpClient client) : IHttpClientFactory
     {
         public HttpClient CreateClient(string name) => client;
@@ -100,5 +153,33 @@ public sealed class KbsMarketIndexServiceTests
                 Content = new StringContent(response)
             });
         }
+    }
+
+    private sealed class LiveShapeStubHandler : HttpMessageHandler
+    {
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken) =>
+            Task.FromResult(new HttpResponseMessage(HttpStatusCode.OK)
+            {
+                Content = new StringContent(
+                    """{"symbol":"VNINDEX","data_day":[{"t":"2026-07-24 07:00","c":"1686.11"},{"t":"2026-07-23 07:00","c":1699.38}]}""")
+            });
+    }
+
+    private sealed class MutableStubHandler : HttpMessageHandler
+    {
+        public bool ShouldFail { get; set; }
+
+        protected override Task<HttpResponseMessage> SendAsync(
+            HttpRequestMessage request,
+            CancellationToken cancellationToken) =>
+            Task.FromResult(ShouldFail
+                ? new HttpResponseMessage(HttpStatusCode.BadGateway)
+                : new HttpResponseMessage(HttpStatusCode.OK)
+                {
+                    Content = new StringContent(
+                        """{"data_day":[{"t":"2026-07-24 07:00","c":"1829.36"},{"t":"2026-07-23 07:00","c":"1845.32"}]}""")
+                });
     }
 }
