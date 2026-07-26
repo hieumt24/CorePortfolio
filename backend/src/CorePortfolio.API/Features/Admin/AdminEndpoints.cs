@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Mvc;
 using CorePortfolio.API.Services;
 using CorePortfolio.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
+using CorePortfolio.API.Features.Admin.ControlPlane;
 
 namespace CorePortfolio.API.Features.Admin;
 
@@ -16,13 +17,15 @@ public static class AdminEndpoints
     {
         var group = app.MapGroup("/api/admin")
             .WithTags("Admin")
-            .RequireAuthorization("Admin");
+            .RequireAuthorization(AdminPermissionCatalog.AdminAccess);
 
         group.MapGet("/overview", async (ISender sender, CancellationToken cancellationToken) =>
-            Results.Ok(await sender.Send(new GetAdminOverviewQuery(), cancellationToken)));
+            Results.Ok(await sender.Send(new GetAdminOverviewQuery(), cancellationToken)))
+            .RequireAuthorization(AdminPermissionCatalog.OperationsRead);
 
         group.MapGet("/operations", (ProductionOperationsState operationsState) =>
-            Results.Ok(operationsState.GetSnapshot()));
+            Results.Ok(operationsState.GetSnapshot()))
+            .RequireAuthorization(AdminPermissionCatalog.OperationsRead);
 
         group.MapGet("/audit-events", async (
             AppDbContext dbContext,
@@ -66,7 +69,7 @@ public static class AdminEndpoints
                 })
                 .ToListAsync(cancellationToken);
             return Results.Ok(new { items, total, page, pageSize });
-        });
+        }).RequireAuthorization(AdminPermissionCatalog.AuditRead);
 
         group.MapGet("/users", async (
             ISender sender,
@@ -78,7 +81,8 @@ public static class AdminEndpoints
             [FromQuery] int pageSize = 20,
             CancellationToken cancellationToken = default) =>
             Results.Ok(await sender.Send(
-                new GetAdminUsersQuery(search, role, isActive, isOnline, page, pageSize), cancellationToken)));
+                new GetAdminUsersQuery(search, role, isActive, isOnline, page, pageSize), cancellationToken)))
+            .RequireAuthorization(AdminPermissionCatalog.UsersRead);
 
         group.MapPut("/users/{id:guid}/access", async (
             Guid id,
@@ -100,6 +104,6 @@ public static class AdminEndpoints
             {
                 return Results.Conflict(new { message = exception.Message });
             }
-        });
+        }).RequireAuthorization(AdminPermissionCatalog.UsersManage);
     }
 }

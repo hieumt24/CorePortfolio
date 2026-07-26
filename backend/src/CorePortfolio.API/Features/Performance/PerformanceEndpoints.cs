@@ -6,6 +6,7 @@ using CorePortfolio.API.Features.Performance.GetMonthlyReturns;
 using CorePortfolio.API.Features.Performance.Benchmarks;
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using CorePortfolio.API.Features.Admin.ControlPlane;
 
 namespace CorePortfolio.API.Features.Performance;
 
@@ -149,7 +150,7 @@ public static class PerformanceEndpoints
                     request.Currency,
                     request.IsActive),
                 cancellationToken)))
-            .RequireAuthorization("Admin");
+            .RequireAuthorization(AdminPermissionCatalog.MarketDataManage);
 
         group.MapPut("/benchmarks/{id:guid}", async (
             Guid id,
@@ -167,7 +168,7 @@ public static class PerformanceEndpoints
                     request.Currency,
                     request.IsActive),
                 cancellationToken)))
-            .RequireAuthorization("Admin");
+            .RequireAuthorization(AdminPermissionCatalog.MarketDataManage);
 
         group.MapPut("/benchmarks/{id:guid}/prices", async (
             Guid id,
@@ -181,6 +182,6 @@ public static class PerformanceEndpoints
                     request.ClosePrice,
                     request.Source),
                 cancellationToken)))
-            .RequireAuthorization("Admin");
+            .RequireAuthorization(AdminPermissionCatalog.MarketDataManage);
     }
 }

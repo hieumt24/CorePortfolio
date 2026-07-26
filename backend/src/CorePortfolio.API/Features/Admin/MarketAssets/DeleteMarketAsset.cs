@@ -2,10 +2,14 @@ using CorePortfolio.Infrastructure.Data;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using CorePortfolio.API.Services;
+using CorePortfolio.API.Features.Admin.ControlPlane;
 
 namespace CorePortfolio.API.Features.Admin.MarketAssets;
 
-public record DeleteMarketAssetCommand(Guid Id) : IRequest<bool>;
+public record DeleteMarketAssetCommand(Guid Id) : IRequest<bool>, IAdminPermissionRequest
+{
+    public string RequiredPermission => AdminPermissionCatalog.MarketDataManage;
+}
 
 public class DeleteMarketAssetHandler : IRequestHandler<DeleteMarketAssetCommand, bool>
 {

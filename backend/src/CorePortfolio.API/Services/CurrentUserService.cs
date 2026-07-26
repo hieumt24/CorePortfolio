@@ -26,6 +26,4 @@ public class CurrentUserService : ICurrentUserService
 
     public string? Role => _httpContextAccessor.HttpContext?.User?.FindFirstValue(ClaimTypes.Role);
 
-    public bool IsAdmin => Role is "Admin" or "SuperAdmin" or "Operations" or "Support"
-        or "MarketDataManager" or "Auditor";
 }

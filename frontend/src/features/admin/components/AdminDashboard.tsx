@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from 'react';
-import { NavLink, Outlet } from 'react-router-dom';
+import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { adminApi } from '../api/adminApi';
 import './AdminDashboard.css';
 
@@ -20,21 +20,33 @@ const navItems = [
 ];
 
 export function AdminDashboard() {
+  const location = useLocation();
+  const navigate = useNavigate();
   const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
-  const [permissions, setPermissions] = useState<string[]>([]);
+  const [permissions, setPermissions] = useState<string[] | null>(null);
   useEffect(() => {
     void adminApi.getCapabilities().then(result => setPermissions(result.permissions));
   }, []);
   const visibleItems = useMemo(() => {
+    if (permissions === null) return [];
     const requirements: Record<string, string> = {
-      users: 'Users.Read', settings: 'Settings.Manage', 'market-assets': 'MarketData.Manage',
+      overview: 'Operations.Read', users: 'Users.Read', settings: 'Settings.Manage',
+      categories: 'MarketData.Manage', 'cashflow-categories': 'Settings.Manage',
+      'market-assets': 'MarketData.Manage',
       'market-data': 'MarketData.Read', notifications: 'Notifications.Manage',
       audit: 'Audit.Read', operations: 'Operations.Read', roles: 'Roles.Manage',
       integrity: 'Integrity.Read', system: 'Backups.Read',
     };
     return navItems.filter(item => !requirements[item.path] || permissions.includes(requirements[item.path]));
   }, [permissions]);
+  useEffect(() => {
+    if (permissions === null || visibleItems.length === 0) return;
+    const currentSection = location.pathname.split('/').filter(Boolean).at(-1);
+    if (!visibleItems.some(item => item.path === currentSection)) {
+      void navigate(`/admin/${visibleItems[0].path}`, { replace: true });
+    }
+  }, [location.pathname, navigate, permissions, visibleItems]);
 
   return (
     <div className="admin-layout">

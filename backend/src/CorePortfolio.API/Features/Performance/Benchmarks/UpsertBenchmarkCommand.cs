@@ -4,6 +4,7 @@ using CorePortfolio.Infrastructure.Data;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using CorePortfolio.API.Services;
+using CorePortfolio.API.Features.Admin.ControlPlane;
 
 namespace CorePortfolio.API.Features.Performance.Benchmarks;
 
@@ -15,7 +16,10 @@ public sealed record UpsertBenchmarkCommand(
     string AssetGroup,
     bool IsDefault,
     string Currency,
-    bool IsActive) : IRequest<BenchmarkDefinitionDto>;
+    bool IsActive) : IRequest<BenchmarkDefinitionDto>, IAdminPermissionRequest
+{
+    public string RequiredPermission => AdminPermissionCatalog.MarketDataManage;
+}
 
 public sealed class UpsertBenchmarkHandler(AppDbContext dbContext, AuditWriter auditWriter)
     : IRequestHandler<UpsertBenchmarkCommand, BenchmarkDefinitionDto>

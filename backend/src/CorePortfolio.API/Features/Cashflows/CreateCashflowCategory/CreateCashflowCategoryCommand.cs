@@ -3,6 +3,8 @@ using CorePortfolio.Infrastructure.Data;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using CorePortfolio.API.Services;
+using CorePortfolio.API.Features.Admin.ControlPlane;
+using CorePortfolio.API.Common;
 
 namespace CorePortfolio.API.Features.Cashflows.CreateCashflowCategory;
 
@@ -21,9 +23,11 @@ public class CreateCashflowCategoryHandler : IRequestHandler<CreateCashflowCateg
 
     public async Task<Guid> Handle(CreateCashflowCategoryCommand request, CancellationToken cancellationToken)
     {
-        if (request.IsGlobal && !_currentUserService.IsAdmin)
+        if (request.IsGlobal && !AdminPermissionCatalog.Has(
+                _currentUserService.Role,
+                AdminPermissionCatalog.SettingsManage))
         {
-            throw new UnauthorizedAccessException("Only admins can create global categories.");
+            throw new ForbiddenAccessException("Settings.Manage permission is required to create global categories.");
         }
 
         var userId = _currentUserService.UserId ?? throw new UnauthorizedAccessException();

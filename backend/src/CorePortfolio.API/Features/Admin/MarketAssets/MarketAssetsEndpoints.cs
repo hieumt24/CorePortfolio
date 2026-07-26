@@ -2,6 +2,7 @@ using MediatR;
 using Microsoft.AspNetCore.Mvc;
 using CorePortfolio.API.Features.MarketAssets.UpdateMarketAssetPrice;
 using System.Net;
+using CorePortfolio.API.Features.Admin.ControlPlane;
 
 namespace CorePortfolio.API.Features.Admin.MarketAssets;
 
@@ -26,14 +27,14 @@ public static class MarketAssetsEndpoints
             var id = await mediator.Send(new CreateMarketAssetCommand(request.CategoryId, request.Symbol, request.Name,
                 request.CurrentPrice, request.PriceSource, request.ExternalId));
             return Results.Created($"/api/admin/market-assets/{id}", new { Id = id });
-        }).RequireAuthorization("Admin");
+        }).RequireAuthorization(AdminPermissionCatalog.MarketDataManage);
 
         group.MapPut("/{id}", async (Guid id, [FromBody] UpdateMarketAssetRequest request, IMediator mediator) =>
         {
             var success = await mediator.Send(new UpdateMarketAssetCommand(id, request.CategoryId, request.Symbol, request.Name,
                 request.CurrentPrice, request.PriceSource, request.ExternalId));
             return success ? Results.NoContent() : Results.NotFound();
-        }).RequireAuthorization("Admin");
+        }).RequireAuthorization(AdminPermissionCatalog.MarketDataManage);
 
         group.MapDelete("/{id}", async (Guid id, IMediator mediator) =>
         {
@@ -46,7 +47,7 @@ public static class MarketAssetsEndpoints
             {
                 return Results.BadRequest(new { message = ex.Message });
             }
-        }).RequireAuthorization("Admin");
+        }).RequireAuthorization(AdminPermissionCatalog.MarketDataManage);
 
         group.MapGet("/", async (
             IMediator mediator,
@@ -120,7 +121,7 @@ public static class MarketAssetsEndpoints
                     title: "Không thể đồng bộ VN100 từ KBS",
                     detail: exception.Message);
             }
-        }).RequireAuthorization("Admin");
+        }).RequireAuthorization(AdminPermissionCatalog.MarketDataManage);
 
         group.MapPost("/sync-funds", async (
             [FromBody] SyncFundMarketAssetsRequest request,
@@ -137,7 +138,7 @@ public static class MarketAssetsEndpoints
                     title: "Không thể đồng bộ chứng chỉ quỹ từ Fmarket",
                     detail: exception.Message);
             }
-        }).RequireAuthorization("Admin");
+        }).RequireAuthorization(AdminPermissionCatalog.MarketDataManage);
 
         group.MapPost("/sync-crypto", async (
             [FromBody] SyncCryptoMarketAssetsRequest request,
@@ -155,14 +156,14 @@ public static class MarketAssetsEndpoints
                     title: "Không thể đồng bộ crypto từ CoinGecko",
                     detail: exception.Message);
             }
-        }).RequireAuthorization("AdminMarketDataManage");
+        }).RequireAuthorization(AdminPermissionCatalog.MarketDataManage);
 
         group.MapPost("/refresh", async (IMediator mediator) =>
             Results.Ok(await mediator.Send(new RefreshMarketAssetPricesCommand())))
-            .RequireAuthorization("Admin");
+            .RequireAuthorization(AdminPermissionCatalog.MarketDataManage);
 
         group.MapPost("/{id:guid}/refresh", async (Guid id, IMediator mediator) =>
             Results.Ok(await mediator.Send(new RefreshMarketAssetPricesCommand(id))))
-            .RequireAuthorization("Admin");
+            .RequireAuthorization(AdminPermissionCatalog.MarketDataManage);
     }
 }

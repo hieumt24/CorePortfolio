@@ -1,6 +1,7 @@
 using CorePortfolio.API.Services;
 using CorePortfolio.Infrastructure.Data;
 using Microsoft.AspNetCore.Mvc;
+using CorePortfolio.API.Features.Admin.ControlPlane;
 
 namespace CorePortfolio.API.Features.Admin.Migration;
 
@@ -12,13 +13,13 @@ public static class MigrationEndpoints
     {
         var group = app.MapGroup("/api/admin/migration")
             .WithTags("Admin - Migration")
-            .RequireAuthorization("Admin");
+            .RequireAuthorization(AdminPermissionCatalog.AdminAccess);
 
         group.MapGet("/backups", async (
             BackupService backupService,
             CancellationToken cancellationToken) =>
             Results.Ok(await backupService.ListBackupsAsync(cancellationToken)))
-            .RequireAuthorization("AdminRecovery");
+            .RequireAuthorization(AdminPermissionCatalog.BackupsRead);
 
         group.MapPost("/backup", async (
             BackupService backupService,
@@ -31,7 +32,7 @@ public static class MigrationEndpoints
                 new { backup.SizeBytes, backup.Sha256 });
             await dbContext.SaveChangesAsync(cancellationToken);
             return Results.Ok(backup);
-        }).RequireAuthorization("AdminOperationsExecute");
+        }).RequireAuthorization(AdminPermissionCatalog.BackupsCreate);
 
         group.MapPost("/restore", async (
             [FromBody] RestoreDatabaseRequest request,
@@ -48,7 +49,7 @@ public static class MigrationEndpoints
                 new { result.SafetyBackupFileName });
             await dbContext.SaveChangesAsync(cancellationToken);
             return Results.Ok(result);
-        }).RequireAuthorization("AdminRolesManage");
+        }).RequireAuthorization(AdminPermissionCatalog.BackupsRestore);
 
         group.MapPost("/run-legacy", async (
             MigrationService migrationService,
@@ -60,6 +61,6 @@ public static class MigrationEndpoints
             auditWriter.Add("LegacyMigrationRun", "Database", null);
             await dbContext.SaveChangesAsync(cancellationToken);
             return Results.Ok(new { message = "Legacy data migration completed." });
-        }).RequireAuthorization("AdminRolesManage");
+        }).RequireAuthorization(AdminPermissionCatalog.MigrationsExecute);
     }
 }

@@ -1,10 +1,14 @@
 using CorePortfolio.Infrastructure.Data;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using CorePortfolio.API.Features.Admin.ControlPlane;
 
 namespace CorePortfolio.API.Features.Admin.Categories;
 
-public record DeleteCategoryCommand(Guid Id) : IRequest<bool>;
+public record DeleteCategoryCommand(Guid Id) : IRequest<bool>, IAdminPermissionRequest
+{
+    public string RequiredPermission => AdminPermissionCatalog.MarketDataManage;
+}
 
 public class DeleteCategoryHandler : IRequestHandler<DeleteCategoryCommand, bool>
 {

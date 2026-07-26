@@ -1,11 +1,15 @@
 using CorePortfolio.Infrastructure.Data;
 using MediatR;
 using CorePortfolio.API.Services;
+using CorePortfolio.API.Features.Admin.ControlPlane;
 
 namespace CorePortfolio.API.Features.Admin.MarketAssets;
 
 public record UpdateMarketAssetCommand(Guid Id, Guid CategoryId, string Symbol, string Name, decimal CurrentPrice,
-    string PriceSource = "Manual", string? ExternalId = null) : IRequest<bool>;
+    string PriceSource = "Manual", string? ExternalId = null) : IRequest<bool>, IAdminPermissionRequest
+{
+    public string RequiredPermission => AdminPermissionCatalog.MarketDataManage;
+}
 
 public class UpdateMarketAssetHandler : IRequestHandler<UpdateMarketAssetCommand, bool>
 {

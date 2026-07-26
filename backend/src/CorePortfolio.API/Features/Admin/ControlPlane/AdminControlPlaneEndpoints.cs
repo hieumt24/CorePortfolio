@@ -16,7 +16,9 @@ public static class AdminControlPlaneEndpoints
 {
     public static void MapAdminControlPlaneEndpoints(this IEndpointRouteBuilder app)
     {
-        var group = app.MapGroup("/api/admin/control-plane").WithTags("Admin Control Plane").RequireAuthorization("Admin");
+        var group = app.MapGroup("/api/admin/control-plane")
+            .WithTags("Admin Control Plane")
+            .RequireAuthorization(AdminPermissionCatalog.AdminAccess);
 
         group.MapGet("/capabilities", async (ISender sender, CancellationToken ct) =>
             Results.Ok(await sender.Send(new GetAdminCapabilitiesQuery(), ct)));
@@ -24,47 +26,47 @@ public static class AdminControlPlaneEndpoints
             Results.Ok(await sender.Send(new GetAuditEventsQuery(
                 filter.Search, filter.Action, filter.EntityType, filter.Outcome, filter.ActorUserId,
                 filter.IpAddress, filter.From, filter.To, filter.Page, filter.PageSize), ct)))
-            .RequireAuthorization("Admin");
+            .RequireAuthorization(AdminPermissionCatalog.AuditRead);
         group.MapGet("/users/{id:guid}", async (Guid id, ISender sender, CancellationToken ct) =>
         {
             var result = await sender.Send(new GetAdminUserDetailQuery(id), ct);
             return result is null ? Results.NotFound() : Results.Ok(result);
-        }).RequireAuthorization("AdminUsersRead");
+        }).RequireAuthorization(AdminPermissionCatalog.UsersRead);
         group.MapGet("/users/{id:guid}/sessions", async (Guid id, ISender sender, CancellationToken ct) =>
-            Results.Ok(await sender.Send(new GetUserSessionsQuery(id), ct))).RequireAuthorization("AdminUsersRead");
+            Results.Ok(await sender.Send(new GetUserSessionsQuery(id), ct))).RequireAuthorization(AdminPermissionCatalog.UsersRead);
         group.MapGet("/users/{id:guid}/security-timeline", async (Guid id, ISender sender, CancellationToken ct) =>
-            Results.Ok(await sender.Send(new GetSecurityTimelineQuery(id), ct))).RequireAuthorization("AdminUsersRead");
+            Results.Ok(await sender.Send(new GetSecurityTimelineQuery(id), ct))).RequireAuthorization(AdminPermissionCatalog.UsersRead);
         group.MapPost("/users/{id:guid}/sessions/revoke", async (
             Guid id, [FromBody] RevokeSessionsRequest request, ISender sender, CancellationToken ct) =>
             Results.Ok(new { revoked = await sender.Send(new RevokeUserSessionsCommand(id, request.SessionId, request.Reason), ct) }))
-            .RequireAuthorization("AdminUsersRead");
+            .RequireAuthorization(AdminPermissionCatalog.SessionsRevoke);
         group.MapPut("/users/{id:guid}/role", async (
             Guid id, [FromBody] UpdateRoleRequest request, ISender sender, CancellationToken ct) =>
             await sender.Send(new UpdateAdminRoleCommand(id, request.Role), ct) ? Results.NoContent() : Results.NotFound())
-            .RequireAuthorization("AdminRolesManage");
+            .RequireAuthorization(AdminPermissionCatalog.RolesManage);
         group.MapGet("/market-data", async (ISender sender, CancellationToken ct) =>
-            Results.Ok(await sender.Send(new GetMarketDataHealthQuery(), ct))).RequireAuthorization("AdminMarketData");
+            Results.Ok(await sender.Send(new GetMarketDataHealthQuery(), ct))).RequireAuthorization(AdminPermissionCatalog.MarketDataRead);
         group.MapPost("/jobs/{name}/run", async (string name, ISender sender, CancellationToken ct) =>
-            Results.Ok(await sender.Send(new RunAdminJobCommand(name), ct))).RequireAuthorization("AdminOperationsExecute");
+            Results.Ok(await sender.Send(new RunAdminJobCommand(name), ct))).RequireAuthorization(AdminPermissionCatalog.OperationsExecute);
         group.MapGet("/notification-campaigns", async (ISender sender, CancellationToken ct) =>
-            Results.Ok(await sender.Send(new GetNotificationCampaignsQuery(), ct))).RequireAuthorization("AdminNotifications");
+            Results.Ok(await sender.Send(new GetNotificationCampaignsQuery(), ct))).RequireAuthorization(AdminPermissionCatalog.NotificationsManage);
         group.MapPost("/notification-campaigns", async (
             [FromBody] BroadcastRequest request, ISender sender, CancellationToken ct) =>
             Results.Ok(new { recipients = await sender.Send(new BroadcastNotificationCommand(
                 request.Title, request.Message, request.Severity, request.Role, request.Link, request.ExpiresAt), ct) }))
-            .RequireAuthorization("AdminNotifications");
+            .RequireAuthorization(AdminPermissionCatalog.NotificationsManage);
         group.MapGet("/data-integrity", async (ISender sender, CancellationToken ct) =>
-            Results.Ok(await sender.Send(new GetDataIntegrityQuery(), ct))).RequireAuthorization("AdminIntegrity");
+            Results.Ok(await sender.Send(new GetDataIntegrityQuery(), ct))).RequireAuthorization(AdminPermissionCatalog.IntegrityRead);
         group.MapPost("/data-integrity/repair", async (
             [FromBody] RepairIntegrityRequest request, ISender sender, CancellationToken ct) =>
             Results.Ok(await sender.Send(new RepairDataIntegrityCommand(request.CheckKey, request.DryRun), ct)))
-            .RequireAuthorization("AdminIntegrity");
+            .RequireAuthorization(AdminPermissionCatalog.IntegrityRepair);
         group.MapGet("/configuration", async (ISender sender, CancellationToken ct) =>
-            Results.Ok(await sender.Send(new GetAdminSystemConfigurationQuery(), ct))).RequireAuthorization("AdminRecovery");
+            Results.Ok(await sender.Send(new GetAdminSystemConfigurationQuery(), ct))).RequireAuthorization(AdminPermissionCatalog.BackupsRead);
         group.MapPut("/configuration", async (
             [FromBody] UpdateConfigurationRequest request, ISender sender, CancellationToken ct) =>
             Results.Ok(await sender.Send(new UpdateAdminSystemConfigurationCommand(request.Settings), ct)))
-            .RequireAuthorization("AdminRolesManage");
+            .RequireAuthorization(AdminPermissionCatalog.SettingsManage);
     }
 }
 

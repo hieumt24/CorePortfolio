@@ -6,6 +6,7 @@ using CorePortfolio.Domain.Entities;
 using CorePortfolio.Infrastructure.Data;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using CorePortfolio.API.Common;
 
 namespace CorePortfolio.API.Features.Admin.ControlPlane;
 
@@ -101,7 +102,7 @@ public sealed class RevokeUserSessionsHandler(
 {
     public async Task<int> Handle(RevokeUserSessionsCommand request, CancellationToken cancellationToken)
     {
-        if (!AdminPermissionCatalog.Has(currentUser.Role, "Sessions.Revoke")) throw new UnauthorizedAccessException();
+        if (!AdminPermissionCatalog.Has(currentUser.Role, AdminPermissionCatalog.SessionsRevoke)) throw new ForbiddenAccessException();
         var sessions = await db.UserSessions.Where(x => x.UserId == request.UserId &&
             x.RevokedAt == null && (!request.SessionId.HasValue || x.Id == request.SessionId))
             .ToListAsync(cancellationToken);
@@ -139,7 +140,7 @@ public sealed class UpdateAdminRoleHandler(
 {
     public async Task<bool> Handle(UpdateAdminRoleCommand request, CancellationToken cancellationToken)
     {
-        if (!AdminPermissionCatalog.Has(currentUser.Role, "Roles.Manage")) throw new UnauthorizedAccessException();
+        if (!AdminPermissionCatalog.Has(currentUser.Role, AdminPermissionCatalog.RolesManage)) throw new ForbiddenAccessException();
         if (!AdminPermissionCatalog.Roles.Contains(request.Role, StringComparer.OrdinalIgnoreCase))
             throw new ArgumentException("Vai trò không hợp lệ.");
         if (currentUser.UserId == request.UserId && request.Role is not ("Admin" or "SuperAdmin"))
@@ -193,7 +194,7 @@ public sealed class RunAdminJobHandler(
 {
     public async Task<object> Handle(RunAdminJobCommand request, CancellationToken cancellationToken)
     {
-        if (!AdminPermissionCatalog.Has(currentUser.Role, "Operations.Execute")) throw new UnauthorizedAccessException();
+        if (!AdminPermissionCatalog.Has(currentUser.Role, AdminPermissionCatalog.OperationsExecute)) throw new ForbiddenAccessException();
         var name = request.JobName.Trim().ToLowerInvariant();
         var startedAt = operations.StartJob($"Manual:{name}");
         try
@@ -226,7 +227,7 @@ public sealed class BroadcastNotificationHandler(
 {
     public async Task<int> Handle(BroadcastNotificationCommand request, CancellationToken cancellationToken)
     {
-        if (!AdminPermissionCatalog.Has(currentUser.Role, "Notifications.Manage")) throw new UnauthorizedAccessException();
+        if (!AdminPermissionCatalog.Has(currentUser.Role, AdminPermissionCatalog.NotificationsManage)) throw new ForbiddenAccessException();
         if (string.IsNullOrWhiteSpace(request.Title) || string.IsNullOrWhiteSpace(request.Message))
             throw new ArgumentException("Tiêu đề và nội dung là bắt buộc.");
         var users = db.Users.AsNoTracking().Where(x => x.IsActive);
@@ -292,7 +293,7 @@ public sealed class RepairDataIntegrityHandler(
 {
     public async Task<object> Handle(RepairDataIntegrityCommand request, CancellationToken cancellationToken)
     {
-        if (!AdminPermissionCatalog.Has(currentUser.Role, "Integrity.Repair")) throw new UnauthorizedAccessException();
+        if (!AdminPermissionCatalog.Has(currentUser.Role, AdminPermissionCatalog.IntegrityRepair)) throw new ForbiddenAccessException();
         if (request.CheckKey != "expired-sessions") throw new ArgumentException("Kiểm tra này chỉ hỗ trợ hướng dẫn xử lý thủ công.");
         var rows = await db.UserSessions.Where(x => x.ExpiresAt < DateTime.UtcNow && x.RevokedAt == null)
             .ToListAsync(cancellationToken);
@@ -338,7 +339,7 @@ public sealed class UpdateAdminSystemConfigurationHandler(
 
     public async Task<bool> Handle(UpdateAdminSystemConfigurationCommand request, CancellationToken cancellationToken)
     {
-        if (!AdminPermissionCatalog.Has(currentUser.Role, "Settings.Manage")) throw new UnauthorizedAccessException();
+        if (!AdminPermissionCatalog.Has(currentUser.Role, AdminPermissionCatalog.SettingsManage)) throw new ForbiddenAccessException();
         foreach (var pair in request.Settings.Where(x => Allowed.Contains(x.Key)))
         {
             var setting = await db.SystemSettings.SingleOrDefaultAsync(x => x.Key == pair.Key, cancellationToken);

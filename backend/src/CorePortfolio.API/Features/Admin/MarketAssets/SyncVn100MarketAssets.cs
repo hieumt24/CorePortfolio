@@ -7,10 +7,14 @@ using CorePortfolio.Infrastructure.Data;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using CorePortfolio.API.Services;
+using CorePortfolio.API.Features.Admin.ControlPlane;
 
 namespace CorePortfolio.API.Features.Admin.MarketAssets;
 
-public record SyncVn100MarketAssetsCommand(Guid CategoryId) : IRequest<SyncVn100MarketAssetsResult>;
+public record SyncVn100MarketAssetsCommand(Guid CategoryId) : IRequest<SyncVn100MarketAssetsResult>, IAdminPermissionRequest
+{
+    public string RequiredPermission => AdminPermissionCatalog.MarketDataManage;
+}
 
 public record SyncVn100MarketAssetsResult(
     int ProviderCount,

@@ -2,6 +2,7 @@ using System.Globalization;
 using System.Text;
 using CorePortfolio.API.Common;
 using CorePortfolio.API.Services;
+using CorePortfolio.API.Features.Admin.ControlPlane;
 using CorePortfolio.Domain.Entities;
 using CorePortfolio.Domain.Interfaces;
 using CorePortfolio.Infrastructure.Data;
@@ -10,7 +11,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CorePortfolio.API.Features.Admin.MarketAssets;
 
-public sealed record SyncFundMarketAssetsCommand(Guid CategoryId) : IRequest<SyncFundMarketAssetsResult>;
+public sealed record SyncFundMarketAssetsCommand(Guid CategoryId) : IRequest<SyncFundMarketAssetsResult>, IAdminPermissionRequest
+{
+    public string RequiredPermission => AdminPermissionCatalog.MarketDataManage;
+}
 
 public sealed record SyncFundMarketAssetsResult(
     int ProviderCount,

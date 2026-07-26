@@ -4,6 +4,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using CorePortfolio.API.Features.Admin.ControlPlane;
+using CorePortfolio.API.Common;
 
 namespace CorePortfolio.API.Features.Admin.Users;
 
@@ -20,8 +21,8 @@ public sealed class UpdateUserAccessHandler(
     {
         if (!AdminPermissionCatalog.Roles.Contains(request.Role, StringComparer.OrdinalIgnoreCase))
             throw new ArgumentException("Role is not supported.");
-        if (!AdminPermissionCatalog.Has(currentUser.Role, "Users.Manage"))
-            throw new UnauthorizedAccessException();
+        if (!AdminPermissionCatalog.Has(currentUser.Role, AdminPermissionCatalog.UsersManage))
+            throw new ForbiddenAccessException();
 
         var user = await dbContext.Users
             .Include(item => item.Portfolios)

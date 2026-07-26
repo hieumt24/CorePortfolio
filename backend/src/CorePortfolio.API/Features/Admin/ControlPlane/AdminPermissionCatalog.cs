@@ -2,12 +2,31 @@ namespace CorePortfolio.API.Features.Admin.ControlPlane;
 
 public static class AdminPermissionCatalog
 {
+    public const string AdminAccess = "Admin.Access";
+    public const string AuditRead = "Audit.Read";
+    public const string OperationsRead = "Operations.Read";
+    public const string OperationsExecute = "Operations.Execute";
+    public const string UsersRead = "Users.Read";
+    public const string UsersManage = "Users.Manage";
+    public const string SessionsRevoke = "Sessions.Revoke";
+    public const string MarketDataRead = "MarketData.Read";
+    public const string MarketDataManage = "MarketData.Manage";
+    public const string NotificationsManage = "Notifications.Manage";
+    public const string IntegrityRead = "Integrity.Read";
+    public const string IntegrityRepair = "Integrity.Repair";
+    public const string BackupsRead = "Backups.Read";
+    public const string BackupsCreate = "Backups.Create";
+    public const string BackupsRestore = "Backups.Restore";
+    public const string MigrationsExecute = "Migrations.Execute";
+    public const string SettingsManage = "Settings.Manage";
+    public const string RolesManage = "Roles.Manage";
+
     public static readonly string[] All =
     [
-        "Audit.Read", "Operations.Read", "Operations.Execute", "Users.Read", "Users.Manage",
-        "Sessions.Revoke", "MarketData.Read", "MarketData.Manage", "Notifications.Manage",
-        "Integrity.Read", "Integrity.Repair", "Backups.Read", "Backups.Create",
-        "Backups.Restore", "Settings.Manage", "Roles.Manage"
+        AdminAccess, AuditRead, OperationsRead, OperationsExecute, UsersRead, UsersManage,
+        SessionsRevoke, MarketDataRead, MarketDataManage, NotificationsManage,
+        IntegrityRead, IntegrityRepair, BackupsRead, BackupsCreate, BackupsRestore,
+        MigrationsExecute, SettingsManage, RolesManage
     ];
 
     private static readonly IReadOnlyDictionary<string, string[]> ByRole =
@@ -17,16 +36,15 @@ public static class AdminPermissionCatalog
             ["Admin"] = All,
             ["Operations"] =
             [
-                "Audit.Read", "Operations.Read", "Operations.Execute", "MarketData.Read",
-                "MarketData.Manage", "Notifications.Manage", "Integrity.Read",
-                "Backups.Read", "Backups.Create"
+                AdminAccess, AuditRead, OperationsRead, OperationsExecute, MarketDataRead,
+                MarketDataManage, NotificationsManage, IntegrityRead, BackupsRead, BackupsCreate
             ],
-            ["Support"] = ["Audit.Read", "Users.Read", "Sessions.Revoke", "Notifications.Manage"],
+            ["Support"] = [AdminAccess, AuditRead, UsersRead, SessionsRevoke, NotificationsManage],
             ["MarketDataManager"] =
-                ["Audit.Read", "Operations.Read", "MarketData.Read", "MarketData.Manage"],
+                [AdminAccess, AuditRead, OperationsRead, MarketDataRead, MarketDataManage],
             ["Auditor"] =
-                ["Audit.Read", "Operations.Read", "Users.Read", "MarketData.Read",
-                    "Integrity.Read", "Backups.Read"],
+                [AdminAccess, AuditRead, OperationsRead, UsersRead, MarketDataRead,
+                    IntegrityRead, BackupsRead],
             ["User"] = []
         };
 

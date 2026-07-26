@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Mvc;
 using CorePortfolio.API.Features.Admin.Settings.GetNavigationSettings;
 using CorePortfolio.API.Features.Admin.Settings.GetSetting;
 using CorePortfolio.API.Features.Admin.Settings.UpdateSetting;
+using CorePortfolio.API.Features.Admin.ControlPlane;
 
 namespace CorePortfolio.API.Features.Admin.Settings;
 
@@ -31,7 +32,7 @@ public static class SettingsEndpoints
         // Admin group
         var adminGroup = app.MapGroup("/api/admin/settings")
             .WithTags("Admin Settings")
-            .RequireAuthorization("Admin");
+            .RequireAuthorization(AdminPermissionCatalog.SettingsManage);
 
         adminGroup.MapPut("/{key}", async (string key, [FromBody] UpdateSettingRequest request, IMediator mediator) =>
         {

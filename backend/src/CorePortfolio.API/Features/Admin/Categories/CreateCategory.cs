@@ -2,10 +2,14 @@ using CorePortfolio.Domain.Entities;
 using CorePortfolio.Infrastructure.Data;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using CorePortfolio.API.Features.Admin.ControlPlane;
 
 namespace CorePortfolio.API.Features.Admin.Categories;
 
-public record CreateCategoryCommand(string Name, string DefaultCurrency) : IRequest<Guid>;
+public record CreateCategoryCommand(string Name, string DefaultCurrency) : IRequest<Guid>, IAdminPermissionRequest
+{
+    public string RequiredPermission => AdminPermissionCatalog.MarketDataManage;
+}
 
 public class CreateCategoryHandler : IRequestHandler<CreateCategoryCommand, Guid>
 {

@@ -2,10 +2,14 @@ using CorePortfolio.Domain.Entities;
 using CorePortfolio.Infrastructure.Data;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using CorePortfolio.API.Features.Admin.ControlPlane;
 
 namespace CorePortfolio.API.Features.Admin.Categories;
 
-public record UpdateCategoryCommand(Guid Id, string Name, string DefaultCurrency) : IRequest<bool>;
+public record UpdateCategoryCommand(Guid Id, string Name, string DefaultCurrency) : IRequest<bool>, IAdminPermissionRequest
+{
+    public string RequiredPermission => AdminPermissionCatalog.MarketDataManage;
+}
 
 public class UpdateCategoryHandler : IRequestHandler<UpdateCategoryCommand, bool>
 {

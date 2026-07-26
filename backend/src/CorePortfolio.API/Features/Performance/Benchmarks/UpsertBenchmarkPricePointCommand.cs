@@ -5,6 +5,7 @@ using CorePortfolio.Infrastructure.Data;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using CorePortfolio.API.Services;
+using CorePortfolio.API.Features.Admin.ControlPlane;
 
 namespace CorePortfolio.API.Features.Performance.Benchmarks;
 
@@ -12,7 +13,10 @@ public sealed record UpsertBenchmarkPricePointCommand(
     Guid BenchmarkId,
     DateTime Date,
     decimal ClosePrice,
-    string? Source) : IRequest<bool>;
+    string? Source) : IRequest<bool>, IAdminPermissionRequest
+{
+    public string RequiredPermission => AdminPermissionCatalog.MarketDataManage;
+}
 
 public sealed class UpsertBenchmarkPricePointHandler(AppDbContext dbContext, AuditWriter auditWriter)
     : IRequestHandler<UpsertBenchmarkPricePointCommand, bool>

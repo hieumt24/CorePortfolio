@@ -3,11 +3,15 @@ using CorePortfolio.Infrastructure.Data;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using CorePortfolio.API.Services;
+using CorePortfolio.API.Features.Admin.ControlPlane;
 
 namespace CorePortfolio.API.Features.Admin.MarketAssets;
 
 public record CreateMarketAssetCommand(Guid CategoryId, string Symbol, string Name, decimal CurrentPrice,
-    string PriceSource = "Manual", string? ExternalId = null) : IRequest<Guid>;
+    string PriceSource = "Manual", string? ExternalId = null) : IRequest<Guid>, IAdminPermissionRequest
+{
+    public string RequiredPermission => AdminPermissionCatalog.MarketDataManage;
+}
 
 public class CreateMarketAssetHandler : IRequestHandler<CreateMarketAssetCommand, Guid>
 {

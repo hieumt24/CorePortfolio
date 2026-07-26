@@ -98,7 +98,11 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseSqlite(connectionString);
 });
 
-builder.Services.AddMediatR(cfg => cfg.RegisterServicesFromAssembly(typeof(Program).Assembly));
+builder.Services.AddMediatR(cfg =>
+{
+    cfg.RegisterServicesFromAssembly(typeof(Program).Assembly);
+    cfg.AddOpenBehavior(typeof(AdminPermissionBehavior<,>));
+});
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
 builder.Services.Configure<UserActivityOptions>(
@@ -174,17 +178,14 @@ builder.Services.AddAuthorization(options =>
     options.FallbackPolicy = new Microsoft.AspNetCore.Authorization.AuthorizationPolicyBuilder()
         .RequireAuthenticatedUser()
         .Build();
-    options.AddPolicy("Admin", policy => policy.RequireRole(
-        "Admin", "SuperAdmin", "Operations", "Support", "MarketDataManager", "Auditor"));
-    options.AddPolicy("AdminUsersRead", policy => policy.RequireRole("Admin", "SuperAdmin", "Support", "Auditor"));
-    options.AddPolicy("AdminRolesManage", policy => policy.RequireRole("Admin", "SuperAdmin"));
-    options.AddPolicy("AdminOperations", policy => policy.RequireRole("Admin", "SuperAdmin", "Operations", "Auditor"));
-    options.AddPolicy("AdminOperationsExecute", policy => policy.RequireRole("Admin", "SuperAdmin", "Operations"));
-    options.AddPolicy("AdminMarketData", policy => policy.RequireRole("Admin", "SuperAdmin", "Operations", "MarketDataManager", "Auditor"));
-    options.AddPolicy("AdminMarketDataManage", policy => policy.RequireRole("Admin", "SuperAdmin", "Operations", "MarketDataManager"));
-    options.AddPolicy("AdminNotifications", policy => policy.RequireRole("Admin", "SuperAdmin", "Operations", "Support"));
-    options.AddPolicy("AdminIntegrity", policy => policy.RequireRole("Admin", "SuperAdmin", "Operations", "Auditor"));
-    options.AddPolicy("AdminRecovery", policy => policy.RequireRole("Admin", "SuperAdmin", "Operations", "Auditor"));
+    foreach (var permission in AdminPermissionCatalog.All)
+    {
+        options.AddPolicy(permission, policy => policy
+            .RequireAuthenticatedUser()
+            .RequireAssertion(context => AdminPermissionCatalog.Has(
+                context.User.FindFirstValue(ClaimTypes.Role),
+                permission)));
+    }
 });
 
 var app = builder.Build();
@@ -223,6 +224,7 @@ app.UseExceptionHandler(errorApp => errorApp.Run(async context =>
     var exception = context.Features.Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerFeature>()?.Error;
     var (status, title) = exception switch
     {
+        ForbiddenAccessException => (StatusCodes.Status403Forbidden, "Forbidden"),
         AccountingValidationException => (StatusCodes.Status400BadRequest, "Dữ liệu giao dịch không hợp lệ"),
         RequestValidationException => (StatusCodes.Status400BadRequest, "Dữ liệu yêu cầu không hợp lệ"),
         ArgumentException => (StatusCodes.Status400BadRequest, "Dữ liệu yêu cầu không hợp lệ"),

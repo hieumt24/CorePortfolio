@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using CorePortfolio.API.Features.Admin.ControlPlane;
 
 namespace CorePortfolio.API.Features.MarketAssets.UpdateMarketAssetPrice;
 
@@ -17,6 +18,6 @@ public static class UpdateMarketAssetPriceEndpoint
         })
         .WithName("UpdateMarketAssetPrice")
         .WithTags("Assets")
-        .RequireAuthorization("Admin");
+        .RequireAuthorization(AdminPermissionCatalog.MarketDataManage);
     }
 }

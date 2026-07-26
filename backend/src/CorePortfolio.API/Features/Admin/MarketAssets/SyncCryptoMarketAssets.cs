@@ -1,5 +1,6 @@
 using CorePortfolio.API.Common;
 using CorePortfolio.API.Services;
+using CorePortfolio.API.Features.Admin.ControlPlane;
 using CorePortfolio.Domain.Accounting;
 using CorePortfolio.Domain.Entities;
 using CorePortfolio.Domain.Interfaces;
@@ -10,7 +11,10 @@ using Microsoft.EntityFrameworkCore;
 namespace CorePortfolio.API.Features.Admin.MarketAssets;
 
 public sealed record SyncCryptoMarketAssetsCommand(Guid CategoryId, int? Limit = null)
-    : IRequest<SyncCryptoMarketAssetsResult>;
+    : IRequest<SyncCryptoMarketAssetsResult>, IAdminPermissionRequest
+{
+    public string RequiredPermission => AdminPermissionCatalog.MarketDataManage;
+}
 
 public sealed record SyncCryptoMarketAssetsResult(
     int ProviderCount,

@@ -1,5 +1,6 @@
 using MediatR;
 using Microsoft.AspNetCore.Mvc;
+using CorePortfolio.API.Features.Admin.ControlPlane;
 
 namespace CorePortfolio.API.Features.Admin.Categories;
 
@@ -18,13 +19,13 @@ public static class CategoriesEndpoints
         {
             var id = await mediator.Send(new CreateCategoryCommand(request.Name, request.DefaultCurrency));
             return Results.Created($"/api/admin/categories/{id}", new { Id = id });
-        }).RequireAuthorization("Admin");
+        }).RequireAuthorization(AdminPermissionCatalog.MarketDataManage);
 
         group.MapPut("/{id}", async (Guid id, [FromBody] UpdateCategoryRequest request, IMediator mediator) =>
         {
             var success = await mediator.Send(new UpdateCategoryCommand(id, request.Name, request.DefaultCurrency));
             return success ? Results.NoContent() : Results.NotFound();
-        }).RequireAuthorization("Admin");
+        }).RequireAuthorization(AdminPermissionCatalog.MarketDataManage);
 
         group.MapDelete("/{id}", async (Guid id, IMediator mediator) =>
         {
@@ -37,7 +38,7 @@ public static class CategoriesEndpoints
             {
                 return Results.BadRequest(new { message = ex.Message });
             }
-        }).RequireAuthorization("Admin");
+        }).RequireAuthorization(AdminPermissionCatalog.MarketDataManage);
 
         group.MapGet("/", async (IMediator mediator) =>
         {

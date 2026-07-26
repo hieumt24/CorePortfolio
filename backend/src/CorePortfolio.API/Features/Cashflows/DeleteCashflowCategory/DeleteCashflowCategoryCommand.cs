@@ -3,6 +3,8 @@ using CorePortfolio.Infrastructure.Data;
 using MediatR;
 using CorePortfolio.API.Services;
 using Microsoft.EntityFrameworkCore;
+using CorePortfolio.API.Features.Admin.ControlPlane;
+using CorePortfolio.API.Common;
 
 namespace CorePortfolio.API.Features.Cashflows.DeleteCashflowCategory;
 
@@ -26,9 +28,11 @@ public class DeleteCashflowCategoryHandler : IRequestHandler<DeleteCashflowCateg
         if (category == null)
             throw new Exception("Category not found");
 
-        if (category.IsGlobal && !_currentUserService.IsAdmin)
+        if (category.IsGlobal && !AdminPermissionCatalog.Has(
+                _currentUserService.Role,
+                AdminPermissionCatalog.SettingsManage))
         {
-            throw new UnauthorizedAccessException("Only admins can delete global categories.");
+            throw new ForbiddenAccessException("Settings.Manage permission is required to delete global categories.");
         }
 
         if (!category.IsGlobal && category.UserId != _currentUserService.UserId)

@@ -3,6 +3,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using CorePortfolio.Domain.Interfaces;
 using CorePortfolio.API.Services;
+using CorePortfolio.API.Features.Admin.ControlPlane;
 using System.Net;
 
 namespace CorePortfolio.API.Features.MarketAssets.UpdateMarketAssetPrice;
@@ -33,7 +34,11 @@ public class UpdateMarketAssetPriceHandler : IRequestHandler<UpdateMarketAssetPr
     }
 }
 
-public record RefreshMarketAssetPricesCommand(Guid? MarketAssetId = null) : IRequest<List<PriceRefreshResultDto>>;
+public record RefreshMarketAssetPricesCommand(Guid? MarketAssetId = null)
+    : IRequest<List<PriceRefreshResultDto>>, IAdminPermissionRequest
+{
+    public string RequiredPermission => AdminPermissionCatalog.MarketDataManage;
+}
 public record PriceRefreshResultDto(Guid MarketAssetId, string Symbol, string Status, decimal? Price, string? Error);
 
 public sealed class RefreshMarketAssetPricesHandler : IRequestHandler<RefreshMarketAssetPricesCommand, List<PriceRefreshResultDto>>
