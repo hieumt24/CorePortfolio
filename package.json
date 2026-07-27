@@ -1,6 +1,7 @@
 {
   "scripts": {
-    "check:encoding": "node scripts/check-text-encoding.mjs"
+    "check:encoding": "node scripts/check-text-encoding.mjs",
+    "check:secrets": "node scripts/check-secrets.mjs"
   },
   "dependencies": {
     "pm2": "^7.0.1"

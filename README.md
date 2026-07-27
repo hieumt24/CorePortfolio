@@ -143,7 +143,7 @@ Never commit secrets to `appsettings.json` or frontend code. Use .NET User Secre
 | `Cors__AllowedOrigins__0` | Exact frontend origin allowlist |
 | `VITE_API_URL` | Absolute API URL for production frontend builds |
 | `CoinGecko__ApiKey` | Optional crypto market-data credential |
-| `Telegram__BotToken` | Optional Telegram bot credential |
+| `TelegramBot__Token` | Optional Telegram bot credential |
 | `ForwardedHeaders__Enabled` | Enable when running behind a trusted reverse proxy |
 
 ## Testing and quality
@@ -166,6 +166,9 @@ cd ..
 
 # UTF-8 and mojibake guard
 npm run check:encoding
+
+# Tracked-file credential guard
+npm run check:secrets
 ```
 
 CI also validates the EF migration snapshot, user isolation, transaction atomicity, authentication/authorization, and the production publish artifact.
@@ -185,6 +188,7 @@ CI also validates the EF migration snapshot, user isolation, transaction atomici
 - [Production hardening, backup, and recovery](docs/PRODUCTION_HARDENING.md)
 - [Market data and secret handling](docs/PRODUCTION_MARKET_DATA.md)
 - [Reverse proxy, client IP, and user presence](docs/PRODUCTION_USER_ACTIVITY.md)
+- [Credential exposure response](docs/SECURITY_CREDENTIAL_RESPONSE.md)
 
 ## Disclaimer
 
