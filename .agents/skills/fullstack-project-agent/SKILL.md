@@ -60,14 +60,30 @@ Treat code, database, UI, production configuration, verification, and documentat
 
 ## 4. Verify proportionally
 
-Always run:
+Choose verification from the files and runtime surfaces actually changed. Do not run unrelated builds or test suites.
+
+For every change:
 
 - `git diff --check`
-- Explicit Release build of `CorePortfolio.API.csproj`
-- Relevant fast unit/domain tests
-- `npm test` when frontend logic changed
-- `npm run build` from `frontend`
 - `npm run check:encoding` when source text changed
+
+For documentation-only changes (`*.md`, `docs/**`, agent instructions, or skill files) that do not alter runtime code, build configuration, dependencies, deployment behavior, or generated artifacts:
+
+- Do not run backend builds, backend tests, frontend tests, or frontend builds.
+- Validate relative links, referenced paths, Markdown structure, or the artifact-specific format when relevant.
+- For skill changes, run the skill validator and inspect `agents/openai.yaml` for stale metadata.
+
+For backend code, project, or runtime-configuration changes:
+
+- Build `CorePortfolio.API.csproj` explicitly in Release mode.
+- Run relevant fast unit/domain tests.
+
+For frontend code, dependency, or build-configuration changes:
+
+- Run `npm test` when frontend logic changed.
+- Run `npm run build` from `frontend`.
+
+For cross-layer changes, combine the applicable backend and frontend checks above.
 
 For EF changes, also apply all migrations to a new temporary SQLite database and run `dotnet ef migrations has-pending-model-changes`.
 
