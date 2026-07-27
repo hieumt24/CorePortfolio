@@ -39,20 +39,10 @@ public class GetGlobalReportHandler : IRequestHandler<GetGlobalReportQuery, Glob
                     (existing?.CurrentValue ?? 0) + asset.CurrentValue);
             }
 
-            foreach (var cash in summary.CashBalances)
-            {
-                var key = $"Fiat_{cash.Currency}";
-                categories.TryGetValue(key, out var existing);
-                categories[key] = new CategoryAllocationDto("Fiat", cash.Currency,
-                    existing?.TotalInvested ?? 0, (existing?.CurrentValue ?? 0) + cash.Balance);
-            }
-
             var currencyRows = summary.Assets.GroupBy(a => a.Currency)
                 .Select(g => new PortfolioCurrencyAllocationDto(g.Key, g.Sum(a => a.TotalCost),
-                    g.Sum(a => a.CurrentValue) + summary.CashBalances.Where(c => c.Currency == g.Key).Sum(c => c.Balance)))
+                    g.Sum(a => a.CurrentValue)))
                 .ToList();
-            foreach (var cash in summary.CashBalances.Where(c => currencyRows.All(r => r.Currency != c.Currency)))
-                currencyRows.Add(new PortfolioCurrencyAllocationDto(cash.Currency, 0, cash.Balance));
 
             portfolioAllocations.Add(new PortfolioAllocationDto(portfolio.Id, portfolio.Name, currencyRows));
         }

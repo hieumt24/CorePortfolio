@@ -30,7 +30,7 @@ public class GetGlobalHistoryHandler : IRequestHandler<GetGlobalHistoryQuery, Li
             .Select(group => new SnapshotDto(
                 group.Key.ToString("yyyy-MM-dd"),
                 group.Sum(snapshot => snapshot.TotalInvested),
-                group.Sum(snapshot => snapshot.NetAssetValue),
+                group.Sum(snapshot => snapshot.HoldingsValue),
                 group.Sum(snapshot => snapshot.HoldingsValue),
                 group.Sum(snapshot => snapshot.CashValue),
                 group.Sum(snapshot => snapshot.NetAssetValue),
