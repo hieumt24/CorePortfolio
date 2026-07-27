@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { adminApi } from '../api/adminApi';
+import { getAdminSection } from '../utils/adminRoute';
 import './AdminDashboard.css';
 
 const navItems = [
@@ -42,7 +43,7 @@ export function AdminDashboard() {
   }, [permissions]);
   useEffect(() => {
     if (permissions === null || visibleItems.length === 0) return;
-    const currentSection = location.pathname.split('/').filter(Boolean).at(-1);
+    const currentSection = getAdminSection(location.pathname);
     if (!visibleItems.some(item => item.path === currentSection)) {
       void navigate(`/admin/${visibleItems[0].path}`, { replace: true });
     }
