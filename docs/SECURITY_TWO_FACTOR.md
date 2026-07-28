@@ -48,6 +48,27 @@ not exactly 32 decoded bytes. Keep enforcement disabled until every privileged
 operator has a tested enrollment/recovery path. The Admin User Security page
 reports enrollment coverage and readiness.
 
+When enforcement is disabled, the API can still start without the key so that
+existing non-2FA sign-in remains available. In that state,
+`GET /api/profile/2fa` returns `isAvailable: false`, the Profile Security UI
+disables enrollment, and setup requests return HTTP 503 instead of an
+unhandled HTTP 500. Configure the key and restart the API before enrolling any
+account.
+
+For Azure App Service, add `Security__TwoFactor__EncryptionKey` under
+Environment variables, mark it as a deployment-slot setting when slots are
+used, save the configuration, and restart the API. A valid value can be
+generated locally with:
+
+```powershell
+[Convert]::ToBase64String(
+  [Security.Cryptography.RandomNumberGenerator]::GetBytes(32)
+)
+```
+
+Store the generated value directly in the platform secret configuration. Do
+not paste it into source files, logs, tickets, or chat.
+
 ## API contract
 
 - `POST /api/auth/login` returns `Authenticated`, `TwoFactorRequired`, or
@@ -56,7 +77,8 @@ reports enrollment coverage and readiness.
   authenticator provisioning URI and manual key.
 - `POST /api/auth/2fa/verify` consumes a TOTP or recovery code and only then
   issues the JWT and refresh cookie.
-- `GET /api/profile/2fa` returns the authenticated user's status.
+- `GET /api/profile/2fa` returns the authenticated user's status and server
+  enrollment availability.
 - `POST /api/profile/2fa/setup` begins voluntary enrollment after password
   re-verification.
 - `POST /api/profile/2fa/recovery-codes` rotates recovery codes after password

@@ -12,7 +12,9 @@ using Microsoft.Extensions.Logging;
 
 namespace CorePortfolio.API.IntegrationTests.Infrastructure;
 
-public sealed class CorePortfolioApiFactory(bool enforceTwoFactorForPrivilegedRoles = false)
+public sealed class CorePortfolioApiFactory(
+    bool enforceTwoFactorForPrivilegedRoles = false,
+    string? twoFactorEncryptionKey = null)
     : WebApplicationFactory<Program>
 {
     private readonly SqliteConnection _connection = new("Data Source=:memory:");
@@ -31,6 +33,7 @@ public sealed class CorePortfolioApiFactory(bool enforceTwoFactorForPrivilegedRo
             .UseSetting("Telegram:Enabled", "false")
             .UseSetting(
                 "Security:TwoFactor:EncryptionKey",
+                twoFactorEncryptionKey ??
                 "MDEyMzQ1Njc4OUFCQ0RFRjAxMjM0NTY3ODlBQkNERUY=")
             .UseSetting(
                 "Security:TwoFactor:EnforceForPrivilegedRoles",

@@ -58,6 +58,16 @@ public sealed class TwoFactorSecretProtector(IOptions<TwoFactorOptions> options)
     private const byte FormatVersion = 1;
     private const int NonceSize = 12;
     private const int TagSize = 16;
+    private const string ConfigurationError =
+        "Two-factor authentication is not available because its encryption key is not configured.";
+
+    public bool IsConfigured => options.Value.HasValidEncryptionKey();
+
+    public void EnsureConfigured()
+    {
+        if (!IsConfigured)
+            throw new ServiceUnavailableException(ConfigurationError);
+    }
 
     public string Protect(string plaintext, Guid userId)
     {
@@ -106,8 +116,7 @@ public sealed class TwoFactorSecretProtector(IOptions<TwoFactorOptions> options)
             // Throw the same configuration error below without echoing the configured value.
         }
 
-        throw new InvalidOperationException(
-            "Security:TwoFactor:EncryptionKey must be a Base64-encoded 32-byte secret.");
+        throw new ServiceUnavailableException(ConfigurationError);
     }
 }
 

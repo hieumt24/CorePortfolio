@@ -202,6 +202,22 @@
   margin: 0;
 }
 
+.profile-security-unavailable {
+  display: grid;
+  gap: 0.3rem;
+  margin-bottom: 1.25rem;
+  padding: 1rem;
+  border: 1px solid rgba(245, 158, 11, 0.36);
+  border-radius: 14px;
+  color: #fde68a;
+  background: rgba(120, 53, 15, 0.2);
+}
+
+.profile-security-unavailable span {
+  color: var(--text-secondary);
+  font-size: 0.84rem;
+}
+
 .profile-2fa-setup {
   display: grid;
   grid-template-columns: auto minmax(0, 1fr);

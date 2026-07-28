@@ -21,6 +21,7 @@ export interface ChangePasswordInput {
 }
 
 export interface TwoFactorStatus {
+  isAvailable: boolean;
   isEnabled: boolean;
   isRequired: boolean;
   isPrivilegedRole: boolean;

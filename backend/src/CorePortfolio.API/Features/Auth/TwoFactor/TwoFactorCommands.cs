@@ -18,6 +18,7 @@ public sealed record TwoFactorSetupResponse(
     DateTime ExpiresAt);
 
 public sealed record TwoFactorStatusResponse(
+    bool IsAvailable,
     bool IsEnabled,
     bool IsRequired,
     bool IsPrivilegedRole,
@@ -38,6 +39,7 @@ public sealed class BeginLoginTwoFactorSetupHandler(
         BeginLoginTwoFactorSetupCommand request,
         CancellationToken cancellationToken)
     {
+        secretProtector.EnsureConfigured();
         var now = DateTime.UtcNow;
         var challenge = await challengeService.FindActiveAsync(
             request.ChallengeToken,
@@ -286,6 +288,7 @@ public sealed class BeginProfileTwoFactorSetupHandler(
             throw new ResourceConflictException("Two-factor authentication is already enabled.");
         if (!BCrypt.Net.BCrypt.Verify(request.CurrentPassword, user.PasswordHash))
             throw new RequestValidationException("Unable to verify the current credentials.");
+        secretProtector.EnsureConfigured();
 
         var now = DateTime.UtcNow;
         var issued = challengeService.Issue(user, TwoFactorChallengePurpose.Enrollment, now);
@@ -314,7 +317,8 @@ public sealed record GetTwoFactorStatusQuery : IRequest<TwoFactorStatusResponse>
 public sealed class GetTwoFactorStatusHandler(
     AppDbContext dbContext,
     ICurrentUserService currentUserService,
-    TwoFactorPolicy policy)
+    TwoFactorPolicy policy,
+    TwoFactorSecretProtector secretProtector)
     : IRequestHandler<GetTwoFactorStatusQuery, TwoFactorStatusResponse>
 {
     public async Task<TwoFactorStatusResponse> Handle(
@@ -329,6 +333,7 @@ public sealed class GetTwoFactorStatusHandler(
             item => item.UserId == userId && item.UsedAt == null,
             cancellationToken);
         return new TwoFactorStatusResponse(
+            secretProtector.IsConfigured,
             user.TwoFactorEnabled,
             policy.RequiresTwoFactor(user),
             policy.IsPrivilegedRole(user.Role),

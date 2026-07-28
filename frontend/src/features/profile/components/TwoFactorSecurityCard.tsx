@@ -150,6 +150,12 @@ export const TwoFactorSecurityCard = () => {
       </div>
 
       {!status && !error && <p className="profile-security-note">Đang tải trạng thái bảo mật…</p>}
+      {status && !status.isAvailable && (
+        <div className="profile-security-unavailable" role="status">
+          <strong>2FA chưa sẵn sàng trên máy chủ.</strong>
+          <span>Vui lòng liên hệ quản trị hệ thống để hoàn tất cấu hình bảo mật.</span>
+        </div>
+      )}
       {status?.isEnabled && (
         <div className="profile-security-summary">
           <div>
@@ -164,7 +170,7 @@ export const TwoFactorSecurityCard = () => {
         </div>
       )}
 
-      {status && !status.isEnabled && !setup && (
+      {status?.isAvailable && !status.isEnabled && !setup && (
         <form onSubmit={beginSetup}>
           <div className="profile-field">
             <label htmlFor="two-factor-password">Mật khẩu hiện tại</label>

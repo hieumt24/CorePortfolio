@@ -294,12 +294,15 @@ app.UseExceptionHandler(errorApp => errorApp.Run(async context =>
         ResourceConflictException => (StatusCodes.Status409Conflict, "Xung đột dữ liệu"),
         DbUpdateConcurrencyException => (StatusCodes.Status409Conflict, "Dữ liệu đã được thay đổi bởi yêu cầu khác"),
         UnauthorizedAccessException => (StatusCodes.Status401Unauthorized, "Chưa xác thực"),
+        ServiceUnavailableException => (StatusCodes.Status503ServiceUnavailable, "Dịch vụ tạm thời chưa sẵn sàng"),
         _ => (StatusCodes.Status500InternalServerError, "Đã xảy ra lỗi hệ thống")
     };
     if (status == 500 && app.Logger != null) app.Logger.LogError(exception, "Unhandled API exception");
 
     await Results.Problem(statusCode: status, title: title,
-        detail: app.Environment.IsDevelopment() ? exception?.ToString() : null).ExecuteAsync(context);
+        detail: exception is ServiceUnavailableException
+            ? exception.Message
+            : app.Environment.IsDevelopment() ? exception?.ToString() : null).ExecuteAsync(context);
 }));
 
 app.Use(async (context, next) =>

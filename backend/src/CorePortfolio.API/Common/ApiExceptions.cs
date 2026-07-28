@@ -20,3 +20,8 @@ public sealed class ForbiddenAccessException : Exception
     public ForbiddenAccessException(string message = "You do not have permission to perform this action.")
         : base(message) { }
 }
+
+public sealed class ServiceUnavailableException : Exception
+{
+    public ServiceUnavailableException(string message) : base(message) { }
+}

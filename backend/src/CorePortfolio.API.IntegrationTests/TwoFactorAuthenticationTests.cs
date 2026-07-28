@@ -15,6 +15,7 @@ using CorePortfolio.API.Common;
 using CorePortfolio.API.Features.Admin.ControlPlane;
 using MediatR;
 using Microsoft.AspNetCore.Http;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CorePortfolio.API.IntegrationTests;
@@ -238,6 +239,44 @@ public sealed class TwoFactorAuthenticationTests
         Assert.Equal("Authenticated", result.Status);
         Assert.False(string.IsNullOrWhiteSpace(result.Token));
         Assert.Null(result.ChallengeToken);
+    }
+
+    [Fact]
+    public async Task ProfileEnrollment_ReturnsServiceUnavailableWhenEncryptionKeyIsMissing()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        using var factory = new CorePortfolioApiFactory(twoFactorEncryptionKey: string.Empty);
+        var admin = await SeedUserAsync(
+            factory,
+            "admin-without-2fa-key",
+            "Admin",
+            cancellationToken);
+        using var client = factory.CreateAuthenticatedClient(admin.Id, admin.Role);
+
+        var statusResponse = await client.GetAsync(
+            "/api/profile/2fa",
+            cancellationToken);
+        Assert.Equal(HttpStatusCode.OK, statusResponse.StatusCode);
+        var status = Assert.IsType<TwoFactorStatusResponse>(
+            await statusResponse.Content.ReadFromJsonAsync<TwoFactorStatusResponse>(
+                cancellationToken));
+        Assert.False(status.IsAvailable);
+
+        var setupResponse = await client.PostAsJsonAsync(
+            "/api/profile/2fa/setup",
+            new { currentPassword = TestPassword },
+            cancellationToken);
+
+        Assert.Equal(HttpStatusCode.ServiceUnavailable, setupResponse.StatusCode);
+        var problem = Assert.IsType<ProblemDetails>(
+            await setupResponse.Content.ReadFromJsonAsync<ProblemDetails>(
+                cancellationToken));
+        Assert.Equal("Dịch vụ tạm thời chưa sẵn sàng", problem.Title);
+        Assert.Contains("encryption key", problem.Detail, StringComparison.OrdinalIgnoreCase);
+
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        Assert.Empty(await db.TwoFactorChallenges.ToListAsync(cancellationToken));
     }
 
     [Fact]
