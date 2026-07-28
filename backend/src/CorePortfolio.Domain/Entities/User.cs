@@ -13,6 +13,10 @@ public class User
     public DateTime? LastLoginAt { get; set; }
     public string? LastLoginIpAddress { get; set; }
     public DateTime? LastActivityAt { get; set; }
+    public bool TwoFactorEnabled { get; set; }
+    public string? TwoFactorSecretEncrypted { get; set; }
+    public DateTime? TwoFactorEnabledAt { get; set; }
+    public long? LastAcceptedTotpTimeStep { get; set; }
     
     public ICollection<Portfolio> Portfolios { get; set; } = new List<Portfolio>();
     public ICollection<CashflowRecord> CashflowRecords { get; set; } = new List<CashflowRecord>();
@@ -20,4 +24,6 @@ public class User
     public ICollection<WatchlistItem> WatchlistItems { get; set; } = new List<WatchlistItem>();
     public ICollection<TargetAllocation> TargetAllocations { get; set; } = new List<TargetAllocation>();
     public ICollection<UserSession> Sessions { get; set; } = new List<UserSession>();
+    public ICollection<TwoFactorChallenge> TwoFactorChallenges { get; set; } = new List<TwoFactorChallenge>();
+    public ICollection<TwoFactorRecoveryCode> TwoFactorRecoveryCodes { get; set; } = new List<TwoFactorRecoveryCode>();
 }

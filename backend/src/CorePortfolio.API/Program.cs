@@ -40,6 +40,8 @@ using CorePortfolio.API.Features.Profile;
 using CorePortfolio.API.Features.Performance;
 using CorePortfolio.API.Services;
 using CorePortfolio.API.Features.Auth;
+using CorePortfolio.API.Features.Auth.Login;
+using CorePortfolio.API.Features.Auth.TwoFactor;
 using CorePortfolio.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -115,6 +117,18 @@ builder.Services.AddScoped<CashflowRecordWriter>();
 builder.Services.AddScoped<NotificationWriter>();
 builder.Services.AddScoped<AuditWriter>();
 builder.Services.AddScoped<AuthSessionService>();
+builder.Services.AddOptions<TwoFactorOptions>()
+    .Bind(builder.Configuration.GetSection(TwoFactorOptions.SectionName))
+    .Validate(
+        options => !options.EnforceForPrivilegedRoles || options.HasValidEncryptionKey(),
+        "A valid 32-byte Security:TwoFactor:EncryptionKey is required when privileged-role enforcement is enabled.")
+    .ValidateOnStart();
+builder.Services.AddScoped<TwoFactorPolicy>();
+builder.Services.AddScoped<TwoFactorSecretProtector>();
+builder.Services.AddScoped<TotpService>();
+builder.Services.AddScoped<RecoveryCodeService>();
+builder.Services.AddScoped<TwoFactorChallengeService>();
+builder.Services.AddScoped<AuthLoginCompletionService>();
 builder.Services.AddScoped<ExchangeRateService>();
 builder.Services.AddSingleton<ProductionOperationsState>();
 builder.Services.AddHttpClient();
@@ -151,6 +165,15 @@ builder.Services.AddRateLimiter(options =>
         {
             PermitLimit = 30,
             Window = TimeSpan.FromMinutes(1),
+            QueueLimit = 0,
+            AutoReplenishment = true
+        }));
+    options.AddPolicy("auth-2fa", context => RateLimitPartition.GetFixedWindowLimiter(
+        partitionKey: context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        factory: _ => new FixedWindowRateLimiterOptions
+        {
+            PermitLimit = 20,
+            Window = TimeSpan.FromMinutes(5),
             QueueLimit = 0,
             AutoReplenishment = true
         }));

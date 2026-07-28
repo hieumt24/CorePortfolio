@@ -12,7 +12,8 @@ using Microsoft.Extensions.Logging;
 
 namespace CorePortfolio.API.IntegrationTests.Infrastructure;
 
-public sealed class CorePortfolioApiFactory : WebApplicationFactory<Program>
+public sealed class CorePortfolioApiFactory(bool enforceTwoFactorForPrivilegedRoles = false)
+    : WebApplicationFactory<Program>
 {
     private readonly SqliteConnection _connection = new("Data Source=:memory:");
 
@@ -27,7 +28,13 @@ public sealed class CorePortfolioApiFactory : WebApplicationFactory<Program>
             .UseSetting("Jwt:Issuer", "CorePortfolio.IntegrationTests")
             .UseSetting("Jwt:Audience", "CorePortfolio.IntegrationTests")
             .UseSetting("MarketPrices:Enabled", "false")
-            .UseSetting("Telegram:Enabled", "false");
+            .UseSetting("Telegram:Enabled", "false")
+            .UseSetting(
+                "Security:TwoFactor:EncryptionKey",
+                "MDEyMzQ1Njc4OUFCQ0RFRjAxMjM0NTY3ODlBQkNERUY=")
+            .UseSetting(
+                "Security:TwoFactor:EnforceForPrivilegedRoles",
+                enforceTwoFactorForPrivilegedRoles.ToString());
 
         builder.ConfigureLogging(logging =>
         {

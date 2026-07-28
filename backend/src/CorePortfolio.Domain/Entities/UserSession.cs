@@ -14,5 +14,7 @@ public sealed class UserSession
     public DateTime? RevokedAt { get; set; }
     public Guid? RevokedByUserId { get; set; }
     public string? RevokeReason { get; set; }
+    public DateTime? TwoFactorVerifiedAt { get; set; }
+    public string AuthenticationMethod { get; set; } = "pwd";
     public ICollection<SessionRefreshToken> RefreshTokens { get; set; } = new List<SessionRefreshToken>();
 }

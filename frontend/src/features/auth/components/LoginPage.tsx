@@ -5,6 +5,11 @@ import { useNotification } from '../../../context/NotificationContext';
 import { apiClient } from '../../../shared/api/baseClient';
 import './Auth.css';
 
+type LoginResponse = {
+  status: 'Authenticated' | 'TwoFactorRequired' | 'TwoFactorSetupRequired';
+  token: string | null;
+};
+
 export const LoginPage: React.FC = () => {
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
@@ -19,15 +24,20 @@ export const LoginPage: React.FC = () => {
     setLoading(true);
     
     try {
-      const response = await apiClient<{ token: string }>('/auth/login', {
+      const response = await apiClient<LoginResponse>('/auth/login', {
         method: 'POST',
         body: JSON.stringify({ username, password })
       });
-      
+
+      if (response.status !== 'Authenticated' || !response.token) {
+        showNotification('Two-factor verification is required. Complete the enrollment UI rollout before enabling enforcement.', 'error');
+        return;
+      }
+
       login(response.token);
       showNotification('Login successful!', 'success');
       navigate('/portfolios');
-    } catch (error) {
+    } catch {
       showNotification('Invalid username or password', 'error');
     } finally {
       setLoading(false);

@@ -1,4 +1,5 @@
 using CorePortfolio.Infrastructure.Data;
+using CorePortfolio.API.Features.Auth.TwoFactor;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
@@ -23,7 +24,8 @@ public interface IUserActivityService
 
 public sealed class UserActivityService(
     AppDbContext dbContext,
-    IOptions<UserActivityOptions> options) : IUserActivityService
+    IOptions<UserActivityOptions> options,
+    TwoFactorPolicy twoFactorPolicy) : IUserActivityService
 {
     public async Task<bool> ValidateAccessAndTrackAsync(
         Guid userId,
@@ -42,6 +44,9 @@ public sealed class UserActivityService(
             item => item.UserId == userId && item.TokenId == tokenId,
             cancellationToken);
         if (session is null || session.RevokedAt.HasValue || session.ExpiresAt <= now)
+            return false;
+        if (twoFactorPolicy.RequiresTwoFactor(user) &&
+            (!user.TwoFactorEnabled || session.TwoFactorVerifiedAt is null))
             return false;
         var writeIntervalSeconds = Math.Clamp(options.Value.WriteIntervalSeconds, 15, 300);
         var writeCutoff = now.AddSeconds(-writeIntervalSeconds);

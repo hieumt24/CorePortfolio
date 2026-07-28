@@ -4,11 +4,14 @@ using System.Security.Cryptography;
 using System.Text;
 using CorePortfolio.API.Common;
 using CorePortfolio.API.Features.Auth.Login;
+using CorePortfolio.API.Features.Auth.TwoFactor;
+using CorePortfolio.API.Features.Admin.ControlPlane;
 using CorePortfolio.Domain.Entities;
 using CorePortfolio.Infrastructure.Data;
 using Microsoft.AspNetCore.WebUtilities;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.Extensions.Options;
 
 namespace CorePortfolio.API.Features.Auth;
 
@@ -20,12 +23,17 @@ public sealed record AuthSessionResult(
 public sealed class AuthSessionService(
     AppDbContext dbContext,
     IConfiguration configuration,
-    IHttpContextAccessor httpContextAccessor)
+    IHttpContextAccessor httpContextAccessor,
+    IOptions<TwoFactorOptions> twoFactorOptions)
 {
     public static readonly TimeSpan AccessTokenLifetime = TimeSpan.FromMinutes(60);
     public static readonly TimeSpan RefreshTokenLifetime = TimeSpan.FromDays(7);
 
-    public AuthSessionResult CreateSession(User user, DateTime now)
+    public AuthSessionResult CreateSession(
+        User user,
+        DateTime now,
+        string authenticationMethod = "pwd",
+        DateTime? twoFactorVerifiedAt = null)
     {
         var accessTokenId = Guid.NewGuid().ToString("N");
         var refreshToken = GenerateRefreshToken();
@@ -38,7 +46,9 @@ public sealed class AuthSessionService(
             UserAgent = httpContextAccessor.HttpContext?.Request.Headers.UserAgent.ToString(),
             CreatedAt = now,
             LastSeenAt = now,
-            ExpiresAt = refreshExpiresAt
+            ExpiresAt = refreshExpiresAt,
+            AuthenticationMethod = authenticationMethod,
+            TwoFactorVerifiedAt = twoFactorVerifiedAt
         };
         var refreshTokenEntity = new SessionRefreshToken
         {
@@ -51,7 +61,7 @@ public sealed class AuthSessionService(
         dbContext.SessionRefreshTokens.Add(refreshTokenEntity);
 
         return new AuthSessionResult(
-            CreateLoginResult(user, accessTokenId, now),
+            CreateLoginResult(user, accessTokenId, now, authenticationMethod),
             refreshToken,
             refreshExpiresAt);
     }
@@ -99,6 +109,19 @@ public sealed class AuthSessionService(
             return null;
         }
 
+        var requiresTwoFactor = session.User.TwoFactorEnabled ||
+            (twoFactorOptions.Value.EnforceForPrivilegedRoles &&
+                AdminPermissionCatalog.Has(
+                    session.User.Role,
+                    AdminPermissionCatalog.AdminAccess));
+        if (requiresTwoFactor && session.TwoFactorVerifiedAt is null)
+        {
+            RevokeSession(session, now, "Two-factor verification is required");
+            await dbContext.SaveChangesAsync(cancellationToken);
+            await transaction.CommitAsync(cancellationToken);
+            return null;
+        }
+
         storedToken.ConsumedAt = now;
         var nextRefreshToken = GenerateRefreshToken();
         var nextToken = new SessionRefreshToken
@@ -126,7 +149,7 @@ public sealed class AuthSessionService(
         await transaction.CommitAsync(cancellationToken);
 
         return new AuthSessionResult(
-            CreateLoginResult(session.User, session.TokenId, now),
+            CreateLoginResult(session.User, session.TokenId, now, session.AuthenticationMethod),
             nextRefreshToken,
             session.ExpiresAt);
     }
@@ -161,7 +184,11 @@ public sealed class AuthSessionService(
         return sessions.Count;
     }
 
-    private LoginResult CreateLoginResult(User user, string accessTokenId, DateTime now)
+    private LoginResult CreateLoginResult(
+        User user,
+        string accessTokenId,
+        DateTime now,
+        string authenticationMethod)
     {
         var expiresAt = now.Add(AccessTokenLifetime);
         var claims = new List<Claim>
@@ -171,6 +198,9 @@ public sealed class AuthSessionService(
             new(ClaimTypes.Role, user.Role),
             new(JwtRegisteredClaimNames.Jti, accessTokenId)
         };
+        claims.Add(new Claim("amr", "pwd"));
+        if (authenticationMethod is "otp" or "recovery")
+            claims.Add(new Claim("amr", authenticationMethod));
         var key = configuration["Jwt:Key"]
             ?? throw new InvalidOperationException("Jwt:Key not found.");
         var descriptor = new SecurityTokenDescriptor

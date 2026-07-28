@@ -37,6 +37,8 @@ public class AppDbContext : DbContext
     public DbSet<AuditEvent> AuditEvents => Set<AuditEvent>();
     public DbSet<UserSession> UserSessions => Set<UserSession>();
     public DbSet<SessionRefreshToken> SessionRefreshTokens => Set<SessionRefreshToken>();
+    public DbSet<TwoFactorChallenge> TwoFactorChallenges => Set<TwoFactorChallenge>();
+    public DbSet<TwoFactorRecoveryCode> TwoFactorRecoveryCodes => Set<TwoFactorRecoveryCode>();
 
     public override int SaveChanges(bool acceptAllChangesOnSuccess)
     {
@@ -92,6 +94,10 @@ public class AppDbContext : DbContext
             .HasMaxLength(45);
 
         modelBuilder.Entity<User>()
+            .Property(u => u.TwoFactorSecretEncrypted)
+            .HasMaxLength(500);
+
+        modelBuilder.Entity<User>()
             .HasIndex(u => new { u.Role, u.IsActive });
 
         modelBuilder.Entity<User>()
@@ -103,6 +109,7 @@ public class AppDbContext : DbContext
             session.Property(item => item.IpAddress).HasMaxLength(45);
             session.Property(item => item.UserAgent).HasMaxLength(500);
             session.Property(item => item.RevokeReason).HasMaxLength(250);
+            session.Property(item => item.AuthenticationMethod).HasMaxLength(30);
             session.HasIndex(item => item.TokenId).IsUnique();
             session.HasIndex(item => new { item.UserId, item.RevokedAt, item.ExpiresAt });
             session.HasOne(item => item.User)
@@ -119,6 +126,32 @@ public class AppDbContext : DbContext
             refreshToken.HasOne(item => item.UserSession)
                 .WithMany(item => item.RefreshTokens)
                 .HasForeignKey(item => item.UserSessionId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<TwoFactorChallenge>(challenge =>
+        {
+            challenge.Property(item => item.TokenHash).HasMaxLength(64);
+            challenge.Property(item => item.Purpose).HasConversion<string>().HasMaxLength(30);
+            challenge.Property(item => item.PendingSecretEncrypted).HasMaxLength(500);
+            challenge.Property(item => item.IpAddress).HasMaxLength(45);
+            challenge.Property(item => item.UserAgent).HasMaxLength(500);
+            challenge.HasIndex(item => item.TokenHash).IsUnique();
+            challenge.HasIndex(item => new { item.UserId, item.ExpiresAt, item.ConsumedAt });
+            challenge.HasOne(item => item.User)
+                .WithMany(item => item.TwoFactorChallenges)
+                .HasForeignKey(item => item.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<TwoFactorRecoveryCode>(recoveryCode =>
+        {
+            recoveryCode.Property(item => item.CodeHash).HasMaxLength(64);
+            recoveryCode.HasIndex(item => item.CodeHash).IsUnique();
+            recoveryCode.HasIndex(item => new { item.UserId, item.UsedAt });
+            recoveryCode.HasOne(item => item.User)
+                .WithMany(item => item.TwoFactorRecoveryCodes)
+                .HasForeignKey(item => item.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
 
