@@ -2,6 +2,7 @@ import { useCallback, useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import { useAuth } from '../../../context/AuthContext';
+import { getApiErrorMessage } from '../../../shared/api/baseClient';
 import { authApi } from '../../auth/api/authApi';
 import { RecoveryCodesPanel } from '../../auth/components/RecoveryCodesPanel';
 import { profileApi } from '../api/profileApi';
@@ -25,7 +26,9 @@ export const TwoFactorSecurityCard = () => {
     try {
       setStatus(await profileApi.getTwoFactorStatus());
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'Không thể tải trạng thái 2FA.');
+      setError(getApiErrorMessage(reason, 'Không thể tải trạng thái 2FA.', {
+        401: 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.',
+      }));
     }
   }, []);
 
@@ -37,7 +40,9 @@ export const TwoFactorSecurityCard = () => {
       })
       .catch(reason => {
         if (active) {
-          setError(reason instanceof Error ? reason.message : 'Không thể tải trạng thái 2FA.');
+          setError(getApiErrorMessage(reason, 'Không thể tải trạng thái 2FA.', {
+            401: 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.',
+          }));
         }
       });
     return () => {
@@ -54,7 +59,12 @@ export const TwoFactorSecurityCard = () => {
       setCode('');
       setMessage('');
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'Không thể bắt đầu thiết lập 2FA.');
+      setError(getApiErrorMessage(reason, 'Không thể bắt đầu thiết lập 2FA.', {
+        400: 'Mật khẩu hiện tại không đúng.',
+        401: 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.',
+        409: '2FA đã được kích hoạt cho tài khoản này.',
+        503: '2FA chưa được cấu hình trên máy chủ. Vui lòng liên hệ quản trị hệ thống.',
+      }));
     } finally {
       setBusy('');
     }
@@ -81,7 +91,11 @@ export const TwoFactorSecurityCard = () => {
       setCode('');
       await loadStatus();
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'Mã xác minh không hợp lệ.');
+      setError(getApiErrorMessage(reason, 'Mã xác minh không hợp lệ.', {
+        401: 'Mã xác minh không đúng hoặc phiên thiết lập 2FA đã hết hạn.',
+        429: 'Bạn đã thử xác minh quá nhiều lần. Vui lòng chờ rồi thử lại.',
+        503: 'Dịch vụ 2FA tạm thời chưa sẵn sàng. Vui lòng thử lại sau.',
+      }));
     } finally {
       setBusy('');
     }
@@ -98,7 +112,11 @@ export const TwoFactorSecurityCard = () => {
       setCurrentPassword('');
       setCode('');
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'Không thể tạo lại mã khôi phục.');
+      setError(getApiErrorMessage(reason, 'Không thể tạo lại mã khôi phục.', {
+        400: 'Mật khẩu hoặc mã authenticator không đúng.',
+        401: 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.',
+        503: 'Dịch vụ 2FA tạm thời chưa sẵn sàng. Vui lòng thử lại sau.',
+      }));
     } finally {
       setBusy('');
     }
@@ -113,7 +131,12 @@ export const TwoFactorSecurityCard = () => {
       await logout();
       navigate('/login', { replace: true });
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'Không thể tắt 2FA.');
+      setError(getApiErrorMessage(reason, 'Không thể tắt 2FA.', {
+        400: 'Mật khẩu hoặc mã authenticator không đúng.',
+        401: 'Phiên đăng nhập đã hết hạn. Vui lòng đăng nhập lại.',
+        403: 'Vai trò hiện tại bắt buộc sử dụng 2FA nên không thể tắt.',
+        503: 'Dịch vụ 2FA tạm thời chưa sẵn sàng. Vui lòng thử lại sau.',
+      }));
       setBusy('');
     }
   };

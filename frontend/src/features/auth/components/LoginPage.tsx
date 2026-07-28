@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import { useAuth } from '../../../context/AuthContext';
+import { getApiErrorMessage } from '../../../shared/api/baseClient';
 import { authApi } from '../api/authApi';
 import type {
   LoginFlowStage,
@@ -50,6 +51,7 @@ export const LoginPage = () => {
     event.preventDefault();
     setLoading(true);
     setError('');
+    let requestStep: 'credentials' | 'setup' = 'credentials';
     try {
       const response = await authApi.login(username.trim(), password);
       if (response.status === 'Authenticated' && response.token) {
@@ -61,6 +63,7 @@ export const LoginPage = () => {
       setChallengeToken(response.challengeToken);
       setChallengeExpiresAt(response.challengeExpiresAt ?? '');
       if (response.status === 'TwoFactorSetupRequired') {
+        requestStep = 'setup';
         const setupResponse = await authApi.beginTwoFactorSetup(response.challengeToken);
         setSetup(setupResponse);
         setStage('setup');
@@ -68,7 +71,16 @@ export const LoginPage = () => {
         setStage('verify');
       }
     } catch (reason) {
-      setError(reason instanceof Error ? reason.message : 'Không thể đăng nhập.');
+      setError(requestStep === 'credentials'
+        ? getApiErrorMessage(reason, 'Không thể đăng nhập.', {
+            401: 'Tên đăng nhập hoặc mật khẩu không đúng.',
+            429: 'Bạn đã thử đăng nhập quá nhiều lần. Vui lòng chờ rồi thử lại.',
+          })
+        : getApiErrorMessage(reason, 'Không thể bắt đầu thiết lập 2FA.', {
+            401: 'Phiên thiết lập 2FA không hợp lệ hoặc đã hết hạn. Vui lòng đăng nhập lại.',
+            429: 'Bạn thao tác quá nhanh. Vui lòng chờ rồi thử lại.',
+            503: '2FA chưa được cấu hình trên máy chủ. Vui lòng liên hệ quản trị hệ thống.',
+          }));
     } finally {
       setLoading(false);
     }
@@ -98,11 +110,15 @@ export const LoginPage = () => {
         completeLogin(response.token);
       }
     } catch (reason) {
-      setError(
-        reason instanceof Error
-          ? reason.message
-          : 'Mã xác minh không hợp lệ hoặc đã hết hạn.',
-      );
+      setError(getApiErrorMessage(
+        reason,
+        'Mã xác minh không hợp lệ hoặc đã hết hạn.',
+        {
+          401: 'Mã xác minh không đúng, đã được sử dụng hoặc phiên xác minh đã hết hạn.',
+          429: 'Bạn đã thử xác minh quá nhiều lần. Vui lòng chờ rồi đăng nhập lại.',
+          503: 'Dịch vụ 2FA tạm thời chưa sẵn sàng. Vui lòng thử lại sau.',
+        },
+      ));
     } finally {
       setLoading(false);
     }

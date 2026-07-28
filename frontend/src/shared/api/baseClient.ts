@@ -14,6 +14,83 @@ export const API_URL = (
 let accessToken: string | null = null;
 let refreshPromise: Promise<string | null> | null = null;
 
+const defaultHttpErrorMessages: Record<number, string> = {
+  400: 'Dữ liệu gửi lên không hợp lệ.',
+  401: 'Phiên đăng nhập không hợp lệ hoặc đã hết hạn.',
+  403: 'Bạn không có quyền thực hiện thao tác này.',
+  404: 'Không tìm thấy dữ liệu yêu cầu.',
+  409: 'Dữ liệu đã thay đổi hoặc đang xung đột. Vui lòng tải lại và thử lại.',
+  422: 'Dữ liệu không thể xử lý.',
+  429: 'Bạn thao tác quá nhanh. Vui lòng chờ một lúc rồi thử lại.',
+  500: 'Hệ thống đang gặp sự cố. Vui lòng thử lại sau.',
+  503: 'Dịch vụ tạm thời chưa sẵn sàng. Vui lòng thử lại sau.',
+};
+
+const genericProblemTitles = new Set([
+  'bad request',
+  'unauthorized',
+  'forbidden',
+  'not found',
+  'conflict',
+  'unprocessable entity',
+  'too many requests',
+  'internal server error',
+  'service unavailable',
+]);
+
+export class ApiError extends Error {
+  readonly status: number;
+
+  constructor(
+    status: number,
+    message: string,
+  ) {
+    super(message);
+    this.name = 'ApiError';
+    this.status = status;
+  }
+}
+
+export const getApiErrorMessage = (
+  reason: unknown,
+  fallback: string,
+  messagesByStatus: Partial<Record<number, string>> = {},
+) => {
+  if (reason instanceof ApiError) {
+    return messagesByStatus[reason.status] ?? reason.message;
+  }
+  return reason instanceof Error && reason.message.trim()
+    ? reason.message
+    : fallback;
+};
+
+const readProblemMessage = (
+  errorBody: unknown,
+  status: number,
+  statusText: string,
+) => {
+  const fallback = defaultHttpErrorMessages[status]
+    ?? `Yêu cầu không thành công (HTTP ${status}).`;
+  if (!errorBody || typeof errorBody !== 'object') return fallback;
+
+  const problem = errorBody as Record<string, unknown>;
+  for (const field of ['detail', 'message']) {
+    const value = problem[field];
+    if (typeof value === 'string' && value.trim()) return value.trim();
+  }
+
+  const title = typeof problem.title === 'string' ? problem.title.trim() : '';
+  const normalizedTitle = title.toLowerCase();
+  if (
+    title
+    && normalizedTitle !== statusText.trim().toLowerCase()
+    && !genericProblemTitles.has(normalizedTitle)
+  ) {
+    return title;
+  }
+  return fallback;
+};
+
 export const getAccessToken = () => accessToken;
 
 export const setAccessToken = (token: string | null) => {
@@ -84,16 +161,18 @@ export const apiClient = async <T>(endpoint: string, options?: RequestInit): Pro
   }
 
   if (!response.ok) {
-    let message = `API Error: ${response.statusText}`;
+    let errorBody: unknown;
 
     try {
-      const errorBody = await response.json();
-      message = errorBody.detail || errorBody.message || errorBody.title || message;
+      errorBody = await response.json();
     } catch {
-      // Keep the HTTP status text when the server returns an empty or non-JSON error body.
+      // The localized status fallback is used for empty or non-JSON error responses.
     }
 
-    throw new Error(message);
+    throw new ApiError(
+      response.status,
+      readProblemMessage(errorBody, response.status, response.statusText),
+    );
   }
 
   if (response.status === 204) {
