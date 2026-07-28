@@ -97,12 +97,13 @@ public class TelegramCommandProcessor : ITelegramCommandProcessor
 
         var command = new CreateTransactionCommand(
             PortfolioId: portfolio.Id,
-            AssetId: asset.Id,
+            AssetId: null,
             Type: (TransactionType)data.Type,
             Quantity: data.Quantity,
             Price: data.Price,
             Currency: "VND",
-            Timestamp: data.Date
+            Timestamp: data.Date,
+            MarketAssetId: asset.Id
         );
 
         await _mediator.Send(command, cancellationToken);

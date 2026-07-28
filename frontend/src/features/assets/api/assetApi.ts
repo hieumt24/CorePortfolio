@@ -11,11 +11,12 @@ export const createAsset = (data: CreateAssetRequest): Promise<{ id: string }> =
 
 export const searchAvailableMarketAssets = (
   portfolioId: string,
-  filters?: { search?: string; categoryId?: string; limit?: number }
+  filters?: { search?: string; categoryId?: string; limit?: number; includeExisting?: boolean }
 ): Promise<AvailableMarketAsset[]> => {
   const params = new URLSearchParams();
   if (filters?.search) params.set('search', filters.search);
   if (filters?.categoryId) params.set('categoryId', filters.categoryId);
+  if (filters?.includeExisting) params.set('includeExisting', 'true');
   params.set('limit', String(filters?.limit ?? 20));
   return apiClient<AvailableMarketAsset[]>(
     `/portfolios/${portfolioId}/available-market-assets?${params.toString()}`,

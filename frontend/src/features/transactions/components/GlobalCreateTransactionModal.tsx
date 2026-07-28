@@ -2,8 +2,12 @@ import React, { useRef, useState, useEffect } from 'react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { createTransaction } from '../api/transactionApi';
-import { getPortfolios, getPortfolioSummary } from '../../portfolios/api/portfolioApi';
-import type { PortfolioDto, AssetSummaryDto } from '../../portfolios/types';
+import { getPortfolios } from '../../portfolios/api/portfolioApi';
+import type { PortfolioDto } from '../../portfolios/types';
+import { searchAvailableMarketAssets } from '../../assets/api/assetApi';
+import type { AvailableMarketAsset } from '../../assets/types';
+import { categoriesApi } from '../../admin/api/categories';
+import type { AssetCategory } from '../../admin/types';
 import { TransactionType } from '../types';
 import { useNotification } from '../../../context/NotificationContext';
 import { NumericFormat } from 'react-number-format';
@@ -59,18 +63,19 @@ DateTimeTrigger.displayName = 'DateTimeTrigger';
 
 export const GlobalCreateTransactionModal: React.FC<GlobalCreateTransactionModalProps> = ({ initialPortfolioId, initialCategory, onClose, onSuccess }) => {
   const [portfolios, setPortfolios] = useState<PortfolioDto[]>([]);
-  const [assets, setAssets] = useState<AssetSummaryDto[]>([]);
+  const [categories, setCategories] = useState<AssetCategory[]>([]);
+  const [assets, setAssets] = useState<AvailableMarketAsset[]>([]);
   
   const [selectedPortfolioId, setSelectedPortfolioId] = useState(initialPortfolioId || '');
-  const [selectedCategoryName, setSelectedCategoryName] = useState('');
-  const [selectedAssetId, setSelectedAssetId] = useState('');
+  const [selectedCategoryId, setSelectedCategoryId] = useState('');
+  const [selectedMarketAssetId, setSelectedMarketAssetId] = useState('');
+  const [assetSearch, setAssetSearch] = useState('');
   
-  const availableCategories = Array.from(new Set(assets.map(a => a.categoryName)));
-  const filteredAssets = selectedCategoryName 
-    ? assets.filter(a => a.categoryName === selectedCategoryName)
-    : assets;
+  const selectedAsset = assets.find(asset => asset.id === selectedMarketAssetId);
+  const selectedCategoryName = selectedAsset?.categoryName
+    ?? categories.find(category => category.id === selectedCategoryId)?.name
+    ?? '';
   const cryptoCategorySelected = isCryptoCategory(selectedCategoryName);
-  const selectedAsset = assets.find(asset => asset.assetId === selectedAssetId);
   
   const [type, setType] = useState<number>(TransactionType.Buy);
   const [quantity, setQuantity] = useState('');
@@ -84,6 +89,7 @@ export const GlobalCreateTransactionModal: React.FC<GlobalCreateTransactionModal
   const [loading, setLoading] = useState(false);
   const [assetsLoading, setAssetsLoading] = useState(false);
   const [categoryLoading, setCategoryLoading] = useState(false);
+  const [assetsError, setAssetsError] = useState('');
   const { showNotification } = useNotification();
 
   const quantityValue = Number(quantity) || 0;
@@ -116,33 +122,56 @@ export const GlobalCreateTransactionModal: React.FC<GlobalCreateTransactionModal
   }, []);
 
   useEffect(() => {
+    categoriesApi.getCategories()
+      .then(data => {
+        setCategories(data || []);
+        if (initialCategory) {
+          const normalizedInitialCategory = initialCategory.toLowerCase();
+          const preferred = data.find(category =>
+            category.name.toLowerCase().includes(normalizedInitialCategory));
+          setSelectedCategoryId(preferred?.id ?? '');
+        }
+      })
+      .catch(() => showNotification('Failed to load asset categories', 'error'));
+  }, [initialCategory]);
+
+  useEffect(() => {
     if (!selectedPortfolioId) {
       setAssets([]);
-      setSelectedAssetId('');
+      setSelectedMarketAssetId('');
       return;
     }
 
-    const fetchAssets = async () => {
-      try {
-        setAssetsLoading(true);
-        const summary = await getPortfolioSummary(selectedPortfolioId);
-        setAssets(summary.assets);
-        const categories = Array.from(new Set(summary.assets.map(a => a.categoryName)));
-        const preferred = initialCategory && categories.find(category => category.toLowerCase().includes(initialCategory.toLowerCase()));
-        setSelectedCategoryName(preferred ?? '');
-        setSelectedAssetId('');
-      } catch (err) {
-        showNotification('Failed to load assets for portfolio', 'error');
-      } finally {
-        setAssetsLoading(false);
-      }
-    };
-    fetchAssets();
-  }, [selectedPortfolioId, initialCategory]);
+    const timer = window.setTimeout(() => {
+      const fetchAssets = async () => {
+        try {
+          setAssetsLoading(true);
+          setAssetsError('');
+          const results = await searchAvailableMarketAssets(selectedPortfolioId, {
+            search: assetSearch.trim() || undefined,
+            categoryId: selectedCategoryId || undefined,
+            limit: 50,
+            includeExisting: true,
+          });
+          setAssets(results);
+          setSelectedMarketAssetId(current =>
+            results.some(asset => asset.id === current) ? current : '');
+        } catch (err) {
+          setAssets([]);
+          setAssetsError('Failed to load assets for portfolio');
+        } finally {
+          setAssetsLoading(false);
+        }
+      };
+      fetchAssets();
+    }, 250);
+
+    return () => window.clearTimeout(timer);
+  }, [selectedPortfolioId, selectedCategoryId, assetSearch]);
 
   useEffect(() => {
-    setSelectedAssetId('');
-  }, [selectedCategoryName]);
+    setSelectedMarketAssetId('');
+  }, [selectedCategoryId]);
 
   useEffect(() => {
     if (type === TransactionType.Earn && !cryptoCategorySelected) {
@@ -181,13 +210,14 @@ export const GlobalCreateTransactionModal: React.FC<GlobalCreateTransactionModal
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedPortfolioId || !selectedAssetId || quantityValue <= 0 || priceValue < 0 || !date) return;
+    if (!selectedPortfolioId || !selectedAsset || quantityValue <= 0 || priceValue < 0 || !date) return;
 
     try {
       setLoading(true);
       await createTransaction({
         portfolioId: selectedPortfolioId,
-        assetId: selectedAssetId,
+        assetId: selectedAsset.portfolioAssetId || undefined,
+        marketAssetId: selectedAsset.portfolioAssetId ? undefined : selectedAsset.id,
         type: type as TransactionType,
         quantity: Number(quantity),
         price: Number(price),
@@ -230,29 +260,45 @@ export const GlobalCreateTransactionModal: React.FC<GlobalCreateTransactionModal
           <div className="form-group">
             <label>Category</label>
             <select 
-              value={selectedCategoryName} 
+              value={selectedCategoryId}
               onChange={e => {
                 setCategoryLoading(true);
-                setSelectedCategoryName(e.target.value);
+                setSelectedCategoryId(e.target.value);
                 window.setTimeout(() => setCategoryLoading(false), 220);
               }}
               className="glass-input"
-              disabled={!selectedPortfolioId || availableCategories.length === 0 || assetsLoading}
+              disabled={!selectedPortfolioId || categories.length === 0}
             >
-              <option value="">{availableCategories.length === 0 && selectedPortfolioId ? 'No categories in portfolio' : 'Select Category'}</option>
-              {availableCategories.map(cat => (
-                <option key={cat} value={cat}>{cat}</option>
+              <option value="">All categories</option>
+              {categories.map(category => (
+                <option key={category.id} value={category.id}>{category.name}</option>
               ))}
             </select>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="transaction-asset-search">Search asset</label>
+            <input
+              id="transaction-asset-search"
+              type="search"
+              value={assetSearch}
+              onChange={event => {
+                setAssetSearch(event.target.value);
+                setSelectedMarketAssetId('');
+              }}
+              className="glass-input"
+              placeholder="Symbol or asset name"
+              disabled={!selectedPortfolioId || loading}
+            />
           </div>
 
           <div className="form-group">
             <label>Asset</label>
             <div className="asset-select-wrap">
             <select 
-              value={selectedAssetId} 
+              value={selectedMarketAssetId}
               onChange={e => {
-                setSelectedAssetId(e.target.value);
+                setSelectedMarketAssetId(e.target.value);
                 setQuantity('');
                 setPrice('');
                 setTotal('');
@@ -260,23 +306,25 @@ export const GlobalCreateTransactionModal: React.FC<GlobalCreateTransactionModal
               }}
               required
               className="glass-input"
-              disabled={assetsLoading || categoryLoading || !selectedCategoryName || filteredAssets.length === 0}
+              disabled={assetsLoading || categoryLoading || !selectedPortfolioId || assets.length === 0}
             >
-              <option value="">{assetsLoading ? 'Loading assets…' : categoryLoading ? 'Loading category…' : filteredAssets.length === 0 && selectedCategoryName ? 'No assets in this category' : 'Select Asset'}</option>
-              {filteredAssets.map(a => (
-                <option key={a.assetId} value={a.assetId}>{a.symbol} - {a.name}</option>
+              <option value="">{assetsLoading ? 'Loading assets…' : categoryLoading ? 'Loading category…' : assets.length === 0 ? 'No matching assets' : 'Select Asset'}</option>
+              {assets.map(asset => (
+                <option key={asset.id} value={asset.id}>
+                  {asset.symbol} - {asset.name}{asset.portfolioAssetId ? ' (in portfolio)' : ''}
+                </option>
               ))}
             </select>
             {(assetsLoading || categoryLoading) && <span className="field-spinner" aria-label="Loading" />}
             </div>
-            {selectedPortfolioId && !selectedCategoryName && availableCategories.length > 0 && (
-              <small style={{ color: '#94a3b8', marginTop: '0.5rem', display: 'block' }}>
-                Please select a category first.
+            {assetsError && (
+              <small style={{ color: '#ef4444', marginTop: '0.5rem', display: 'block' }}>
+                {assetsError}
               </small>
             )}
-            {selectedPortfolioId && availableCategories.length === 0 && (
-              <small style={{ color: '#ef4444', marginTop: '0.5rem', display: 'block' }}>
-                You must add an asset to this portfolio first.
+            {selectedAsset && !selectedAsset.portfolioAssetId && (
+              <small className="field-hint">
+                This asset will be added to the portfolio automatically when the transaction is saved.
               </small>
             )}
           </div>
@@ -425,7 +473,7 @@ export const GlobalCreateTransactionModal: React.FC<GlobalCreateTransactionModal
             <button
               type="submit"
               className="btn btn-primary"
-              disabled={loading || !selectedAssetId || quantityValue <= 0 || priceValue < 0}
+              disabled={loading || !selectedAsset || quantityValue <= 0 || priceValue < 0}
             >
               {loading ? 'Saving...' : 'Save'}
             </button>

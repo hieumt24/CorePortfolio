@@ -22,7 +22,8 @@ export interface TransactionDto {
 
 export interface CreateTransactionRequest {
   portfolioId: string;
-  assetId: string;
+  assetId?: string;
+  marketAssetId?: string;
   type: TransactionType;
   quantity: number;
   price: number;

@@ -32,6 +32,7 @@ export interface CreateAssetRequest {
 
 export interface AvailableMarketAsset {
   id: string;
+  portfolioAssetId?: string | null;
   categoryId: string;
   categoryName: string;
   currency: string;

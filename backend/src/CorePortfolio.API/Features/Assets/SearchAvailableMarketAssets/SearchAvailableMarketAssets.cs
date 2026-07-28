@@ -10,7 +10,8 @@ public record SearchAvailableMarketAssetsQuery(
     Guid PortfolioId,
     string? Search,
     Guid? CategoryId,
-    int Limit = 20) : IRequest<IReadOnlyList<AvailableMarketAssetDto>>;
+    int Limit = 20,
+    bool IncludeExisting = false) : IRequest<IReadOnlyList<AvailableMarketAssetDto>>;
 
 public record AvailableMarketAssetDto(
     Guid Id,
@@ -21,7 +22,8 @@ public record AvailableMarketAssetDto(
     string Name,
     decimal CurrentPrice,
     string PriceSource,
-    string PriceStatus);
+    string PriceStatus,
+    Guid? PortfolioAssetId);
 
 public sealed class SearchAvailableMarketAssetsHandler
     : IRequestHandler<SearchAvailableMarketAssetsQuery, IReadOnlyList<AvailableMarketAssetDto>>
@@ -50,9 +52,9 @@ public sealed class SearchAvailableMarketAssetsHandler
         var existingMarketAssetIds = _db.Assets
             .Where(asset => asset.PortfolioId == request.PortfolioId)
             .Select(asset => asset.MarketAssetId);
-        var query = _db.MarketAssets
-            .AsNoTracking()
-            .Where(asset => !existingMarketAssetIds.Contains(asset.Id));
+        var query = _db.MarketAssets.AsNoTracking();
+        if (!request.IncludeExisting)
+            query = query.Where(asset => !existingMarketAssetIds.Contains(asset.Id));
 
         if (request.CategoryId.HasValue)
             query = query.Where(asset => asset.CategoryId == request.CategoryId.Value);
@@ -87,7 +89,13 @@ public sealed class SearchAvailableMarketAssetsHandler
                 asset.Name,
                 asset.CurrentPrice,
                 asset.PriceSource,
-                asset.PriceStatus))
+                asset.PriceStatus,
+                _db.Assets
+                    .Where(portfolioAsset =>
+                        portfolioAsset.PortfolioId == request.PortfolioId
+                        && portfolioAsset.MarketAssetId == asset.Id)
+                    .Select(portfolioAsset => (Guid?)portfolioAsset.Id)
+                    .FirstOrDefault()))
             .ToListAsync(cancellationToken);
     }
 }
@@ -103,12 +111,14 @@ public static class SearchAvailableMarketAssetsEndpoint
                     IMediator mediator,
                     string? search,
                     Guid? categoryId,
-                    int limit = 20) =>
+                    int limit = 20,
+                    bool includeExisting = false) =>
                     Results.Ok(await mediator.Send(new SearchAvailableMarketAssetsQuery(
                         portfolioId,
                         search,
                         categoryId,
-                        limit))))
+                        limit,
+                        includeExisting))))
             .WithName("SearchAvailableMarketAssets")
             .WithTags("Assets")
             .RequireAuthorization();
