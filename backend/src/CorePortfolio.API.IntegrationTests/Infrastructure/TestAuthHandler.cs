@@ -11,6 +11,7 @@ public sealed class TestAuthHandler : AuthenticationHandler<AuthenticationScheme
     public const string SchemeName = "IntegrationTest";
     public const string UserIdHeader = "X-Test-User-Id";
     public const string RoleHeader = "X-Test-Role";
+    public const string MfaHeader = "X-Test-Mfa";
 
     public TestAuthHandler(
         IOptionsMonitor<AuthenticationSchemeOptions> options,
@@ -31,11 +32,17 @@ public sealed class TestAuthHandler : AuthenticationHandler<AuthenticationScheme
         var role = Request.Headers.TryGetValue(RoleHeader, out var roleHeader)
             ? roleHeader.ToString()
             : "User";
-        var claims = new[]
+        var claims = new List<Claim>
         {
             new Claim(ClaimTypes.NameIdentifier, parsedUserId.ToString()),
             new Claim(ClaimTypes.Role, role)
         };
+        if (!Request.Headers.TryGetValue(MfaHeader, out var mfaHeader) ||
+            !string.Equals(mfaHeader, "false", StringComparison.OrdinalIgnoreCase))
+        {
+            claims.Add(new Claim("amr", "pwd"));
+            claims.Add(new Claim("amr", "otp"));
+        }
         var identity = new ClaimsIdentity(claims, SchemeName);
         var principal = new ClaimsPrincipal(identity);
         var ticket = new AuthenticationTicket(principal, SchemeName);

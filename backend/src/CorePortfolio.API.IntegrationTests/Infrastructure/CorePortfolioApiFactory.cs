@@ -55,7 +55,9 @@ public sealed class CorePortfolioApiFactory(bool enforceTwoFactorForPrivilegedRo
                     (descriptor.ImplementationType == typeof(TelegramCronService) ||
                      descriptor.ImplementationType == typeof(DailySnapshotService) ||
                      descriptor.ImplementationType == typeof(MarketPriceRefreshService) ||
-                     descriptor.ImplementationType == typeof(ScheduledBackupService)))
+                     descriptor.ImplementationType == typeof(ScheduledBackupService) ||
+                     descriptor.ImplementationType == typeof(
+                         CorePortfolio.API.Features.Auth.TwoFactor.TwoFactorChallengeCleanupService)))
                 .ToList();
             foreach (var descriptor in backgroundServices)
                 services.Remove(descriptor);
@@ -71,11 +73,17 @@ public sealed class CorePortfolioApiFactory(bool enforceTwoFactorForPrivilegedRo
         });
     }
 
-    public HttpClient CreateAuthenticatedClient(Guid userId, string role = "User")
+    public HttpClient CreateAuthenticatedClient(
+        Guid userId,
+        string role = "User",
+        bool mfaVerified = true)
     {
         var client = CreateClient();
         client.DefaultRequestHeaders.Add(TestAuthHandler.UserIdHeader, userId.ToString());
         client.DefaultRequestHeaders.Add(TestAuthHandler.RoleHeader, role);
+        client.DefaultRequestHeaders.Add(
+            TestAuthHandler.MfaHeader,
+            mfaVerified.ToString());
         return client;
     }
 

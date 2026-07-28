@@ -91,6 +91,10 @@ export function UserDetailPage() {
   const [capabilities, setCapabilities] = useState<AdminCapabilities | null>(null);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(true);
+  const [resetConfirmation, setResetConfirmation] = useState('');
+  const [resetReason, setResetReason] = useState('');
+  const [resetBusy, setResetBusy] = useState(false);
+  const [resetStatus, setResetStatus] = useState('');
   const load = useCallback(async () => {
     setLoading(true); try {
       const [detail, sessionRows, events, caps] = await Promise.all([
@@ -101,11 +105,44 @@ export function UserDetailPage() {
   useEffect(() => { void load(); }, [load]);
   const revoke = async (sessionId?: string) => { if (!window.confirm('Thu hồi phiên đăng nhập đã chọn?')) return; await adminApi.revokeSessions(id, sessionId); await load(); };
   const updateRole = async (role: string) => { await adminApi.updateRole(id, role); await load(); };
+  const resetTwoFactor = async (event: FormEvent) => {
+    event.preventDefault();
+    if (!user) return;
+    setResetBusy(true);
+    setResetStatus('');
+    try {
+      await adminApi.resetUserTwoFactor(id, resetConfirmation, resetReason);
+      setResetConfirmation('');
+      setResetReason('');
+      setResetStatus('Đã reset 2FA và thu hồi toàn bộ phiên của tài khoản.');
+      await load();
+    } catch (reason) {
+      setResetStatus(reason instanceof Error ? reason.message : 'Không thể reset 2FA.');
+    } finally {
+      setResetBusy(false);
+    }
+  };
   if (loading || error || !user) return <PageState loading={loading} error={error || 'Không tìm thấy user.'} retry={load} />;
   return <section className="control-page"><header className="control-hero"><div><span>Identity</span><h1>{user.displayName || user.username}</h1><p>{user.email || 'Chưa có email'} · {user.lastLoginIpAddress || 'Chưa có IP'}</p></div><Link className="control-link" to="/admin/users">Quay lại</Link></header>
     <div className="control-grid four">{[['Portfolio', user.portfolioCount], ['Giao dịch', user.transactionCount], ['Dòng tiền', user.cashflowCount], ['Phiên hoạt động', user.activeSessionCount]].map(([label, value]) => <article className="metric-card glass-panel" key={label}><span>{label}</span><strong>{value}</strong></article>)}</div>
     <div className="control-grid two"><article className="control-card glass-panel"><h2>Quyền truy cập</h2><select value={user.role} onChange={e => void updateRole(e.target.value)}>{capabilities?.roles.map(role => <option key={role}>{role}</option>)}</select><p>Đổi role sẽ thu hồi tất cả token hiện tại.</p></article><article className="control-card glass-panel"><div className="control-card-head"><h2>Sessions</h2><button onClick={() => revoke()}>Thu hồi tất cả</button></div>{sessions.map(s => <div className="session-row" key={s.id}><div><strong>{s.ipAddress || 'Unknown IP'}</strong><small>{s.userAgent || 'Unknown device'} · {formatVietnamDateTime(s.lastSeenAt)}</small></div><span className={`status-pill ${s.isActive ? 'ready' : 'failed'}`}>{s.isActive ? 'Active' : 'Revoked'}</span>{s.isActive && <button onClick={() => revoke(s.id)}>Thu hồi</button>}</div>)}</article></div>
     <article className="control-card glass-panel"><h2>Security timeline</h2><div className="timeline">{timeline.map(event => <div key={event.id}><i /><div><strong>{event.action}</strong><p>{event.outcome} · {event.ipAddress || 'System'} · {formatVietnamDateTime(event.occurredAt)}</p></div></div>)}</div></article>
+    <article className="control-card glass-panel">
+      <div className="control-card-head"><h2>Xác minh hai bước</h2><span className={`status-pill ${user.twoFactorEnabled ? 'ready' : 'failed'}`}>{user.twoFactorEnabled ? 'Enrolled' : user.twoFactorRequired ? 'Required' : 'Disabled'}</span></div>
+      <dl><div><dt>Recovery codes</dt><dd>{user.recoveryCodesRemaining}</dd></div><div><dt>Kích hoạt</dt><dd>{formatVietnamDateTime(user.twoFactorEnabledAt, '—')}</dd></div></dl>
+      <p>Reset khẩn cấp chỉ dành cho SuperAdmin, yêu cầu xác nhận username và luôn thu hồi session.</p>
+    </article>
+    {capabilities?.permissions.includes('TwoFactor.Reset') && (
+      <form className="control-card control-form glass-panel mfa-reset-panel" onSubmit={resetTwoFactor}>
+        <div className="control-card-head"><div><h2>SuperAdmin recovery reset</h2><p>Dùng khi người dùng mất cả authenticator và recovery codes.</p></div><span className="status-pill failed">Break-glass</span></div>
+        <div className="form-row">
+          <label>Nhập chính xác username<input value={resetConfirmation} onChange={event => setResetConfirmation(event.target.value)} placeholder={user.username} required /></label>
+          <label>Lý do audit<input value={resetReason} onChange={event => setResetReason(event.target.value)} minLength={10} maxLength={200} required /></label>
+        </div>
+        {resetStatus && <div className="control-alert" role="status">{resetStatus}</div>}
+        <div className="button-row"><button className="danger-button" disabled={resetBusy || resetConfirmation !== user.username || resetReason.trim().length < 10}>{resetBusy ? 'Đang reset…' : 'Reset 2FA và thu hồi sessions'}</button></div>
+      </form>
+    )}
   </section>;
 }
 

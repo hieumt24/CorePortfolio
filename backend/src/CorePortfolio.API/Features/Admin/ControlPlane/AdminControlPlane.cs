@@ -7,6 +7,8 @@ using CorePortfolio.Infrastructure.Data;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using CorePortfolio.API.Common;
+using CorePortfolio.API.Features.Auth.TwoFactor;
+using Microsoft.Extensions.Options;
 
 namespace CorePortfolio.API.Features.Admin.ControlPlane;
 
@@ -63,17 +65,30 @@ public sealed class GetAuditEventsHandler(AppDbContext db) : IRequestHandler<Get
 }
 
 public sealed record GetAdminUserDetailQuery(Guid UserId) : IRequest<object?>;
-public sealed class GetAdminUserDetailHandler(AppDbContext db, IConfiguration configuration) :
+public sealed class GetAdminUserDetailHandler(
+    AppDbContext db,
+    IConfiguration configuration,
+    IOptions<TwoFactorOptions> twoFactorOptions) :
     IRequestHandler<GetAdminUserDetailQuery, object?>
 {
     public async Task<object?> Handle(GetAdminUserDetailQuery request, CancellationToken cancellationToken)
     {
         var onlineCutoff = DateTime.UtcNow.AddMinutes(-Math.Clamp(
             configuration.GetValue("UserActivity:OnlineWindowMinutes", 5), 1, 60));
+        var privilegedRoles = AdminPermissionCatalog.Roles
+            .Where(role => AdminPermissionCatalog.Has(
+                role,
+                AdminPermissionCatalog.AdminAccess))
+            .ToArray();
+        var enforcementEnabled = twoFactorOptions.Value.EnforceForPrivilegedRoles;
         return await db.Users.AsNoTracking().Where(x => x.Id == request.UserId).Select(x => new
         {
             x.Id, x.Username, x.DisplayName, x.Email, x.Role, x.IsActive, x.CreatedAt,
             x.LastLoginAt, x.LastLoginIpAddress, x.LastActivityAt,
+            x.TwoFactorEnabled, x.TwoFactorEnabledAt,
+            TwoFactorRequired = x.TwoFactorEnabled ||
+                (enforcementEnabled && privilegedRoles.Contains(x.Role)),
+            RecoveryCodesRemaining = x.TwoFactorRecoveryCodes.Count(code => code.UsedAt == null),
             IsOnline = x.LastActivityAt >= onlineCutoff,
             PortfolioCount = x.Portfolios.Count,
             TransactionCount = x.Portfolios.SelectMany(p => p.Transactions).Count(),

@@ -15,6 +15,7 @@ import type {
   IntegrityReport,
   DatabaseBackup,
   AdminSystemConfiguration,
+  TwoFactorCoverage,
 } from '../types';
 
 export const adminApi = {
@@ -55,6 +56,13 @@ export const adminApi = {
     apiClient<UserSession[]>(`/admin/control-plane/users/${id}/sessions`),
   getSecurityTimeline: (id: string) =>
     apiClient<SecurityEvent[]>(`/admin/control-plane/users/${id}/security-timeline`),
+  getTwoFactorCoverage: () =>
+    apiClient<TwoFactorCoverage>('/admin/control-plane/two-factor/coverage'),
+  resetUserTwoFactor: (id: string, confirmation: string, reason: string) =>
+    apiClient<void>(`/admin/control-plane/users/${id}/two-factor/reset`, {
+      method: 'POST',
+      body: JSON.stringify({ confirmation, reason }),
+    }),
   revokeSessions: (id: string, sessionId?: string) =>
     apiClient<{ revoked: number }>(`/admin/control-plane/users/${id}/sessions/revoke`, {
       method: 'POST',

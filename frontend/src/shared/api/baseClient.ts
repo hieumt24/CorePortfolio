@@ -70,6 +70,7 @@ export const apiClient = async <T>(endpoint: string, options?: RequestInit): Pro
   let response = await sendRequest(endpoint, options);
   const isSessionEndpoint = endpoint.startsWith('/auth/login')
     || endpoint.startsWith('/auth/register')
+    || endpoint.startsWith('/auth/2fa')
     || endpoint.startsWith('/auth/refresh')
     || endpoint.startsWith('/auth/logout');
   if (response.status === 401 && accessToken && !isSessionEndpoint) {

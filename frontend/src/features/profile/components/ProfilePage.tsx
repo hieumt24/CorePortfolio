@@ -5,6 +5,7 @@ import { profileApi } from '../api/profileApi';
 import type { UserProfile } from '../types';
 import { formatVietnamDateTime } from '../../../shared/utils/dateTime';
 import './ProfilePage.css';
+import { TwoFactorSecurityCard } from './TwoFactorSecurityCard';
 
 type FieldErrors = Partial<Record<'displayName' | 'username' | 'email', string>>;
 type PasswordErrors = Partial<Record<'currentPassword' | 'newPassword' | 'confirmPassword', string>>;
@@ -365,6 +366,7 @@ export const ProfilePage = () => {
               </div>
             </form>
           </section>
+          <TwoFactorSecurityCard />
         </div>
       </div>
     </main>

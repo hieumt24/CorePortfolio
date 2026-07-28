@@ -10,6 +10,12 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 using System.Security.Cryptography;
+using System.Security.Claims;
+using CorePortfolio.API.Common;
+using CorePortfolio.API.Features.Admin.ControlPlane;
+using MediatR;
+using Microsoft.AspNetCore.Http;
+using Microsoft.Extensions.Logging.Abstractions;
 
 namespace CorePortfolio.API.IntegrationTests;
 
@@ -43,6 +49,17 @@ public sealed class TwoFactorAuthenticationTests
         Assert.Equal("TOTP-SECRET", protector.Unprotect(encrypted, userId));
         Assert.ThrowsAny<CryptographicException>(() =>
             protector.Unprotect(encrypted, Guid.NewGuid()));
+    }
+
+    [Fact]
+    public void TwoFactorResetPermission_IsRestrictedToSuperAdmin()
+    {
+        Assert.True(AdminPermissionCatalog.Has(
+            "SuperAdmin",
+            AdminPermissionCatalog.TwoFactorReset));
+        Assert.False(AdminPermissionCatalog.Has(
+            "Admin",
+            AdminPermissionCatalog.TwoFactorReset));
     }
 
     [Fact]
@@ -277,6 +294,197 @@ public sealed class TwoFactorAuthenticationTests
             cancellationToken);
 
         Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task PrivilegedAdminEndpoint_RejectsSessionWithoutMfaClaimWhenEnforced()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        using var factory = new CorePortfolioApiFactory(enforceTwoFactorForPrivilegedRoles: true);
+        var admin = await SeedUserAsync(factory, "policy-admin", "Admin", cancellationToken);
+        using var client = factory.CreateAuthenticatedClient(
+            admin.Id,
+            admin.Role,
+            mfaVerified: false);
+
+        var response = await client.GetAsync(
+            "/api/admin/control-plane/capabilities",
+            cancellationToken);
+
+        Assert.Equal(HttpStatusCode.Forbidden, response.StatusCode);
+    }
+
+    [Fact]
+    public async Task SuperAdminReset_ClearsTwoFactorArtifactsRevokesSessionsAndAudits()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        using var factory = new CorePortfolioApiFactory(enforceTwoFactorForPrivilegedRoles: true);
+        var superAdmin = await SeedUserAsync(
+            factory,
+            "recovery-superadmin",
+            "SuperAdmin",
+            cancellationToken);
+        var target = await SeedUserAsync(
+            factory,
+            "locked-operator",
+            "Operations",
+            cancellationToken);
+
+        using (var arrangeScope = factory.Services.CreateScope())
+        {
+            var db = arrangeScope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var trackedTarget = await db.Users.SingleAsync(
+                item => item.Id == target.Id,
+                cancellationToken);
+            var protector = arrangeScope.ServiceProvider
+                .GetRequiredService<TwoFactorSecretProtector>();
+            trackedTarget.TwoFactorEnabled = true;
+            trackedTarget.TwoFactorEnabledAt = DateTime.UtcNow;
+            trackedTarget.TwoFactorSecretEncrypted = protector.Protect(
+                "JBSWY3DPEHPK3PXP",
+                trackedTarget.Id);
+            db.TwoFactorRecoveryCodes.Add(new TwoFactorRecoveryCode
+            {
+                UserId = trackedTarget.Id,
+                CodeHash = RecoveryCodeService.Hash("AAAA-BBBB-CCCC-DDDD")
+            });
+            arrangeScope.ServiceProvider.GetRequiredService<TwoFactorChallengeService>()
+                .Issue(
+                    trackedTarget,
+                    TwoFactorChallengePurpose.Login,
+                    DateTime.UtcNow);
+            arrangeScope.ServiceProvider.GetRequiredService<AuthSessionService>()
+                .CreateSession(
+                    trackedTarget,
+                    DateTime.UtcNow,
+                    "otp",
+                    DateTime.UtcNow);
+            await db.SaveChangesAsync(cancellationToken);
+        }
+
+        using var client = factory.CreateAuthenticatedClient(
+            superAdmin.Id,
+            superAdmin.Role,
+            mfaVerified: true);
+        var response = await client.PostAsJsonAsync(
+            $"/api/admin/control-plane/users/{target.Id}/two-factor/reset",
+            new
+            {
+                confirmation = target.Username,
+                reason = "Operator lost authenticator and recovery codes"
+            },
+            cancellationToken);
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        using var assertScope = factory.Services.CreateScope();
+        var assertDb = assertScope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var resetUser = await assertDb.Users.SingleAsync(
+            item => item.Id == target.Id,
+            cancellationToken);
+        Assert.False(resetUser.TwoFactorEnabled);
+        Assert.Null(resetUser.TwoFactorSecretEncrypted);
+        Assert.Empty(await assertDb.TwoFactorRecoveryCodes
+            .Where(item => item.UserId == target.Id)
+            .ToListAsync(cancellationToken));
+        Assert.Empty(await assertDb.TwoFactorChallenges
+            .Where(item => item.UserId == target.Id)
+            .ToListAsync(cancellationToken));
+        Assert.All(
+            await assertDb.UserSessions
+                .Where(item => item.UserId == target.Id)
+                .ToListAsync(cancellationToken),
+            session => Assert.NotNull(session.RevokedAt));
+        Assert.Contains(
+            await assertDb.AuditEvents.ToListAsync(cancellationToken),
+            item => item.Action == "UserTwoFactorReset" &&
+                item.EntityId == target.Id.ToString());
+    }
+
+    [Fact]
+    public async Task DirectResetCommand_RequiresMfaAtMediatRBoundary()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        using var factory = new CorePortfolioApiFactory(enforceTwoFactorForPrivilegedRoles: true);
+        var superAdmin = await SeedUserAsync(
+            factory,
+            "direct-superadmin",
+            "SuperAdmin",
+            cancellationToken);
+        var target = await SeedUserAsync(
+            factory,
+            "direct-reset-target",
+            "Admin",
+            cancellationToken);
+        using var scope = factory.Services.CreateScope();
+        var accessor = scope.ServiceProvider.GetRequiredService<IHttpContextAccessor>();
+        accessor.HttpContext = new DefaultHttpContext
+        {
+            User = new ClaimsPrincipal(new ClaimsIdentity(
+            [
+                new Claim(ClaimTypes.NameIdentifier, superAdmin.Id.ToString()),
+                new Claim(ClaimTypes.Role, superAdmin.Role),
+                new Claim("amr", "pwd")
+            ], "DirectTest"))
+        };
+
+        var exception = await Assert.ThrowsAsync<ForbiddenAccessException>(() =>
+            scope.ServiceProvider.GetRequiredService<ISender>().Send(
+                new ResetUserTwoFactorCommand(
+                    target.Id,
+                    target.Username,
+                    "Direct dispatch without second factor"),
+                cancellationToken));
+
+        Assert.Contains("Two-factor", exception.Message);
+    }
+
+    [Fact]
+    public async Task ChallengeCleanup_DeletesOnlyRowsPastRetention()
+    {
+        var cancellationToken = TestContext.Current.CancellationToken;
+        using var factory = new CorePortfolioApiFactory();
+        var user = await SeedUserAsync(
+            factory,
+            "cleanup-user",
+            "User",
+            cancellationToken);
+        using (var arrangeScope = factory.Services.CreateScope())
+        {
+            var db = arrangeScope.ServiceProvider.GetRequiredService<AppDbContext>();
+            db.TwoFactorChallenges.AddRange(
+                new TwoFactorChallenge
+                {
+                    UserId = user.Id,
+                    TokenHash = new string('a', 64),
+                    Purpose = TwoFactorChallengePurpose.Login,
+                    CreatedAt = DateTime.UtcNow.AddHours(-50),
+                    ExpiresAt = DateTime.UtcNow.AddHours(-48),
+                    MaxAttempts = 5
+                },
+                new TwoFactorChallenge
+                {
+                    UserId = user.Id,
+                    TokenHash = new string('b', 64),
+                    Purpose = TwoFactorChallengePurpose.Login,
+                    CreatedAt = DateTime.UtcNow.AddMinutes(-6),
+                    ExpiresAt = DateTime.UtcNow.AddMinutes(-1),
+                    MaxAttempts = 5
+                });
+            await db.SaveChangesAsync(cancellationToken);
+        }
+
+        var cleanup = new TwoFactorChallengeCleanupService(
+            factory.Services.GetRequiredService<IServiceScopeFactory>(),
+            Options.Create(new TwoFactorOptions { ChallengeRetentionHours = 24 }),
+            NullLogger<TwoFactorChallengeCleanupService>.Instance);
+        var deleted = await cleanup.CleanupOnceAsync(cancellationToken);
+
+        Assert.Equal(1, deleted);
+        using var assertScope = factory.Services.CreateScope();
+        Assert.Single(await assertScope.ServiceProvider
+            .GetRequiredService<AppDbContext>()
+            .TwoFactorChallenges
+            .ToListAsync(cancellationToken));
     }
 
     private const string TestPassword = "StrongPassword123!";

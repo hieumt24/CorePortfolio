@@ -184,6 +184,24 @@ public sealed class AuthSessionService(
         return sessions.Count;
     }
 
+    public async Task<int> RevokeAllForUserExceptAsync(
+        Guid userId,
+        string? retainedTokenId,
+        string reason,
+        CancellationToken cancellationToken)
+    {
+        var sessions = await dbContext.UserSessions
+            .Include(item => item.RefreshTokens)
+            .Where(item =>
+                item.UserId == userId &&
+                item.RevokedAt == null &&
+                (retainedTokenId == null || item.TokenId != retainedTokenId))
+            .ToListAsync(cancellationToken);
+        var now = DateTime.UtcNow;
+        foreach (var session in sessions) RevokeSession(session, now, reason);
+        return sessions.Count;
+    }
+
     private LoginResult CreateLoginResult(
         User user,
         string accessTokenId,

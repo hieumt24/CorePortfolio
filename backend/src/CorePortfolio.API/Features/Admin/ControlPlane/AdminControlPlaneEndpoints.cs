@@ -11,6 +11,7 @@ public sealed record BroadcastRequest(
     string Title, string Message, NotificationSeverity Severity, string? Role, string? Link, DateTime? ExpiresAt);
 public sealed record RepairIntegrityRequest(string CheckKey, bool DryRun = true);
 public sealed record UpdateConfigurationRequest(Dictionary<string, string> Settings);
+public sealed record ResetTwoFactorRequest(string Confirmation, string Reason);
 
 public static class AdminControlPlaneEndpoints
 {
@@ -36,6 +37,20 @@ public static class AdminControlPlaneEndpoints
             Results.Ok(await sender.Send(new GetUserSessionsQuery(id), ct))).RequireAuthorization(AdminPermissionCatalog.UsersRead);
         group.MapGet("/users/{id:guid}/security-timeline", async (Guid id, ISender sender, CancellationToken ct) =>
             Results.Ok(await sender.Send(new GetSecurityTimelineQuery(id), ct))).RequireAuthorization(AdminPermissionCatalog.UsersRead);
+        group.MapGet("/two-factor/coverage", async (ISender sender, CancellationToken ct) =>
+            Results.Ok(await sender.Send(new GetTwoFactorCoverageQuery(), ct)))
+            .RequireAuthorization(AdminPermissionCatalog.UsersRead);
+        group.MapPost("/users/{id:guid}/two-factor/reset", async (
+            Guid id,
+            [FromBody] ResetTwoFactorRequest request,
+            ISender sender,
+            CancellationToken ct) =>
+            await sender.Send(
+                new ResetUserTwoFactorCommand(id, request.Confirmation, request.Reason),
+                ct)
+                ? Results.NoContent()
+                : Results.NotFound())
+            .RequireAuthorization(AdminPermissionCatalog.TwoFactorReset);
         group.MapPost("/users/{id:guid}/sessions/revoke", async (
             Guid id, [FromBody] RevokeSessionsRequest request, ISender sender, CancellationToken ct) =>
             Results.Ok(new { revoked = await sender.Send(new RevokeUserSessionsCommand(id, request.SessionId, request.Reason), ct) }))

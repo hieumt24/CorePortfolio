@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { useAuth } from '../../../context/AuthContext';
 import { useNotification } from '../../../context/NotificationContext';
 import { adminApi } from '../api/adminApi';
-import type { AdminUser } from '../types';
+import type { AdminUser, TwoFactorCoverage } from '../types';
 import { formatVietnamDateTime } from '../../../shared/utils/dateTime';
 import './AdminOperations.css';
 import { Link } from 'react-router-dom';
@@ -30,6 +30,7 @@ export function UserManagement() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [updatingId, setUpdatingId] = useState<string | null>(null);
+  const [twoFactorCoverage, setTwoFactorCoverage] = useState<TwoFactorCoverage | null>(null);
 
   const loadUsers = useCallback(async (showLoading = true) => {
     if (showLoading) {
@@ -38,16 +39,20 @@ export function UserManagement() {
     }
 
     try {
-      const result = await adminApi.getUsers({
-        search,
-        role,
-        isActive: accountStatus === '' ? undefined : accountStatus === 'active',
-        isOnline: presence === '' ? undefined : presence === 'online',
-        page,
-        pageSize: PAGE_SIZE,
-      });
+      const [result, coverage] = await Promise.all([
+        adminApi.getUsers({
+          search,
+          role,
+          isActive: accountStatus === '' ? undefined : accountStatus === 'active',
+          isOnline: presence === '' ? undefined : presence === 'online',
+          page,
+          pageSize: PAGE_SIZE,
+        }),
+        adminApi.getTwoFactorCoverage(),
+      ]);
       setUsers(result.items);
       setTotalCount(result.totalCount);
+      setTwoFactorCoverage(coverage);
     } catch (loadError) {
       if (showLoading) {
         setError(loadError instanceof Error
@@ -107,6 +112,28 @@ export function UserManagement() {
         </div>
         <span className="user-total">{totalCount} tài khoản</span>
       </div>
+
+      {twoFactorCoverage && (
+        <section className="mfa-coverage" aria-label="Tiến độ triển khai 2FA">
+          <div>
+            <span>Privileged 2FA</span>
+            <strong>{twoFactorCoverage.enrollmentPercentage}%</strong>
+          </div>
+          <div className="mfa-coverage-track" aria-hidden="true">
+            <i style={{ width: `${twoFactorCoverage.enrollmentPercentage}%` }} />
+          </div>
+          <p>
+            {twoFactorCoverage.enrolledAccounts}/{twoFactorCoverage.privilegedAccounts} tài khoản đã đăng ký
+            {' · '}
+            {twoFactorCoverage.enforcementEnabled ? 'enforcement đang bật' : 'enforcement đang tắt'}
+          </p>
+          <span className={`mfa-readiness ${twoFactorCoverage.readyForEnforcement ? 'ready' : 'pending'}`}>
+            {twoFactorCoverage.readyForEnforcement
+              ? 'Sẵn sàng bật'
+              : `${twoFactorCoverage.pendingAccounts} đang chờ`}
+          </span>
+        </section>
+      )}
 
       <form
         className="user-filters"
@@ -236,6 +263,9 @@ export function UserManagement() {
                           <span className={`account-state ${user.isActive ? 'active' : 'inactive'}`}>
                             {user.isActive ? 'Được truy cập' : 'Đã khóa'}
                             {isSelf ? ' · Bạn' : ''}
+                          </span>
+                          <span className={`account-state ${user.twoFactorEnabled ? 'active' : 'inactive'}`}>
+                            2FA {user.twoFactorEnabled ? 'đã bật' : 'chưa bật'}
                           </span>
                         </div>
                       </td>

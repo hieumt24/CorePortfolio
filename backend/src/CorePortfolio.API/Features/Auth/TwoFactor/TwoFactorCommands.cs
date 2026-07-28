@@ -6,6 +6,8 @@ using CorePortfolio.Domain.Entities;
 using CorePortfolio.Infrastructure.Data;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using System.IdentityModel.Tokens.Jwt;
+using System.Security.Claims;
 
 namespace CorePortfolio.API.Features.Auth.TwoFactor;
 
@@ -379,8 +381,11 @@ public sealed class RegenerateRecoveryCodesHandler(
                 CodeHash = RecoveryCodeService.Hash(code),
                 CreatedAt = now
             }));
-        await authSessionService.RevokeAllForUserAsync(
+        var retainedTokenId = httpContextAccessor.HttpContext?.User
+            .FindFirstValue(JwtRegisteredClaimNames.Jti);
+        await authSessionService.RevokeAllForUserExceptAsync(
             userId,
+            retainedTokenId,
             "Two-factor recovery codes regenerated",
             cancellationToken);
         VerifyTwoFactorHandler.AddAudit(

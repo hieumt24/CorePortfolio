@@ -1,8 +1,9 @@
 # Privileged-account two-factor authentication
 
 CorePortfolio supports RFC 6238 TOTP authenticator apps and single-use recovery
-codes. The backend foundation is available before the enrollment UI so that the
-database and authentication contract can be deployed independently.
+codes. The login and Profile Security experiences support enrollment by QR or
+manual key, TOTP verification, recovery-code login, recovery-code rotation, and
+optional disablement.
 
 ## Enforcement scope
 
@@ -43,9 +44,9 @@ Generate the value with a cryptographically secure random-number generator.
 Do not reuse the JWT signing key or a provider credential.
 
 Startup validation rejects enforcement when the configured key is absent or
-not exactly 32 decoded bytes. Keep enforcement disabled until the Sprint 1 UI
-is deployed and every privileged operator has a tested enrollment/recovery
-path.
+not exactly 32 decoded bytes. Keep enforcement disabled until every privileged
+operator has a tested enrollment/recovery path. The Admin User Security page
+reports enrollment coverage and readiness.
 
 ## API contract
 
@@ -68,14 +69,42 @@ failed attempts. The anonymous setup and verification endpoints are also
 rate-limited by client IP. Recovery codes are high-entropy, single-use values;
 only SHA-256 hashes are persisted.
 
+Expired or consumed challenges are removed by the hosted cleanup service after
+the configured retention period:
+
+```text
+Security__TwoFactor__CleanupIntervalMinutes=60
+Security__TwoFactor__ChallengeRetentionHours=24
+```
+
+When privileged-role enforcement is enabled, Admin authorization policies and
+the MediatR admin-command boundary both require an `amr` claim produced by TOTP
+or recovery-code verification. Session validation independently checks the
+persisted MFA verification timestamp.
+
+## SuperAdmin recovery reset
+
+Only `SuperAdmin` has the `TwoFactor.Reset` permission. The Admin User Security
+page requires the operator to enter the target username exactly and provide a
+10–200 character audit reason. A reset cannot target the current SuperAdmin
+account. It clears the target's authenticator secret, recovery codes, and
+challenges, revokes all sessions, and records `UserTwoFactorReset`.
+
+Use a separate enrolled SuperAdmin account for this break-glass operation.
+After reset, a privileged target must enroll again at the next login when
+enforcement is enabled.
+
 ## Deployment and rollback
 
 1. Configure and back up the encryption key.
 2. Deploy the API and apply `AddAdminTwoFactorFoundation`.
 3. Leave privileged-role enforcement disabled.
-4. Deploy the Sprint 1 enrollment/login UI.
+4. Deploy the enrollment/login and Profile Security UI.
 5. Enroll and test every privileged operator, including recovery codes.
-6. Enable enforcement and restart the API.
+6. Confirm the Admin coverage panel reports 100% and "ready for enforcement".
+7. Enable enforcement and restart the API.
+8. Confirm password-only Admin sessions receive HTTP 403 and a fresh TOTP login
+   restores Admin access.
 
 The migration is additive and does not enable 2FA for existing users. A safe
 application rollback leaves the new tables and columns in place and turns the

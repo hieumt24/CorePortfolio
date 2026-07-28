@@ -17,6 +17,7 @@ public record AdminUserDto(
     string? LastLoginIpAddress,
     DateTime? LastActivityAt,
     bool IsOnline,
+    bool TwoFactorEnabled,
     int PortfolioCount,
     int TransactionCount);
 
@@ -81,6 +82,7 @@ public sealed class GetAdminUsersHandler(
                 user.LastLoginIpAddress,
                 user.LastActivityAt,
                 user.IsActive && user.LastActivityAt != null && user.LastActivityAt >= onlineCutoff,
+                user.TwoFactorEnabled,
                 user.Portfolios.Count,
                 user.Portfolios.SelectMany(portfolio => portfolio.Transactions).Count()))
             .ToListAsync(cancellationToken);

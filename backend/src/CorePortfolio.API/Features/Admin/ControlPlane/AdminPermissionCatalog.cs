@@ -20,20 +20,23 @@ public static class AdminPermissionCatalog
     public const string MigrationsExecute = "Migrations.Execute";
     public const string SettingsManage = "Settings.Manage";
     public const string RolesManage = "Roles.Manage";
+    public const string TwoFactorReset = "TwoFactor.Reset";
 
     public static readonly string[] All =
     [
         AdminAccess, AuditRead, OperationsRead, OperationsExecute, UsersRead, UsersManage,
         SessionsRevoke, MarketDataRead, MarketDataManage, NotificationsManage,
         IntegrityRead, IntegrityRepair, BackupsRead, BackupsCreate, BackupsRestore,
-        MigrationsExecute, SettingsManage, RolesManage
+        MigrationsExecute, SettingsManage, RolesManage, TwoFactorReset
     ];
 
     private static readonly IReadOnlyDictionary<string, string[]> ByRole =
         new Dictionary<string, string[]>(StringComparer.OrdinalIgnoreCase)
         {
             ["SuperAdmin"] = All,
-            ["Admin"] = All,
+            ["Admin"] = All
+                .Where(permission => permission != TwoFactorReset)
+                .ToArray(),
             ["Operations"] =
             [
                 AdminAccess, AuditRead, OperationsRead, OperationsExecute, MarketDataRead,

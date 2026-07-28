@@ -24,6 +24,8 @@ public sealed class TwoFactorOptions
     public int MaxVerificationAttempts { get; set; } = 5;
     public int AllowedTimeStepDrift { get; set; } = 1;
     public int RecoveryCodeCount { get; set; } = 10;
+    public int CleanupIntervalMinutes { get; set; } = 60;
+    public int ChallengeRetentionHours { get; set; } = 24;
 
     public bool HasValidEncryptionKey()
     {

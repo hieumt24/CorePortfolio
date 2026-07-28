@@ -103,6 +103,7 @@ builder.Services.AddMediatR(cfg =>
 {
     cfg.RegisterServicesFromAssembly(typeof(Program).Assembly);
     cfg.AddOpenBehavior(typeof(AdminPermissionBehavior<,>));
+    cfg.AddOpenBehavior(typeof(PrivilegedMfaAdminBehavior<,>));
 });
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
@@ -129,6 +130,9 @@ builder.Services.AddScoped<TotpService>();
 builder.Services.AddScoped<RecoveryCodeService>();
 builder.Services.AddScoped<TwoFactorChallengeService>();
 builder.Services.AddScoped<AuthLoginCompletionService>();
+builder.Services.AddSingleton<Microsoft.AspNetCore.Authorization.IAuthorizationHandler,
+    PrivilegedMfaAuthorizationHandler>();
+builder.Services.AddHostedService<TwoFactorChallengeCleanupService>();
 builder.Services.AddScoped<ExchangeRateService>();
 builder.Services.AddSingleton<ProductionOperationsState>();
 builder.Services.AddHttpClient();
@@ -239,7 +243,8 @@ builder.Services.AddAuthorization(options =>
             .RequireAuthenticatedUser()
             .RequireAssertion(context => AdminPermissionCatalog.Has(
                 context.User.FindFirstValue(ClaimTypes.Role),
-                permission)));
+                permission))
+            .AddRequirements(new PrivilegedMfaRequirement()));
     }
 });
 

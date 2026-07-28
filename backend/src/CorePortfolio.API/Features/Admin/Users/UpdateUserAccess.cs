@@ -84,6 +84,7 @@ public sealed class UpdateUserAccessHandler(
 
         return new AdminUserDto(user.Id, user.Username, user.Role, user.IsActive, user.CreatedAt,
             user.LastLoginAt, user.LastLoginIpAddress, user.LastActivityAt, isOnline,
+            user.TwoFactorEnabled,
             user.Portfolios.Count,
             user.Portfolios.SelectMany(portfolio => portfolio.Transactions).Count());
     }

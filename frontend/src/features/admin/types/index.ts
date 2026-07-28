@@ -103,6 +103,7 @@ export interface AdminUser {
   lastLoginIpAddress: string | null;
   lastActivityAt: string | null;
   isOnline: boolean;
+  twoFactorEnabled: boolean;
   portfolioCount: number;
   transactionCount: number;
 }
@@ -160,6 +161,18 @@ export interface AdminUserDetail extends AdminUser {
   email: string | null;
   cashflowCount: number;
   activeSessionCount: number;
+  twoFactorEnabledAt: string | null;
+  twoFactorRequired: boolean;
+  recoveryCodesRemaining: number;
+}
+
+export interface TwoFactorCoverage {
+  privilegedAccounts: number;
+  enrolledAccounts: number;
+  pendingAccounts: number;
+  enrollmentPercentage: number;
+  enforcementEnabled: boolean;
+  readyForEnforcement: boolean;
 }
 
 export interface UserSession {

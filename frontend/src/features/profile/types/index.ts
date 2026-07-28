@@ -19,3 +19,18 @@ export interface ChangePasswordInput {
   newPassword: string;
   confirmPassword: string;
 }
+
+export interface TwoFactorStatus {
+  isEnabled: boolean;
+  isRequired: boolean;
+  isPrivilegedRole: boolean;
+  enabledAt: string | null;
+  recoveryCodesRemaining: number;
+}
+
+export interface TwoFactorSetup {
+  challengeToken: string;
+  provisioningUri: string;
+  manualKey: string;
+  expiresAt: string;
+}
