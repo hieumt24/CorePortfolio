@@ -3,6 +3,7 @@ using CorePortfolio.API.Services;
 using CorePortfolio.Domain.Interfaces;
 using CorePortfolio.Infrastructure.Data;
 using CorePortfolio.API.Features.Portfolios.GetPortfolioSummary;
+using CorePortfolio.Domain.Accounting;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 
@@ -65,7 +66,8 @@ public class GetPerformanceAnalyticsHandler : IRequestHandler<GetPerformanceAnal
             var summary = await _mediator.Send(new GetPortfolioSummaryQuery(p.Id), cancellationToken);
             if (summary == null) continue;
 
-            foreach (var asset in summary.Assets.Where(a => a.CategoryName != "Fiat"))
+            foreach (var asset in summary.Assets.Where(asset =>
+                         !AssetCategoryClassifier.IsFiat(asset.CategoryName)))
             {
                 var currentVal = asset.CurrentValue;
                 var cost = asset.TotalCost;

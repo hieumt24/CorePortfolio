@@ -82,7 +82,7 @@ public sealed class GetAnalyticsDecisionReviewContextHandler(
             overview.Scope.To,
             overview.Scope.Currency,
             overview.DataQuality.QualityStatus,
-            overview.Allocation.Sum(item => item.TotalValue),
+            overview.InvestmentPortfolioValue,
             overview.Performance.TimeWeightedReturnPercentage.Value,
             overview.Performance.MoneyWeightedReturnPercentage.Value,
             overview.Performance.MaximumDrawdownPercentage.Value,

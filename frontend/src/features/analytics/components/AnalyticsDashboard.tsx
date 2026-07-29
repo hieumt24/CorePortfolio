@@ -146,7 +146,11 @@ export const AnalyticsDashboard = () => {
       ) : overview ? (
         <>
           <DataTrustBanner quality={overview.dataQuality} />
-          <DecisionSummary performance={overview.performance} currency={overview.scope.currency} />
+          <DecisionSummary
+            performance={overview.performance}
+            investmentPortfolioValue={overview.investmentPortfolioValue}
+            currency={overview.scope.currency}
+          />
           <div className="analytics-decision-layout">
             <AnalyticsWorkspace
               data={overview}

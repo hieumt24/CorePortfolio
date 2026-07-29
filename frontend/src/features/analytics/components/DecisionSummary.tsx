@@ -2,13 +2,18 @@ import type { PerformanceSummary } from '../../performance/types';
 
 interface DecisionSummaryProps {
   performance: PerformanceSummary;
+  investmentPortfolioValue: number;
   currency: string;
 }
 
 const metricValue = (value: number | null, suffix = '%') =>
   value === null ? 'Chưa đủ dữ liệu' : `${value > 0 ? '+' : ''}${value.toFixed(2)}${suffix}`;
 
-export const DecisionSummary = ({ performance, currency }: DecisionSummaryProps) => {
+export const DecisionSummary = ({
+  performance,
+  investmentPortfolioValue,
+  currency,
+}: DecisionSummaryProps) => {
   const money = new Intl.NumberFormat(currency === 'VND' ? 'vi-VN' : 'en-US', {
     style: 'currency',
     currency,
@@ -17,9 +22,9 @@ export const DecisionSummary = ({ performance, currency }: DecisionSummaryProps)
   });
   const cards = [
     {
-      label: 'Giá trị ròng cuối kỳ',
-      value: money.format(performance.endingNetAssetValue),
-      meta: `Dòng tiền ngoài: ${money.format(performance.netExternalFlow)}`,
+      label: 'Giá trị danh mục đầu tư hiện tại',
+      value: money.format(investmentPortfolioValue),
+      meta: `NAV hiệu suất gồm tiền mặt: ${money.format(performance.endingNetAssetValue)} · Dòng tiền ngoài: ${money.format(performance.netExternalFlow)}`,
       tone: 'neutral',
     },
     {

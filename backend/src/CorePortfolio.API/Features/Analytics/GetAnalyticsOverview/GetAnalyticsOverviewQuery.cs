@@ -44,6 +44,7 @@ public sealed record AnalyticsAttentionDto(
 
 public sealed record AnalyticsOverviewDto(
     AnalyticsScopeDto Scope,
+    decimal InvestmentPortfolioValue,
     PerformanceSummaryDto Performance,
     PerformanceSeriesDto Series,
     PerformanceDataQualityDto DataQuality,
@@ -164,7 +165,7 @@ public sealed class GetAnalyticsOverviewHandler(
             from,
             to,
             currency,
-            request.PortfolioId.HasValue);
+            true);
         var findings = AnalyticsInsightEngine.Evaluate(new AnalyticsInsightInput(
             dataQuality.QualityStatus,
             dataQuality.MissingSnapshotDays,
@@ -199,6 +200,7 @@ public sealed class GetAnalyticsOverviewHandler(
             .ToList();
         return new AnalyticsOverviewDto(
             scope,
+            allocation.Sum(item => item.TotalValue),
             performance,
             series,
             dataQuality,

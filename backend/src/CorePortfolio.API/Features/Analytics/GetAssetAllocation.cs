@@ -7,6 +7,7 @@ using MediatR;
 using Microsoft.EntityFrameworkCore;
 using CorePortfolio.API.Common;
 using CorePortfolio.API.Features.Portfolios.GetPortfolioSummary;
+using CorePortfolio.Domain.Accounting;
 
 namespace CorePortfolio.API.Features.Analytics;
 
@@ -57,7 +58,8 @@ public class GetAssetAllocationHandler : IRequestHandler<GetAssetAllocationQuery
             if (summary is null)
                 throw new ResourceNotFoundException("Không tìm thấy danh mục của người dùng.");
 
-            foreach (var asset in summary.Assets)
+            foreach (var asset in summary.Assets.Where(asset =>
+                         !AssetCategoryClassifier.IsFiat(asset.CategoryName)))
             {
                 var currentValue = ConvertValue(
                     asset.CurrentValue,
@@ -76,7 +78,8 @@ public class GetAssetAllocationHandler : IRequestHandler<GetAssetAllocationQuery
             var report = await _mediator.Send(
                 new GetGlobalReportQuery(userId.Value),
                 cancellationToken);
-            foreach (var category in report.AllocationsByCategory)
+            foreach (var category in report.AllocationsByCategory.Where(category =>
+                         !AssetCategoryClassifier.IsFiat(category.CategoryName)))
             {
                 convertedAllocations.Add(new AssetAllocationDto
                 {

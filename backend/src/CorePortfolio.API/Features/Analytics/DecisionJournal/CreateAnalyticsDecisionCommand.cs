@@ -72,7 +72,7 @@ public sealed class CreateAnalyticsDecisionHandler(
             ScopeTo = DateTime.SpecifyKind(overview.Scope.To.Date, DateTimeKind.Utc),
             Currency = overview.Scope.Currency,
             DataQualityStatus = overview.DataQuality.QualityStatus,
-            TrackedPortfolioValue = overview.Allocation.Sum(item => item.TotalValue),
+            TrackedPortfolioValue = overview.InvestmentPortfolioValue,
             TimeWeightedReturnPercentage =
                 overview.Performance.TimeWeightedReturnPercentage.Value,
             MoneyWeightedReturnPercentage =

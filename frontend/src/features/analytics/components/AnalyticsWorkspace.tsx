@@ -50,8 +50,8 @@ export const AnalyticsWorkspace = ({
     maximumFractionDigits: data.scope.currency === 'VND' ? 0 : 2,
   });
   const chartSummary = data.series.points.length > 0
-    ? `Chuỗi có ${data.series.points.length} điểm, từ ${money.format(data.series.points[0].netAssetValue)} đến ${money.format(data.series.points.at(-1)?.netAssetValue ?? 0)}.`
-    : 'Chưa có điểm dữ liệu hiệu suất trong kỳ.';
+    ? `Chuỗi NAV gồm tiền mặt có ${data.series.points.length} điểm, từ ${money.format(data.series.points[0].netAssetValue)} đến ${money.format(data.series.points.at(-1)?.netAssetValue ?? 0)}.`
+    : 'Chưa có điểm dữ liệu NAV gồm tiền mặt trong kỳ.';
 
   const handleTabKeyDown = (event: KeyboardEvent<HTMLButtonElement>, tab: AnalyticsTab) => {
     if (!['ArrowLeft', 'ArrowRight', 'Home', 'End'].includes(event.key)) return;
@@ -73,17 +73,17 @@ export const AnalyticsWorkspace = ({
       <div className="analytics-panel-heading">
         <div>
           <span className="analytics-eyebrow">Diễn biến trong kỳ</span>
-          <h2>NAV, dòng tiền và tăng trưởng</h2>
+          <h2>NAV gồm tiền mặt, dòng tiền và tăng trưởng</h2>
         </div>
         <div className="analytics-chart-legend" aria-label="Chú giải biểu đồ">
-          <span className="is-nav">NAV</span>
+          <span className="is-nav">NAV (gồm tiền mặt)</span>
           <span className="is-flow">Dòng tiền lũy kế</span>
         </div>
       </div>
       {data.series.points.length === 0 ? (
         <div className="analytics-empty-state">
           <strong>Chưa có chuỗi hiệu suất</strong>
-          <p>Tạo snapshot để theo dõi NAV và lợi suất theo thời gian.</p>
+          <p>Tạo snapshot để theo dõi NAV gồm tiền mặt và lợi suất theo thời gian.</p>
         </div>
       ) : (
         <>
@@ -115,7 +115,7 @@ export const AnalyticsWorkspace = ({
                 <Tooltip
                   formatter={(value, name) => [
                     money.format(Number(value)),
-                    name === 'netAssetValue' ? 'NAV' : 'Dòng tiền lũy kế',
+                    name === 'netAssetValue' ? 'NAV (gồm tiền mặt)' : 'Dòng tiền lũy kế',
                   ]}
                   contentStyle={{
                     background: '#111827',
@@ -184,7 +184,7 @@ export const AnalyticsWorkspace = ({
             </ResponsiveContainer>
             <div>
               <span>Tổng giá trị</span>
-              <strong>{compactNumber(data.allocation.reduce((sum, item) => sum + item.totalValue, 0))}</strong>
+              <strong>{compactNumber(data.investmentPortfolioValue)}</strong>
               <small>{data.scope.currency}</small>
             </div>
           </div>
@@ -270,8 +270,8 @@ export const AnalyticsWorkspace = ({
             </dd>
             <small>
               {data.scope.financialHealthIsGlobal
-                ? 'Chỉ số tổng thể của mọi danh mục'
-                : 'Toàn bộ tài khoản trong phạm vi'}
+                ? 'Chỉ số toàn tài khoản, gồm mọi danh mục'
+                : 'Chỉ số trong phạm vi danh mục đã chọn'}
             </small>
           </div>
         </dl>

@@ -322,6 +322,7 @@ export interface AnalyticsDecisionReviewContextDto {
 
 export interface AnalyticsOverviewDto {
   scope: AnalyticsScopeDto;
+  investmentPortfolioValue: number;
   performance: PerformanceSummary;
   series: PerformanceSeries;
   dataQuality: PerformanceDataQualityDto;
