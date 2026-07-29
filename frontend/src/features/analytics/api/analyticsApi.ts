@@ -12,6 +12,10 @@ import type {
   AnalyticsInsightsDto,
   AnalyticsScenarioDto,
   EvaluateAnalyticsScenarioRequest,
+  AnalyticsDecisionDto,
+  AnalyticsDecisionOutcome,
+  AnalyticsDecisionStatus,
+  CreateAnalyticsDecisionRequest,
 } from '../types';
 
 export const analyticsApi = {
@@ -50,6 +54,38 @@ export const analyticsApi = {
   ): Promise<AnalyticsScenarioDto> => {
     return apiClient<AnalyticsScenarioDto>('/analytics/scenarios/evaluate', {
       method: 'POST',
+      body: JSON.stringify(request),
+    });
+  },
+
+  getDecisions: async (filters: {
+    portfolioId?: string;
+    status?: AnalyticsDecisionStatus;
+  } = {}): Promise<AnalyticsDecisionDto[]> => {
+    const params = new URLSearchParams();
+    if (filters.portfolioId) params.set('portfolioId', filters.portfolioId);
+    if (filters.status) params.set('status', filters.status);
+    const query = params.toString();
+    return apiClient<AnalyticsDecisionDto[]>(
+      `/analytics/decisions${query ? `?${query}` : ''}`,
+    );
+  },
+
+  createDecision: async (
+    request: CreateAnalyticsDecisionRequest,
+  ): Promise<AnalyticsDecisionDto> => {
+    return apiClient<AnalyticsDecisionDto>('/analytics/decisions', {
+      method: 'POST',
+      body: JSON.stringify(request),
+    });
+  },
+
+  reviewDecision: async (
+    id: string,
+    request: { outcome: AnalyticsDecisionOutcome; notes: string },
+  ): Promise<AnalyticsDecisionDto> => {
+    return apiClient<AnalyticsDecisionDto>(`/analytics/decisions/${id}/review`, {
+      method: 'PUT',
       body: JSON.stringify(request),
     });
   },

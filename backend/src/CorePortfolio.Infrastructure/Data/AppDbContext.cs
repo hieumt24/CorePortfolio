@@ -39,6 +39,7 @@ public class AppDbContext : DbContext
     public DbSet<SessionRefreshToken> SessionRefreshTokens => Set<SessionRefreshToken>();
     public DbSet<TwoFactorChallenge> TwoFactorChallenges => Set<TwoFactorChallenge>();
     public DbSet<TwoFactorRecoveryCode> TwoFactorRecoveryCodes => Set<TwoFactorRecoveryCode>();
+    public DbSet<AnalyticsDecision> AnalyticsDecisions => Set<AnalyticsDecision>();
 
     public override int SaveChanges(bool acceptAllChangesOnSuccess)
     {
@@ -162,7 +163,8 @@ public class AppDbContext : DbContext
             typeof(SavingGoal),
             typeof(DcaPlan),
             typeof(RebalanceExecutionPlan),
-            typeof(NotificationPreference)
+            typeof(NotificationPreference),
+            typeof(AnalyticsDecision)
         })
         {
             modelBuilder.Entity(entityType)
@@ -400,6 +402,33 @@ public class AppDbContext : DbContext
             .WithMany()
             .HasForeignKey(i => i.CategoryId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        modelBuilder.Entity<AnalyticsDecision>(decision =>
+        {
+            decision.Property(item => item.PortfolioNameSnapshot).HasMaxLength(160);
+            decision.Property(item => item.DecisionType).HasConversion<string>().HasMaxLength(30);
+            decision.Property(item => item.Title).HasMaxLength(120);
+            decision.Property(item => item.Rationale).HasMaxLength(2000);
+            decision.Property(item => item.PlannedAction).HasMaxLength(1000);
+            decision.Property(item => item.RiskTriggers).HasMaxLength(1000);
+            decision.Property(item => item.Status).HasConversion<string>().HasMaxLength(20);
+            decision.Property(item => item.ReviewOutcome).HasConversion<string>().HasMaxLength(20);
+            decision.Property(item => item.ReviewNotes).HasMaxLength(2000);
+            decision.Property(item => item.Currency).HasMaxLength(3);
+            decision.Property(item => item.DataQualityStatus).HasMaxLength(30);
+            decision.Property(item => item.InsightCodes).HasMaxLength(500);
+            decision.Property(item => item.MethodologyVersion).HasMaxLength(50);
+            decision.HasIndex(item => new { item.UserId, item.Status, item.ReviewDate });
+            decision.HasIndex(item => new { item.UserId, item.CreatedAt });
+            decision.HasOne(item => item.User)
+                .WithMany()
+                .HasForeignKey(item => item.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+            decision.HasOne(item => item.Portfolio)
+                .WithMany()
+                .HasForeignKey(item => item.PortfolioId)
+                .OnDelete(DeleteBehavior.SetNull);
+        });
 
         modelBuilder.Entity<RecurringCashflowRule>().HasIndex(r => new { r.UserId, r.NextOccurrence });
         modelBuilder.Entity<RecurringCashflowRule>().HasOne(r => r.User).WithMany().HasForeignKey(r => r.UserId).OnDelete(DeleteBehavior.Cascade);

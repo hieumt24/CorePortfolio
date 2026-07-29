@@ -17,6 +17,7 @@ import {
 import type { AnalyticsOverviewDto } from '../types';
 import { analyticsTabs, type AnalyticsTab } from '../utils/analyticsUrlState';
 import { ScenarioLab } from './ScenarioLab';
+import { DecisionJournal } from './DecisionJournal';
 
 interface AnalyticsWorkspaceProps {
   data: AnalyticsOverviewDto;
@@ -31,6 +32,7 @@ const tabLabels: Record<AnalyticsTab, string> = {
   allocation: 'Phân bổ',
   cashflow: 'Dòng tiền & mục tiêu',
   scenario: 'Mô phỏng',
+  journal: 'Nhật ký',
 };
 
 const compactNumber = (value: number) =>
@@ -344,6 +346,7 @@ export const AnalyticsWorkspace = ({
         {activeTab === 'allocation' && renderAllocation()}
         {activeTab === 'cashflow' && renderCashflow()}
         {activeTab === 'scenario' && <ScenarioLab data={data} />}
+        {activeTab === 'journal' && <DecisionJournal data={data} />}
       </div>
     </section>
   );

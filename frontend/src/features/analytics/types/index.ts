@@ -240,6 +240,57 @@ export interface AnalyticsScenarioDto {
   disclaimer: string;
 }
 
+export type AnalyticsDecisionType =
+  'Observation' | 'Allocation' | 'Cashflow' | 'Risk' | 'Goal';
+
+export type AnalyticsDecisionStatus = 'Open' | 'Reviewed';
+
+export type AnalyticsDecisionOutcome = 'OnTrack' | 'Adjust' | 'Closed';
+
+export interface CreateAnalyticsDecisionRequest {
+  portfolioId?: string;
+  from: string;
+  to: string;
+  currency: string;
+  decisionType: AnalyticsDecisionType;
+  title: string;
+  rationale: string;
+  plannedAction: string;
+  riskTriggers: string;
+  reviewDate: string;
+}
+
+export interface AnalyticsDecisionDto {
+  id: string;
+  portfolioId: string | null;
+  portfolioName: string;
+  decisionType: AnalyticsDecisionType | string;
+  title: string;
+  rationale: string;
+  plannedAction: string;
+  riskTriggers: string;
+  reviewDate: string;
+  status: AnalyticsDecisionStatus | string;
+  reviewOutcome: AnalyticsDecisionOutcome | string | null;
+  reviewNotes: string;
+  createdAt: string;
+  updatedAt: string;
+  reviewedAt: string | null;
+  isOverdue: boolean;
+  snapshot: {
+    from: string;
+    to: string;
+    currency: string;
+    dataQualityStatus: string;
+    trackedPortfolioValue: number;
+    timeWeightedReturnPercentage: number | null;
+    moneyWeightedReturnPercentage: number | null;
+    maximumDrawdownPercentage: number | null;
+    insightCodes: string[];
+    methodologyVersion: string;
+  };
+}
+
 export interface AnalyticsOverviewDto {
   scope: AnalyticsScopeDto;
   performance: PerformanceSummary;

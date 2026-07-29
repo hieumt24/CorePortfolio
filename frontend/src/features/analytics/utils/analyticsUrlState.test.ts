@@ -37,6 +37,17 @@ describe('analytics URL state', () => {
     expect(parseAnalyticsUrlState(toAnalyticsSearchParams(state))).toEqual(state);
   });
 
+  it('keeps the decision journal in the URL', () => {
+    const state = {
+      period: '6M' as const,
+      tab: 'journal' as const,
+      currency: 'USD' as const,
+      portfolioId: undefined,
+    };
+
+    expect(parseAnalyticsUrlState(toAnalyticsSearchParams(state))).toEqual(state);
+  });
+
   it('resolves YTD without depending on local timezone', () => {
     expect(resolveAnalyticsDateRange('YTD', new Date('2026-07-29T20:00:00Z')))
       .toEqual({ from: '2026-01-01', to: '2026-07-29' });

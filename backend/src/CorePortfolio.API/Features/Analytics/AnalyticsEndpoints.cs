@@ -6,6 +6,7 @@ using Microsoft.AspNetCore.Mvc;
 using CorePortfolio.API.Features.Analytics.GetAnalyticsOverview;
 using CorePortfolio.API.Features.Analytics.GetAnalyticsInsights;
 using CorePortfolio.API.Features.Analytics.EvaluateAnalyticsScenario;
+using CorePortfolio.API.Features.Analytics.DecisionJournal;
 
 namespace CorePortfolio.API.Features.Analytics;
 
@@ -45,6 +46,35 @@ public static class AnalyticsEndpoints
         {
             var result = await mediator.Send(
                 new EvaluateAnalyticsScenarioQuery(request));
+            return Results.Ok(result);
+        });
+
+        group.MapGet("/decisions", async (
+            IMediator mediator,
+            [FromQuery] Guid? portfolioId,
+            [FromQuery] string? status) =>
+        {
+            var result = await mediator.Send(
+                new GetAnalyticsDecisionsQuery(portfolioId, status));
+            return Results.Ok(result);
+        });
+
+        group.MapPost("/decisions", async (
+            IMediator mediator,
+            [FromBody] CreateAnalyticsDecisionRequest request) =>
+        {
+            var result = await mediator.Send(
+                new CreateAnalyticsDecisionCommand(request));
+            return Results.Ok(result);
+        });
+
+        group.MapPut("/decisions/{id:guid}/review", async (
+            Guid id,
+            IMediator mediator,
+            [FromBody] ReviewAnalyticsDecisionRequest request) =>
+        {
+            var result = await mediator.Send(
+                new ReviewAnalyticsDecisionCommand(id, request));
             return Results.Ok(result);
         });
 
