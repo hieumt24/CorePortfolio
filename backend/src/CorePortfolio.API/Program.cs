@@ -61,6 +61,7 @@ using System.Security.Claims;
 using System.Threading.RateLimiting;
 using Microsoft.AspNetCore.RateLimiting;
 using CorePortfolio.API.Features.Cashflows.CreateCashflowRecord;
+using CorePortfolio.API.Features.Rebalancing;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -107,6 +108,12 @@ builder.Services.AddMediatR(cfg =>
 });
 builder.Services.AddHttpContextAccessor();
 builder.Services.AddScoped<ICurrentUserService, CurrentUserService>();
+builder.Services.AddOptions<RebalancingOptions>()
+    .Bind(builder.Configuration.GetSection(RebalancingOptions.SectionName))
+    .Validate(
+        options => options.TolerancePercentagePoints is > 0m and <= 100m,
+        "Analytics:Rebalancing:TolerancePercentagePoints must be greater than 0 and at most 100.")
+    .ValidateOnStart();
 builder.Services.Configure<UserActivityOptions>(
     builder.Configuration.GetSection(UserActivityOptions.SectionName));
 builder.Services.AddScoped<IUserActivityService, UserActivityService>();

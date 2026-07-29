@@ -4,7 +4,6 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.Mvc;
 
-using CorePortfolio.API.Services;
 namespace CorePortfolio.API.Features.Analytics;
 
 public static class AnalyticsEndpoints
@@ -37,12 +36,8 @@ public static class AnalyticsEndpoints
             return Results.Ok(result);
         });
 
-        group.MapGet("/target-allocations", async (IMediator mediator, ICurrentUserService currentUserService) =>
-        {
-            if (currentUserService.UserId == null) return Results.Unauthorized();
-            var result = await mediator.Send(new GetTargetAllocationsQuery(currentUserService.UserId.Value));
-            return Results.Ok(result);
-        });
+        group.MapGet("/target-allocations", async (IMediator mediator) =>
+            Results.Ok(await mediator.Send(new GetTargetAllocationsQuery())));
 
         group.MapGet("/heatmap", async (IMediator mediator) =>
         {
@@ -50,10 +45,12 @@ public static class AnalyticsEndpoints
             return Results.Ok(result);
         });
 
-        group.MapPost("/target-allocations", async (IMediator mediator, ICurrentUserService currentUserService, [FromBody] List<TargetAllocationInput> inputs) =>
+        group.MapPost("/target-allocations", async (
+            IMediator mediator,
+            [FromBody] List<TargetAllocationInput> inputs) =>
         {
-            if (currentUserService.UserId == null) return Results.Unauthorized();
-            var result = await mediator.Send(new UpdateTargetAllocationsCommand(currentUserService.UserId.Value, inputs));
+            await mediator.Send(new UpdateTargetAllocationsCommand(inputs));
+            var result = await mediator.Send(new GetTargetAllocationsQuery());
             return Results.Ok(result);
         });
     }

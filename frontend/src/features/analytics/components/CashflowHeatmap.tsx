@@ -4,22 +4,40 @@ import { analyticsApi } from '../api/analyticsApi';
 export const CashflowHeatmap: React.FC = () => {
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState('');
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     const fetchData = async () => {
+      setLoading(true);
+      setError('');
       try {
         const heatmapData = await analyticsApi.getCashflowHeatmap();
         setData(heatmapData);
       } catch (error) {
         console.error('Failed to fetch heatmap', error);
+        setError(error instanceof Error ? error.message : 'Không thể tải dữ liệu hoạt động giao dịch.');
       } finally {
         setLoading(false);
       }
     };
     fetchData();
-  }, []);
+  }, [reloadKey]);
 
   if (loading) return <div>Đang tải biểu đồ...</div>;
+  if (error) {
+    return (
+      <div className="analytics-section-error" role="alert">
+        <div>
+          <strong>Không tải được dữ liệu</strong>
+          <p>{error}</p>
+        </div>
+        <button type="button" onClick={() => setReloadKey(value => value + 1)}>
+          Thử lại
+        </button>
+      </div>
+    );
+  }
 
   // Generate last 365 days
   const days = [];

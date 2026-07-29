@@ -25,6 +25,14 @@ export interface TargetAllocationInput {
   targetPercentage: number;
 }
 
+export interface TargetAllocationPlanDto {
+  allocations: TargetAllocationDto[];
+  totalPercentage: number;
+  status: 'NotConfigured' | 'Complete' | 'Invalid' | string;
+  isActionable: boolean;
+  reason: string | null;
+}
+
 export interface AssetPerformanceDto {
   symbol: string;
   name: string;
@@ -71,4 +79,13 @@ export interface RebalanceSuggestionDto {
   targetValue: number;
   differenceValue: number;
   action: string;
+}
+
+export interface RebalanceAssessmentDto {
+  targetPlanStatus: 'NotConfigured' | 'Complete' | 'Invalid' | string;
+  totalTargetPercentage: number;
+  tolerancePercentagePoints: number;
+  isActionable: boolean;
+  reason: string | null;
+  suggestions: RebalanceSuggestionDto[];
 }

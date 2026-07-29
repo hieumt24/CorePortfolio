@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import type { TargetAllocationDto, TargetAllocationInput } from '../types';
 import { analyticsApi } from '../api/analyticsApi';
+import { getTargetAllocationDraftState } from '../utils/targetAllocationValidation';
 import '../../cashflows/components/CashflowDashboard.css';
 
 interface TargetAllocationModalProps {
@@ -25,10 +26,10 @@ export const TargetAllocationModal: React.FC<TargetAllocationModalProps> = ({ is
     setLoading(true);
     setError('');
     try {
-      const data = await analyticsApi.getTargetAllocations();
-      setAllocations(data);
+      const plan = await analyticsApi.getTargetAllocations();
+      setAllocations(plan.allocations);
     } catch (err) {
-      setError('Lỗi tải dữ liệu tỷ trọng mục tiêu');
+      setError(err instanceof Error ? err.message : 'Lỗi tải dữ liệu tỷ trọng mục tiêu');
     } finally {
       setLoading(false);
     }
@@ -44,9 +45,9 @@ export const TargetAllocationModal: React.FC<TargetAllocationModalProps> = ({ is
   };
 
   const handleSave = async () => {
-    const total = allocations.reduce((sum, a) => sum + a.targetPercentage, 0);
-    if (total > 100) {
-      setError('Tổng tỷ trọng mục tiêu không được vượt quá 100%');
+    const draft = getTargetAllocationDraftState(allocations);
+    if (!draft.canSave) {
+      setError('Tổng tỷ trọng phải bằng 100%, hoặc bằng 0% để xóa kế hoạch mục tiêu.');
       return;
     }
 
@@ -61,7 +62,7 @@ export const TargetAllocationModal: React.FC<TargetAllocationModalProps> = ({ is
       onSaved();
       onClose();
     } catch (err) {
-      setError('Lỗi khi lưu tỷ trọng mục tiêu');
+      setError(err instanceof Error ? err.message : 'Lỗi khi lưu tỷ trọng mục tiêu');
     } finally {
       setSaving(false);
     }
@@ -69,14 +70,22 @@ export const TargetAllocationModal: React.FC<TargetAllocationModalProps> = ({ is
 
   if (!isOpen) return null;
 
-  const currentTotal = allocations.reduce((sum, a) => sum + a.targetPercentage, 0);
+  const draft = getTargetAllocationDraftState(allocations);
+  const currentTotal = draft.total;
+  const canSave = draft.canSave;
 
   return (
-    <div className="modal-overlay">
-      <div className="modal-content glass-panel" style={{ maxWidth: '500px' }}>
+    <div className="modal-overlay" role="presentation">
+      <div
+        aria-labelledby="target-allocation-title"
+        aria-modal="true"
+        className="modal-content glass-panel"
+        role="dialog"
+        style={{ maxWidth: '500px' }}
+      >
         <div className="modal-header">
-          <h2>Cài đặt Tỷ trọng Mục tiêu</h2>
-          <button className="icon-btn" onClick={onClose}>×</button>
+          <h2 id="target-allocation-title">Cài đặt tỷ trọng mục tiêu</h2>
+          <button aria-label="Đóng" className="icon-btn" onClick={onClose} type="button">×</button>
         </div>
 
         <div className="modal-body">
@@ -105,17 +114,22 @@ export const TargetAllocationModal: React.FC<TargetAllocationModalProps> = ({ is
 
               <div className="form-group" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid rgba(255,255,255,0.1)' }}>
                 <label><strong>Tổng cộng</strong></label>
-                <div style={{ color: currentTotal > 100 ? '#ef4444' : (currentTotal === 100 ? '#10b981' : '#f59e0b') }}>
+                <div style={{ color: draft.isComplete ? '#10b981' : (draft.isCleared ? '#94a3b8' : '#f59e0b') }}>
                   <strong>{currentTotal.toFixed(1)}%</strong>
                 </div>
               </div>
+              {!canSave && (
+                <p className="target-allocation-hint" role="status">
+                  Cần phân bổ đủ 100%. Đặt tất cả về 0% nếu muốn xóa kế hoạch mục tiêu.
+                </p>
+              )}
             </div>
           )}
         </div>
 
         <div className="modal-footer">
-          <button className="btn-secondary" onClick={onClose} disabled={saving}>Hủy</button>
-          <button className="btn-primary" onClick={handleSave} disabled={saving || currentTotal > 100}>
+          <button className="btn-secondary" onClick={onClose} disabled={saving} type="button">Hủy</button>
+          <button className="btn-primary" onClick={handleSave} disabled={saving || !canSave} type="button">
             {saving ? 'Đang lưu...' : 'Lưu cài đặt'}
           </button>
         </div>

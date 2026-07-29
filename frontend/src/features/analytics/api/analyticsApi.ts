@@ -5,9 +5,9 @@ import type {
   PerformanceAnalyticsDto, 
   PerformanceDataQualityDto,
   DividendMonthlyAnalyticsDto,
-  TargetAllocationDto,
   TargetAllocationInput,
-  RebalanceSuggestionDto
+  TargetAllocationPlanDto,
+  RebalanceAssessmentDto
 } from '../types';
 
 export const analyticsApi = {
@@ -42,12 +42,12 @@ export const analyticsApi = {
     return apiClient<DividendMonthlyAnalyticsDto[]>(`/analytics/dividends?months=${months}&currency=${currency}`);
   },
 
-  getTargetAllocations: async (): Promise<TargetAllocationDto[]> => {
-    return apiClient<TargetAllocationDto[]>('/analytics/target-allocations');
+  getTargetAllocations: async (): Promise<TargetAllocationPlanDto> => {
+    return apiClient<TargetAllocationPlanDto>('/analytics/target-allocations');
   },
 
-  updateTargetAllocations: async (inputs: TargetAllocationInput[]): Promise<boolean> => {
-    return apiClient<boolean>('/analytics/target-allocations', {
+  updateTargetAllocations: async (inputs: TargetAllocationInput[]): Promise<TargetAllocationPlanDto> => {
+    return apiClient<TargetAllocationPlanDto>('/analytics/target-allocations', {
       method: 'POST',
       body: JSON.stringify(inputs)
     });
@@ -59,8 +59,8 @@ export const analyticsApi = {
     });
   },
 
-  getRebalanceSuggestions: async (currency: string = 'VND'): Promise<RebalanceSuggestionDto[]> => {
-    return apiClient<RebalanceSuggestionDto[]>(`/rebalancing/suggestions?currency=${currency}`);
+  getRebalanceSuggestions: async (currency: string = 'VND'): Promise<RebalanceAssessmentDto> => {
+    return apiClient<RebalanceAssessmentDto>(`/rebalancing/suggestions?currency=${currency}`);
   },
 
   getCashflowHeatmap: async (): Promise<{ date: string, count: number, totalAmount: number }[]> => {

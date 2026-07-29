@@ -1,3 +1,6 @@
+using CorePortfolio.API.Common;
+using CorePortfolio.API.Services;
+using CorePortfolio.Domain.Analytics;
 using CorePortfolio.Domain.Entities;
 using CorePortfolio.Infrastructure.Data;
 using MediatR;
@@ -11,57 +14,60 @@ public class TargetAllocationInput
     public decimal TargetPercentage { get; set; }
 }
 
-public class UpdateTargetAllocationsCommand : IRequest<bool>
-{
-    public Guid UserId { get; set; }
-    public List<TargetAllocationInput> Allocations { get; set; } = new();
-
-    public UpdateTargetAllocationsCommand(Guid userId, List<TargetAllocationInput> allocations)
-    {
-        UserId = userId;
-        Allocations = allocations;
-    }
-}
+public sealed record UpdateTargetAllocationsCommand(
+    List<TargetAllocationInput> Allocations) : IRequest<bool>;
 
 public class UpdateTargetAllocationsHandler : IRequestHandler<UpdateTargetAllocationsCommand, bool>
 {
     private readonly AppDbContext _dbContext;
+    private readonly ICurrentUserService _currentUserService;
 
-    public UpdateTargetAllocationsHandler(AppDbContext dbContext)
+    public UpdateTargetAllocationsHandler(
+        AppDbContext dbContext,
+        ICurrentUserService currentUserService)
     {
         _dbContext = dbContext;
+        _currentUserService = currentUserService;
     }
 
     public async Task<bool> Handle(UpdateTargetAllocationsCommand request, CancellationToken cancellationToken)
     {
-        // 1. Validate Total Percentage <= 100
-        var totalPercentage = request.Allocations.Sum(a => a.TargetPercentage);
-        if (totalPercentage > 100)
-            throw new Exception("Tổng tỷ trọng mục tiêu không được vượt quá 100%");
+        var userId = _currentUserService.UserId ?? throw new UnauthorizedAccessException();
+        var assessment = TargetAllocationPolicy.Evaluate(
+            request.Allocations.Select(allocation =>
+                new TargetAllocationWeight(
+                    allocation.CategoryId,
+                    allocation.TargetPercentage)));
+        if (assessment.Status == TargetAllocationPlanStatuses.Invalid)
+            throw new RequestValidationException(
+                assessment.Reason ?? "Kế hoạch phân bổ mục tiêu không hợp lệ.");
 
-        // 2. Fetch existing allocations
+        var categoryIds = request.Allocations
+            .Select(allocation => allocation.CategoryId)
+            .Distinct()
+            .ToList();
+        var existingCategoryCount = categoryIds.Count == 0
+            ? 0
+            : await _dbContext.AssetCategories
+                .CountAsync(category => categoryIds.Contains(category.Id), cancellationToken);
+        if (existingCategoryCount != categoryIds.Count)
+            throw new RequestValidationException(
+                "Kế hoạch phân bổ chứa nhóm tài sản không tồn tại.");
+
         var existing = await _dbContext.TargetAllocations
-            .Where(t => t.UserId == request.UserId)
+            .Where(t => t.UserId == userId)
             .ToListAsync(cancellationToken);
+        _dbContext.TargetAllocations.RemoveRange(existing);
 
-        // 3. Update or Add
-        foreach (var input in request.Allocations)
+        foreach (var input in request.Allocations.Where(input => input.TargetPercentage > 0m))
         {
-            var match = existing.FirstOrDefault(e => e.CategoryId == input.CategoryId);
-            if (match != null)
+            _dbContext.TargetAllocations.Add(new TargetAllocation
             {
-                match.TargetPercentage = input.TargetPercentage;
-            }
-            else
-            {
-                _dbContext.TargetAllocations.Add(new TargetAllocation
-                {
-                    Id = Guid.NewGuid(),
-                    UserId = request.UserId,
-                    CategoryId = input.CategoryId,
-                    TargetPercentage = input.TargetPercentage
-                });
-            }
+                Id = Guid.NewGuid(),
+                UserId = userId,
+                CategoryId = input.CategoryId,
+                TargetPercentage = input.TargetPercentage
+            });
         }
 
         await _dbContext.SaveChangesAsync(cancellationToken);

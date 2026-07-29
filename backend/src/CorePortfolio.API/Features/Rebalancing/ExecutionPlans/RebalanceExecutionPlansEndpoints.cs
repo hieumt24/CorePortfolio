@@ -127,7 +127,9 @@ public sealed class SimulateRebalanceExecutionPlanHandler : IRequestHandler<Simu
     {
         var userId = _currentUserService.UserId ?? throw new UnauthorizedAccessException();
         var currency = NormalizeCurrency(request.Currency);
-        var suggestions = await _mediator.Send(new GetRebalanceSuggestionsQuery(userId, currency), cancellationToken);
+        var assessment = await _mediator.Send(
+            new GetRebalanceSuggestionsQuery(currency),
+            cancellationToken);
         var availableCash = await _dbContext.CashLedgerEntries
             .AsNoTracking()
             .Where(e => e.CashAccount.Portfolio.UserId == userId && e.CashAccount.Currency == currency)
@@ -143,12 +145,12 @@ public sealed class SimulateRebalanceExecutionPlanHandler : IRequestHandler<Simu
             Status = RebalanceExecutionPlanStatus.Simulated
         };
 
-        var sellSuggestions = suggestions
-            .Where(s => s.Action == "Sell")
+        var sellSuggestions = assessment.Suggestions
+            .Where(s => s.Action == "Reduce")
             .OrderByDescending(s => s.DifferenceValue)
             .ToList();
-        var buySuggestions = suggestions
-            .Where(s => s.Action == "Buy")
+        var buySuggestions = assessment.Suggestions
+            .Where(s => s.Action == "Increase")
             .OrderByDescending(s => s.DifferenceValue)
             .ToList();
 
@@ -168,11 +170,12 @@ public sealed class SimulateRebalanceExecutionPlanHandler : IRequestHandler<Simu
 
         if (plan.Items.Count == 0)
         {
-            plan.Notes = "Portfolio is already within the target allocation tolerance.";
+            plan.Notes = assessment.Reason ??
+                "Danh mục đang nằm trong biên dung sai của phân bổ mục tiêu.";
         }
         else if (plan.Items.Any(i => i.IsCashLimited))
         {
-            plan.Notes = "Some buy legs are limited by available cash and planned sells.";
+            plan.Notes = "Một số phương án bổ sung bị giới hạn bởi tiền mặt khả dụng và các khoản dự kiến giảm.";
         }
 
         _dbContext.RebalanceExecutionPlans.Add(plan);

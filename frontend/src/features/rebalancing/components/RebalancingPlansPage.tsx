@@ -16,7 +16,7 @@ const formatCurrency = (amount: number, currency: string) =>
   }).format(amount);
 
 const actionLabel = (action: RebalanceExecutionAction) =>
-  action === RebalanceExecutionAction.Buy ? 'Mua' : 'Ban';
+  action === RebalanceExecutionAction.Buy ? 'Cân nhắc bổ sung' : 'Cân nhắc giảm';
 
 export const RebalancingPlansPage: React.FC = () => {
   const [plans, setPlans] = useState<RebalanceExecutionPlan[]>([]);
@@ -68,7 +68,7 @@ export const RebalancingPlansPage: React.FC = () => {
         <div>
           <span className="page-kicker">Kế hoạch hành động</span>
           <h1>Rebalancing</h1>
-          <p>Biến gợi ý tái cân bằng thành các bước mua/bán cụ thể, có tính đến lượng tiền mặt khả dụng.</p>
+          <p>Mô phỏng phương án điều chỉnh phân bổ có tính đến tiền mặt khả dụng. CorePortfolio không đặt lệnh hoặc tạo giao dịch tự động.</p>
         </div>
         <div className="rebalancing-controls">
           <select value={currency} onChange={e => setCurrency(e.target.value)}>
@@ -86,7 +86,7 @@ export const RebalancingPlansPage: React.FC = () => {
       ) : !latestPlan ? (
         <div className="glass-panel rebalancing-empty">
           <strong>Chưa có execution plan.</strong>
-          <span>Hãy mô phỏng plan đầu tiên để xem danh mục nên mua/bán theo thứ tự nào.</span>
+          <span>Hãy tạo mô phỏng đầu tiên để xem những sai lệch phân bổ cần cân nhắc.</span>
         </div>
       ) : (
         <>
@@ -97,14 +97,14 @@ export const RebalancingPlansPage: React.FC = () => {
             </div>
             <div>
               <span>Trạng thái</span>
-              <strong>{latestPlan.status === RebalanceExecutionPlanStatus.Applied ? 'Đã áp dụng' : 'Mô phỏng'}</strong>
+              <strong>{latestPlan.status === RebalanceExecutionPlanStatus.Applied ? 'Đã ghi nhận xem xét' : 'Mô phỏng'}</strong>
             </div>
             <div>
               <span>Cash khả dụng</span>
               <strong>{formatCurrency(latestPlan.availableCash, latestPlan.currency)}</strong>
             </div>
             <div>
-              <span>Có thể thực hiện</span>
+              <span>Giá trị mô phỏng</span>
               <strong>{formatCurrency(latestPlanStats?.executableTotal || 0, latestPlan.currency)}</strong>
             </div>
           </section>
@@ -112,22 +112,24 @@ export const RebalancingPlansPage: React.FC = () => {
           <section className="rebalance-plan-card glass-panel">
             <div className="rebalance-plan-header">
               <div>
-                <h2>Các bước thực hiện</h2>
+                <h2>Các phương án tham khảo</h2>
                 <p>
-                  {latestPlanStats?.sellCount || 0} bước bán, {latestPlanStats?.buyCount || 0} bước mua
-                  {latestPlanStats?.limitedCount ? `, ${latestPlanStats.limitedCount} bước bị giới hạn bởi cash` : ''}.
+                  {latestPlanStats?.sellCount || 0} phương án giảm, {latestPlanStats?.buyCount || 0} phương án bổ sung
+                  {latestPlanStats?.limitedCount ? `, ${latestPlanStats.limitedCount} phương án bị giới hạn bởi tiền mặt` : ''}.
                 </p>
                 {latestPlan.notes && <p>{latestPlan.notes}</p>}
               </div>
               {latestPlan.status === RebalanceExecutionPlanStatus.Simulated && (
                 <button className="btn btn-outline" onClick={() => applyPlan(latestPlan.id)}>
-                  Đánh dấu đã áp dụng
+                  Ghi nhận đã xem xét
                 </button>
               )}
             </div>
 
             {latestPlan.items.length === 0 ? (
-              <div className="rebalancing-empty compact">Danh mục đang cân bằng theo mục tiêu hiện tại.</div>
+              <div className="rebalancing-empty compact">
+                {latestPlan.notes || 'Không có phương án nào trong biên dung sai hiện tại.'}
+              </div>
             ) : (
               <div className="rebalance-steps">
                 {latestPlan.items.map(item => (
@@ -150,15 +152,15 @@ export const RebalancingPlansPage: React.FC = () => {
                           <strong>{formatCurrency(item.targetValue, latestPlan.currency)}</strong>
                         </div>
                         <div>
-                          <span>Đề xuất</span>
+                          <span>Chênh lệch</span>
                           <strong>{formatCurrency(item.suggestedAmount, latestPlan.currency)}</strong>
                         </div>
                         <div>
-                          <span>Có thể thực hiện</span>
+                          <span>Trong mô phỏng</span>
                           <strong>{formatCurrency(item.executableAmount, latestPlan.currency)}</strong>
                         </div>
                       </div>
-                      {item.isCashLimited && <p className="cash-limited">Bị giới hạn bởi cash khả dụng.</p>}
+                      {item.isCashLimited && <p className="cash-limited">Bị giới hạn bởi tiền mặt khả dụng.</p>}
                     </div>
                   </article>
                 ))}
@@ -173,8 +175,8 @@ export const RebalancingPlansPage: React.FC = () => {
                 <div key={plan.id} className="history-row">
                   <span>{formatVietnamDateTime(plan.createdAt)}</span>
                   <span>{plan.currency}</span>
-                  <span>{plan.status === RebalanceExecutionPlanStatus.Applied ? 'Đã áp dụng' : 'Mô phỏng'}</span>
-                  <span>{plan.items.length} bước</span>
+                  <span>{plan.status === RebalanceExecutionPlanStatus.Applied ? 'Đã ghi nhận xem xét' : 'Mô phỏng'}</span>
+                  <span>{plan.items.length} phương án</span>
                 </div>
               ))}
             </section>

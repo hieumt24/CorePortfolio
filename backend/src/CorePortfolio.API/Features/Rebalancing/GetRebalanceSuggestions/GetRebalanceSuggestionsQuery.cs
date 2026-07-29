@@ -9,16 +9,16 @@ public class RebalanceSuggestionDto
     public decimal CurrentValue { get; set; }
     public decimal TargetValue { get; set; }
     public decimal DifferenceValue { get; set; }
-    public string Action { get; set; } = string.Empty; // "Buy", "Sell", "Hold"
+    public string Action { get; set; } = string.Empty; // "Increase" or "Reduce"
 }
 
-public class GetRebalanceSuggestionsQuery : IRequest<List<RebalanceSuggestionDto>>
-{
-    public Guid UserId { get; set; }
-    public string Currency { get; set; } = "VND";
-    public GetRebalanceSuggestionsQuery(Guid userId, string currency)
-    {
-        UserId = userId;
-        Currency = currency;
-    }
-}
+public sealed record RebalanceAssessmentDto(
+    string TargetPlanStatus,
+    decimal TotalTargetPercentage,
+    decimal TolerancePercentagePoints,
+    bool IsActionable,
+    string? Reason,
+    IReadOnlyList<RebalanceSuggestionDto> Suggestions);
+
+public sealed record GetRebalanceSuggestionsQuery(string Currency = "VND")
+    : IRequest<RebalanceAssessmentDto>;

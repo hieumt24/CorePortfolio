@@ -6,7 +6,8 @@ import type {
   AssetAllocationDto, 
   PerformanceAnalyticsDto, 
   DividendMonthlyAnalyticsDto,
-  RebalanceSuggestionDto
+  PerformanceDataQualityDto,
+  RebalanceAssessmentDto
 } from '../types';
 import { 
   PieChart, Pie, Cell, Tooltip as RechartsTooltip, ResponsiveContainer, Legend,
@@ -17,7 +18,14 @@ import { TargetAllocationModal } from './TargetAllocationModal';
 import { CashflowHeatmap } from './CashflowHeatmap';
 import { DashboardSkeleton } from '../../../shared/components/Skeleton';
 import '../../cashflows/components/CashflowDashboard.css'; // Re-use styling
+import './AnalyticsDashboard.css';
 import { useNotification } from '../../../context/NotificationContext';
+
+type AnalyticsSection = 'cashflow' | 'allocation' | 'performance' | 'dividend' | 'rebalancing' | 'quality';
+type AnalyticsErrors = Partial<Record<AnalyticsSection, string>>;
+
+const getErrorMessage = (reason: unknown, fallback: string) =>
+  reason instanceof Error && reason.message ? reason.message : fallback;
 
 export const AnalyticsDashboard: React.FC = () => {
   const { showNotification } = useNotification();
@@ -26,45 +34,61 @@ export const AnalyticsDashboard: React.FC = () => {
   const [allocationData, setAllocationData] = useState<AssetAllocationDto[]>([]);
   const [performanceData, setPerformanceData] = useState<PerformanceAnalyticsDto | null>(null);
   const [dividendData, setDividendData] = useState<DividendMonthlyAnalyticsDto[]>([]);
-  const [rebalanceSuggestions, setRebalanceSuggestions] = useState<RebalanceSuggestionDto[]>([]);
+  const [rebalanceAssessment, setRebalanceAssessment] = useState<RebalanceAssessmentDto | null>(null);
+  const [dataQuality, setDataQuality] = useState<PerformanceDataQualityDto | null>(null);
+  const [errors, setErrors] = useState<AnalyticsErrors>({});
   const [loading, setLoading] = useState(true);
+  const [reloadKey, setReloadKey] = useState(0);
   const [isSnapshotLoading, setIsSnapshotLoading] = useState(false);
   const [isTargetModalOpen, setIsTargetModalOpen] = useState(false);
 
   useEffect(() => {
+    let active = true;
+
     const fetchData = async () => {
       setLoading(true);
-      
-      const safeFetch = async <T,>(promise: Promise<T>, fallback: T): Promise<T> => {
-        try {
-          return await promise;
-        } catch (error) {
-          console.error('API Error in AnalyticsDashboard:', error);
-          return fallback;
-        }
-      };
+      setErrors({});
 
-      try {
-        const [cf, alloc, perf, div, suggestions] = await Promise.all([
-          safeFetch(analyticsApi.getCashflowAnalytics(6, currency), []),
-          safeFetch(analyticsApi.getAssetAllocation(currency), []),
-          safeFetch(analyticsApi.getPerformanceAnalytics(currency), null),
-          safeFetch(analyticsApi.getDividendAnalytics(12, currency), []),
-          safeFetch(analyticsApi.getRebalanceSuggestions(currency), [])
-        ]);
-        setCashflowData(cf);
-        setAllocationData(alloc);
-        setPerformanceData(perf);
-        setDividendData(div);
-        setRebalanceSuggestions(suggestions);
-      } catch (error) {
-        console.error('Failed to load analytics', error);
-      } finally {
-        setLoading(false);
-      }
+      const results = await Promise.allSettled([
+        analyticsApi.getCashflowAnalytics(6, currency),
+        analyticsApi.getAssetAllocation(currency),
+        analyticsApi.getPerformanceAnalytics(currency),
+        analyticsApi.getDividendAnalytics(12, currency),
+        analyticsApi.getRebalanceSuggestions(currency),
+        analyticsApi.getPerformanceDataQuality()
+      ] as const);
+      if (!active) return;
+
+      const nextErrors: AnalyticsErrors = {};
+      const [cashflow, allocation, performance, dividend, rebalancing, quality] = results;
+
+      if (cashflow.status === 'fulfilled') setCashflowData(cashflow.value);
+      else nextErrors.cashflow = getErrorMessage(cashflow.reason, 'Không thể tải phân tích dòng tiền.');
+
+      if (allocation.status === 'fulfilled') setAllocationData(allocation.value);
+      else nextErrors.allocation = getErrorMessage(allocation.reason, 'Không thể tải phân bổ tài sản.');
+
+      if (performance.status === 'fulfilled') setPerformanceData(performance.value);
+      else nextErrors.performance = getErrorMessage(performance.reason, 'Không thể tải lịch sử hiệu suất.');
+
+      if (dividend.status === 'fulfilled') setDividendData(dividend.value);
+      else nextErrors.dividend = getErrorMessage(dividend.reason, 'Không thể tải thu nhập đầu tư.');
+
+      if (rebalancing.status === 'fulfilled') setRebalanceAssessment(rebalancing.value);
+      else nextErrors.rebalancing = getErrorMessage(rebalancing.reason, 'Không thể đánh giá tái cân bằng.');
+
+      if (quality.status === 'fulfilled') setDataQuality(quality.value);
+      else nextErrors.quality = getErrorMessage(quality.reason, 'Không thể kiểm tra chất lượng dữ liệu.');
+
+      setErrors(nextErrors);
+      setLoading(false);
     };
-    fetchData();
-  }, [currency]);
+
+    void fetchData();
+    return () => {
+      active = false;
+    };
+  }, [currency, reloadKey]);
 
   const reloadAllocations = async () => {
     try {
@@ -73,8 +97,12 @@ export const AnalyticsDashboard: React.FC = () => {
         analyticsApi.getRebalanceSuggestions(currency)
       ]);
       setAllocationData(alloc);
-      setRebalanceSuggestions(suggestions);
-    } catch (e) {}
+      setRebalanceAssessment(suggestions);
+      setErrors(current => ({ ...current, allocation: undefined, rebalancing: undefined }));
+    } catch (error) {
+      const message = getErrorMessage(error, 'Không thể cập nhật phân bổ và đánh giá tái cân bằng.');
+      setErrors(current => ({ ...current, allocation: message, rebalancing: message }));
+    }
   };
 
   const formatCurrency = (amount: number) => {
@@ -88,6 +116,23 @@ export const AnalyticsDashboard: React.FC = () => {
     return formatCurrency(Number(value));
   };
 
+  const renderSectionError = (section: AnalyticsSection) => {
+    const message = errors[section];
+    if (!message) return null;
+
+    return (
+      <div className="analytics-section-error" role="alert">
+        <div>
+          <strong>Không tải được dữ liệu</strong>
+          <p>{message}</p>
+        </div>
+        <button type="button" onClick={() => setReloadKey(value => value + 1)}>
+          Thử lại
+        </button>
+      </div>
+    );
+  };
+
   const handleTakeSnapshot = async () => {
     try {
       setIsSnapshotLoading(true);
@@ -96,6 +141,9 @@ export const AnalyticsDashboard: React.FC = () => {
       // Reload performance data
       const perf = await analyticsApi.getPerformanceAnalytics(currency);
       setPerformanceData(perf);
+      const quality = await analyticsApi.getPerformanceDataQuality();
+      setDataQuality(quality);
+      setErrors(current => ({ ...current, performance: undefined, quality: undefined }));
     } catch (error) {
       showNotification('Có lỗi xảy ra khi cập nhật giá trị danh mục.', 'error');
     } finally {
@@ -111,8 +159,8 @@ export const AnalyticsDashboard: React.FC = () => {
     <div className="cashflow-dashboard" style={{ paddingBottom: '3rem' }}>
       <div className="dashboard-header">
         <div className="header-title">
-          <h1>📊 Báo cáo & Phân tích</h1>
-          <p className="subtitle">Theo dõi hiệu suất và sức khỏe danh mục của bạn</p>
+          <h1>📊 Phân tích tài chính</h1>
+          <p className="subtitle">Theo dõi hiệu suất, dòng tiền và mức độ phù hợp với mục tiêu của bạn</p>
         </div>
         <div className="header-actions">
           <Link
@@ -133,6 +181,36 @@ export const AnalyticsDashboard: React.FC = () => {
         </div>
       </div>
 
+      {errors.quality ? (
+        <section className="analytics-quality-banner quality-error" aria-label="Chất lượng dữ liệu">
+          {renderSectionError('quality')}
+        </section>
+      ) : dataQuality ? (
+        <section
+          className={`analytics-quality-banner quality-${dataQuality.qualityStatus.toLowerCase()}`}
+          aria-label="Chất lượng dữ liệu"
+        >
+          <div>
+            <strong>
+              {dataQuality.qualityStatus === 'Complete'
+                ? 'Dữ liệu đủ để tham khảo'
+                : dataQuality.qualityStatus === 'Unavailable'
+                  ? 'Chưa đủ dữ liệu để phân tích'
+                  : 'Dữ liệu cần được kiểm tra'}
+            </strong>
+            <p>
+              {dataQuality.missingSnapshotDays} ngày thiếu snapshot · {dataQuality.staleAssetCount} tài sản có giá cũ ·{' '}
+              {dataQuality.unclassifiedCashFlowCount} dòng tiền chưa phân loại
+            </p>
+          </div>
+          <span>
+            {dataQuality.asOf
+              ? `Cập nhật ${new Date(dataQuality.asOf).toLocaleString('vi-VN')}`
+              : 'Chưa có snapshot'}
+          </span>
+        </section>
+      ) : null}
+
       {/* Row 1: Allocation & Cashflow */}
       <div className="dashboard-grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
         <div className="chart-card glass-panel" style={{ height: '400px', display: 'flex', flexDirection: 'column' }}>
@@ -143,7 +221,7 @@ export const AnalyticsDashboard: React.FC = () => {
             </button>
           </div>
           <div style={{ flex: 1, minHeight: 0, display: 'flex', gap: '1rem', marginTop: '1rem' }}>
-            {allocationData.length === 0 ? (
+            {errors.allocation ? renderSectionError('allocation') : allocationData.length === 0 ? (
               <div className="empty-state">Chưa có tài sản nào.</div>
             ) : (
               <>
@@ -203,7 +281,7 @@ export const AnalyticsDashboard: React.FC = () => {
         <div className="chart-card glass-panel" style={{ height: '400px', display: 'flex', flexDirection: 'column' }}>
           <h2>Thu / Chi theo tháng</h2>
           <div style={{ flex: 1, minHeight: 0 }}>
-            {cashflowData.length === 0 ? (
+            {errors.cashflow ? renderSectionError('cashflow') : cashflowData.length === 0 ? (
               <div className="empty-state">Chưa có giao dịch thu chi.</div>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
@@ -237,7 +315,7 @@ export const AnalyticsDashboard: React.FC = () => {
       <div className="dashboard-grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
         <div className="chart-card glass-panel" style={{ height: '400px', display: 'flex', flexDirection: 'column' }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-            <h2>Tổng tài sản theo thời gian</h2>
+            <h2>Giá trị danh mục đang theo dõi</h2>
             <button 
               className="btn-secondary" 
               style={{ padding: '0.25rem 0.75rem', fontSize: '0.875rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }} 
@@ -249,7 +327,7 @@ export const AnalyticsDashboard: React.FC = () => {
             </button>
           </div>
           <div style={{ flex: 1, minHeight: 0, marginTop: '1rem' }}>
-            {!performanceData || performanceData.totalValueHistory.length === 0 ? (
+            {errors.performance ? renderSectionError('performance') : !performanceData || performanceData.totalValueHistory.length === 0 ? (
               <div className="empty-state">Chưa có dữ liệu lịch sử.</div>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
@@ -268,7 +346,7 @@ export const AnalyticsDashboard: React.FC = () => {
         <div className="chart-card glass-panel" style={{ height: '400px', display: 'flex', flexDirection: 'column' }}>
           <h2>Cổ tức & Lãi tiết kiệm</h2>
           <div style={{ flex: 1, minHeight: 0 }}>
-            {dividendData.length === 0 ? (
+            {errors.dividend ? renderSectionError('dividend') : dividendData.length === 0 ? (
               <div className="empty-state">Chưa có dữ liệu cổ tức.</div>
             ) : (
               <ResponsiveContainer width="100%" height="100%">
@@ -288,10 +366,11 @@ export const AnalyticsDashboard: React.FC = () => {
       {/* Row 3: Performance Winners & Losers */}
       <div className="dashboard-grid" style={{ gridTemplateColumns: '1fr 1fr', gap: '1.5rem' }}>
         <div className="chart-card glass-panel" style={{ display: 'flex', flexDirection: 'column' }}>
-          <h2>🔥 Top Lợi Nhuận</h2>
+          <h2>Tài sản có lợi suất cao nhất</h2>
+          <p className="analytics-panel-note">Xếp theo tỷ suất lợi nhuận, không phải mức đóng góp vào toàn danh mục.</p>
           <div className="transactions-list" style={{ marginTop: '1rem' }}>
-            {(!performanceData || performanceData.topPerformers.length === 0) && <p className="empty-state">Không có dữ liệu.</p>}
-            {performanceData?.topPerformers.map(a => (
+            {errors.performance ? renderSectionError('performance') : (!performanceData || performanceData.topPerformers.length === 0) && <p className="empty-state">Không có dữ liệu.</p>}
+            {!errors.performance && performanceData?.topPerformers.map(a => (
               <div key={a.symbol} className="transaction-item" style={{ padding: '0.75rem', marginBottom: '0.5rem', borderRadius: '8px', background: 'rgba(255,255,255,0.05)' }}>
                 <div className="transaction-details">
                   <h4>{a.symbol}</h4>
@@ -311,10 +390,11 @@ export const AnalyticsDashboard: React.FC = () => {
         </div>
 
         <div className="chart-card glass-panel" style={{ display: 'flex', flexDirection: 'column' }}>
-          <h2>📉 Top Thua Lỗ</h2>
+          <h2>Tài sản có lợi suất thấp nhất</h2>
+          <p className="analytics-panel-note">Xếp theo tỷ suất lợi nhuận, không phải mức đóng góp vào toàn danh mục.</p>
           <div className="transactions-list" style={{ marginTop: '1rem' }}>
-            {(!performanceData || performanceData.worstPerformers.length === 0) && <p className="empty-state">Không có dữ liệu.</p>}
-            {performanceData?.worstPerformers.map(a => (
+            {errors.performance ? renderSectionError('performance') : (!performanceData || performanceData.worstPerformers.length === 0) && <p className="empty-state">Không có dữ liệu.</p>}
+            {!errors.performance && performanceData?.worstPerformers.map(a => (
               <div key={a.symbol} className="transaction-item" style={{ padding: '0.75rem', marginBottom: '0.5rem', borderRadius: '8px', background: 'rgba(255,255,255,0.05)' }}>
                 <div className="transaction-details">
                   <h4>{a.symbol}</h4>
@@ -337,15 +417,28 @@ export const AnalyticsDashboard: React.FC = () => {
       {/* Row 4: Rebalancing Suggestions */}
       <div className="dashboard-grid" style={{ gridTemplateColumns: '1fr', gap: '1.5rem', marginTop: '1.5rem' }}>
         <div className="chart-card glass-panel" style={{ display: 'flex', flexDirection: 'column' }}>
-          <h2>⚖️ Gợi ý Tái cân bằng (Rebalancing)</h2>
+          <h2>Đánh giá sai lệch phân bổ</h2>
+          <p className="analytics-panel-note">
+            Chỉ mang tính tham khảo. Hãy cân nhắc dòng tiền mới, phí và thuế trước khi điều chỉnh tài sản.
+          </p>
           <div className="transactions-list" style={{ marginTop: '1rem' }}>
-            {rebalanceSuggestions.length === 0 ? (
-              <p className="empty-state">Tỷ trọng danh mục của bạn đang cân bằng, không có gợi ý nào vào lúc này.</p>
+            {errors.rebalancing ? renderSectionError('rebalancing') : !rebalanceAssessment?.isActionable ? (
+              <div className="analytics-assessment-note">
+                <strong>Chưa thể đưa ra phương án tham khảo</strong>
+                <p>{rebalanceAssessment?.reason ?? 'Chưa có đủ dữ liệu đánh giá.'}</p>
+                {rebalanceAssessment?.targetPlanStatus !== 'Complete' && (
+                  <button className="btn-secondary" onClick={() => setIsTargetModalOpen(true)} type="button">
+                    Hoàn thiện phân bổ mục tiêu
+                  </button>
+                )}
+              </div>
+            ) : rebalanceAssessment.suggestions.length === 0 ? (
+              <p className="empty-state">{rebalanceAssessment.reason}</p>
             ) : (
               <table style={{ width: '100%', fontSize: '0.875rem', textAlign: 'left', borderCollapse: 'collapse' }}>
                 <thead>
                   <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.1)' }}>
-                    <th style={{ padding: '0.75rem' }}>Hành động</th>
+                    <th style={{ padding: '0.75rem' }}>Phương án tham khảo</th>
                     <th style={{ padding: '0.75rem' }}>Danh mục</th>
                     <th style={{ padding: '0.75rem', textAlign: 'right' }}>Giá trị Hiện tại</th>
                     <th style={{ padding: '0.75rem', textAlign: 'right' }}>Giá trị Mục tiêu</th>
@@ -353,29 +446,34 @@ export const AnalyticsDashboard: React.FC = () => {
                   </tr>
                 </thead>
                 <tbody>
-                  {rebalanceSuggestions.map((s, index) => (
+                  {rebalanceAssessment.suggestions.map((s, index) => (
                     <tr key={index} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
                       <td style={{ padding: '0.75rem' }}>
                         <span style={{ 
                           padding: '0.25rem 0.5rem', 
                           borderRadius: '4px',
-                          backgroundColor: s.action === 'Buy' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(239, 68, 68, 0.2)',
-                          color: s.action === 'Buy' ? '#10b981' : '#ef4444',
+                          backgroundColor: s.action === 'Increase' ? 'rgba(16, 185, 129, 0.2)' : 'rgba(245, 158, 11, 0.2)',
+                          color: s.action === 'Increase' ? '#10b981' : '#f59e0b',
                           fontWeight: 'bold'
                         }}>
-                          {s.action === 'Buy' ? 'NÊN MUA' : 'NÊN BÁN'}
+                          {s.action === 'Increase' ? 'CÂN NHẮC BỔ SUNG' : 'CÂN NHẮC GIẢM'}
                         </span>
                       </td>
                       <td style={{ padding: '0.75rem', fontWeight: 'bold' }}>{s.categoryName}</td>
                       <td style={{ padding: '0.75rem', textAlign: 'right' }}>{formatCurrency(s.currentValue)}</td>
                       <td style={{ padding: '0.75rem', textAlign: 'right' }}>{formatCurrency(s.targetValue)}</td>
-                      <td style={{ padding: '0.75rem', textAlign: 'right', color: s.action === 'Buy' ? '#10b981' : '#ef4444', fontWeight: 'bold' }}>
+                      <td style={{ padding: '0.75rem', textAlign: 'right', color: s.action === 'Increase' ? '#10b981' : '#f59e0b', fontWeight: 'bold' }}>
                         {formatCurrency(s.differenceValue)}
                       </td>
                     </tr>
                   ))}
                 </tbody>
               </table>
+            )}
+            {!errors.rebalancing && rebalanceAssessment && (
+              <p className="analytics-tolerance-note">
+                Biên dung sai: {rebalanceAssessment.tolerancePercentagePoints.toLocaleString('vi-VN')} điểm phần trăm.
+              </p>
             )}
           </div>
         </div>

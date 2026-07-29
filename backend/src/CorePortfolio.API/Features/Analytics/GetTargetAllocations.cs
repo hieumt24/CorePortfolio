@@ -1,3 +1,5 @@
+using CorePortfolio.Domain.Analytics;
+using CorePortfolio.API.Services;
 using CorePortfolio.Infrastructure.Data;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
@@ -11,29 +13,36 @@ public class TargetAllocationDto
     public decimal TargetPercentage { get; set; }
 }
 
-public class GetTargetAllocationsQuery : IRequest<List<TargetAllocationDto>>
-{
-    public Guid UserId { get; set; }
-    public GetTargetAllocationsQuery(Guid userId)
-    {
-        UserId = userId;
-    }
-}
+public sealed record TargetAllocationPlanDto(
+    IReadOnlyList<TargetAllocationDto> Allocations,
+    decimal TotalPercentage,
+    string Status,
+    bool IsActionable,
+    string? Reason);
 
-public class GetTargetAllocationsHandler : IRequestHandler<GetTargetAllocationsQuery, List<TargetAllocationDto>>
+public sealed record GetTargetAllocationsQuery : IRequest<TargetAllocationPlanDto>;
+
+public class GetTargetAllocationsHandler : IRequestHandler<GetTargetAllocationsQuery, TargetAllocationPlanDto>
 {
     private readonly AppDbContext _dbContext;
+    private readonly ICurrentUserService _currentUserService;
 
-    public GetTargetAllocationsHandler(AppDbContext dbContext)
+    public GetTargetAllocationsHandler(
+        AppDbContext dbContext,
+        ICurrentUserService currentUserService)
     {
         _dbContext = dbContext;
+        _currentUserService = currentUserService;
     }
 
-    public async Task<List<TargetAllocationDto>> Handle(GetTargetAllocationsQuery request, CancellationToken cancellationToken)
+    public async Task<TargetAllocationPlanDto> Handle(
+        GetTargetAllocationsQuery request,
+        CancellationToken cancellationToken)
     {
+        var userId = _currentUserService.UserId ?? throw new UnauthorizedAccessException();
         var allocations = await _dbContext.TargetAllocations
             .Include(t => t.Category)
-            .Where(t => t.UserId == request.UserId)
+            .Where(t => t.UserId == userId)
             .Select(t => new TargetAllocationDto
             {
                 CategoryId = t.CategoryId,
@@ -42,27 +51,37 @@ public class GetTargetAllocationsHandler : IRequestHandler<GetTargetAllocationsQ
             })
             .ToListAsync(cancellationToken);
 
-        var allCategories = await _dbContext.AssetCategories.ToListAsync(cancellationToken);
+        var assessment = TargetAllocationPolicy.Evaluate(
+            allocations.Select(allocation =>
+                new TargetAllocationWeight(
+                    allocation.CategoryId,
+                    allocation.TargetPercentage)));
+        var groupedAllocations = allocations
+            .GroupBy(allocation => allocation.CategoryId)
+            .ToDictionary(
+                group => group.Key,
+                group => group.Sum(allocation => allocation.TargetPercentage));
+        var allCategories = await _dbContext.AssetCategories
+            .AsNoTracking()
+            .OrderBy(category => category.Name)
+            .ToListAsync(cancellationToken);
         
         var result = new List<TargetAllocationDto>();
         foreach (var cat in allCategories)
         {
-            var existing = allocations.FirstOrDefault(a => a.CategoryId == cat.Id);
-            if (existing != null)
+            result.Add(new TargetAllocationDto
             {
-                result.Add(existing);
-            }
-            else
-            {
-                result.Add(new TargetAllocationDto
-                {
-                    CategoryId = cat.Id,
-                    CategoryName = cat.Name,
-                    TargetPercentage = 0
-                });
-            }
+                CategoryId = cat.Id,
+                CategoryName = cat.Name,
+                TargetPercentage = groupedAllocations.GetValueOrDefault(cat.Id)
+            });
         }
 
-        return result;
+        return new TargetAllocationPlanDto(
+            result,
+            assessment.TotalPercentage,
+            assessment.Status,
+            assessment.IsActionable,
+            assessment.Reason);
     }
 }
