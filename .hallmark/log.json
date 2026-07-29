@@ -1,5 +1,15 @@
 [
   {
+    "date": "2026-07-29",
+    "scope": "analytics-decision-workspace",
+    "macrostructure": "Workbench",
+    "theme": "CorePortfolio premium",
+    "genre": "atmospheric",
+    "enrichment": "none",
+    "nav": "existing application navbar",
+    "brief": "Decision-first analytics workspace with scoped performance, trust, allocation, cashflow and deterministic attention signals"
+  },
+  {
     "date": "2026-07-26",
     "scope": "profile-and-navbar",
     "macrostructure": "Split Studio",

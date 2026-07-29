@@ -1,3 +1,8 @@
+import type {
+  PerformanceSeries,
+  PerformanceSummary,
+} from '../../performance/types';
+
 export interface CashflowMonthlyAnalyticsDto {
   month: string;
   income: number;
@@ -88,4 +93,64 @@ export interface RebalanceAssessmentDto {
   isActionable: boolean;
   reason: string | null;
   suggestions: RebalanceSuggestionDto[];
+}
+
+export interface AnalyticsScopeDto {
+  portfolioId: string | null;
+  portfolioName: string;
+  from: string;
+  to: string;
+  currency: string;
+  financialHealthIsGlobal: boolean;
+}
+
+export interface FinancialHealthDto {
+  netWorth: number;
+  investedValue: number;
+  cashBalance: number;
+  unrealizedPnl: number;
+  monthlyIncome: number;
+  monthlyExpense: number;
+  monthlyNetFlow: number;
+  budgetLimit: number;
+  budgetSpent: number;
+  budgetProgressPercentage: number;
+  portfolioCount: number;
+  budgetWarningCount: number;
+  budgetExceededCount: number;
+  asOf: string;
+}
+
+export interface AnalyticsGoalSummaryDto {
+  activeCount: number;
+  completedCount: number;
+  atRiskCount: number;
+  totalRemaining: number;
+}
+
+export interface AnalyticsDcaSummaryDto {
+  activeCount: number;
+  insufficientCashCount: number;
+  nextExecutionDate: string | null;
+}
+
+export interface AnalyticsAttentionDto {
+  code: string;
+  severity: 'Critical' | 'Warning' | 'Info' | 'Positive' | string;
+  title: string;
+  detail: string;
+  deepLink: string | null;
+}
+
+export interface AnalyticsOverviewDto {
+  scope: AnalyticsScopeDto;
+  performance: PerformanceSummary;
+  series: PerformanceSeries;
+  dataQuality: PerformanceDataQualityDto;
+  financialHealth: FinancialHealthDto;
+  allocation: AssetAllocationDto[];
+  cashflow: CashflowMonthlyAnalyticsDto[];
+  goals: AnalyticsGoalSummaryDto;
+  dca: AnalyticsDcaSummaryDto;
+  attention: AnalyticsAttentionDto[];
 }

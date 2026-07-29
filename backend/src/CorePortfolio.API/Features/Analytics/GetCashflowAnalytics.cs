@@ -7,7 +7,10 @@ using Microsoft.EntityFrameworkCore;
 
 namespace CorePortfolio.API.Features.Analytics;
 
-public record GetCashflowAnalyticsQuery(int Months = 6, string Currency = "VND") : IRequest<List<CashflowMonthlyAnalyticsDto>>;
+public record GetCashflowAnalyticsQuery(
+    int Months = 6,
+    string Currency = "VND",
+    Guid? PortfolioId = null) : IRequest<List<CashflowMonthlyAnalyticsDto>>;
 
 public class CashflowMonthlyAnalyticsDto
 {
@@ -37,10 +40,13 @@ public class GetCashflowAnalyticsHandler : IRequestHandler<GetCashflowAnalyticsQ
 
         var startDate = DateTime.UtcNow.AddMonths(-request.Months);
 
-        var cashflows = await _dbContext.CashflowRecords
+        var cashflowsQuery = _dbContext.CashflowRecords
             .Include(c => c.Category)
-            .Where(c => c.UserId == userId && c.Date >= startDate && c.Currency == request.Currency)
-            .ToListAsync(cancellationToken);
+            .Where(c => c.UserId == userId && c.Date >= startDate && c.Currency == request.Currency);
+        if (request.PortfolioId.HasValue)
+            cashflowsQuery = cashflowsQuery.Where(c => c.PortfolioId == request.PortfolioId.Value);
+
+        var cashflows = await cashflowsQuery.ToListAsync(cancellationToken);
 
         var grouped = cashflows
             .GroupBy(c => new { c.Date.Year, c.Date.Month })

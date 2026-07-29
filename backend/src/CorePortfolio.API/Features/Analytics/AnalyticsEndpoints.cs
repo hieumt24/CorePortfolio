@@ -3,6 +3,7 @@ using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.Mvc;
+using CorePortfolio.API.Features.Analytics.GetAnalyticsOverview;
 
 namespace CorePortfolio.API.Features.Analytics;
 
@@ -12,15 +13,30 @@ public static class AnalyticsEndpoints
     {
         var group = app.MapGroup("/api/analytics").WithTags("Analytics");
 
+        group.MapGet("/overview", async (
+            IMediator mediator,
+            [FromQuery] Guid? portfolioId,
+            [FromQuery] DateTime? from,
+            [FromQuery] DateTime? to,
+            [FromQuery] string currency = "VND") =>
+        {
+            var result = await mediator.Send(
+                new GetAnalyticsOverviewQuery(portfolioId, from, to, currency));
+            return Results.Ok(result);
+        });
+
         group.MapGet("/cashflow", async (IMediator mediator, [FromQuery] int months = 6, [FromQuery] string currency = "VND") =>
         {
             var result = await mediator.Send(new GetCashflowAnalyticsQuery(months, currency));
             return Results.Ok(result);
         });
 
-        group.MapGet("/allocation", async (IMediator mediator, [FromQuery] string currency = "VND") =>
+        group.MapGet("/allocation", async (
+            IMediator mediator,
+            [FromQuery] string currency = "VND",
+            [FromQuery] Guid? portfolioId = null) =>
         {
-            var result = await mediator.Send(new GetAssetAllocationQuery(currency));
+            var result = await mediator.Send(new GetAssetAllocationQuery(currency, portfolioId));
             return Results.Ok(result);
         });
 

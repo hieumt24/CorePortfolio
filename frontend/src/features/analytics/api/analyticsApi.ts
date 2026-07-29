@@ -7,10 +7,26 @@ import type {
   DividendMonthlyAnalyticsDto,
   TargetAllocationInput,
   TargetAllocationPlanDto,
-  RebalanceAssessmentDto
+  RebalanceAssessmentDto,
+  AnalyticsOverviewDto,
 } from '../types';
 
 export const analyticsApi = {
+  getOverview: async (filters: {
+    portfolioId?: string;
+    from: string;
+    to: string;
+    currency: string;
+  }): Promise<AnalyticsOverviewDto> => {
+    const params = new URLSearchParams({
+      from: filters.from,
+      to: filters.to,
+      currency: filters.currency,
+    });
+    if (filters.portfolioId) params.set('portfolioId', filters.portfolioId);
+    return apiClient<AnalyticsOverviewDto>(`/analytics/overview?${params.toString()}`);
+  },
+
   getCashflowAnalytics: async (months: number = 6, currency: string = 'VND'): Promise<CashflowMonthlyAnalyticsDto[]> => {
     return apiClient<CashflowMonthlyAnalyticsDto[]>(`/analytics/cashflow?months=${months}&currency=${currency}`);
   },

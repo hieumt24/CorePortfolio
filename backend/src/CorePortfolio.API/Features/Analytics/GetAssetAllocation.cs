@@ -5,10 +5,14 @@ using CorePortfolio.Infrastructure.Data;
 using CorePortfolio.API.Features.Reports.GetGlobalReport;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
+using CorePortfolio.API.Common;
+using CorePortfolio.API.Features.Portfolios.GetPortfolioSummary;
 
 namespace CorePortfolio.API.Features.Analytics;
 
-public record GetAssetAllocationQuery(string Currency = "VND") : IRequest<List<AssetAllocationDto>>;
+public record GetAssetAllocationQuery(
+    string Currency = "VND",
+    Guid? PortfolioId = null) : IRequest<List<AssetAllocationDto>>;
 
 public class AssetAllocationDto
 {
@@ -40,24 +44,50 @@ public class GetAssetAllocationHandler : IRequestHandler<GetAssetAllocationQuery
         var userId = _currentUserService.UserId;
         if (userId == null || userId == Guid.Empty) throw new UnauthorizedAccessException();
 
-        var report = await _mediator.Send(new GetGlobalReportQuery(userId.Value), cancellationToken);
-
         var vndUsdRate = await _exchangeRateService.GetUsdToVndAsync(cancellationToken);
 
         var result = new List<AssetAllocationDto>();
 
         var convertedAllocations = new List<AssetAllocationDto>();
-        foreach (var cat in report.AllocationsByCategory)
+        if (request.PortfolioId.HasValue)
         {
-            var currentVal = cat.CurrentValue;
-            if (request.Currency == "VND" && cat.Currency == "USD") currentVal *= vndUsdRate;
-            else if (request.Currency == "USD" && cat.Currency == "VND") currentVal /= vndUsdRate;
+            var summary = await _mediator.Send(
+                new GetPortfolioSummaryQuery(request.PortfolioId.Value, userId.Value),
+                cancellationToken);
+            if (summary is null)
+                throw new ResourceNotFoundException("Không tìm thấy danh mục của người dùng.");
 
-            convertedAllocations.Add(new AssetAllocationDto
+            foreach (var asset in summary.Assets)
             {
-                CategoryName = cat.CategoryName,
-                TotalValue = currentVal
-            });
+                var currentValue = ConvertValue(
+                    asset.CurrentValue,
+                    asset.Currency,
+                    request.Currency,
+                    vndUsdRate);
+                convertedAllocations.Add(new AssetAllocationDto
+                {
+                    CategoryName = asset.CategoryName,
+                    TotalValue = currentValue
+                });
+            }
+        }
+        else
+        {
+            var report = await _mediator.Send(
+                new GetGlobalReportQuery(userId.Value),
+                cancellationToken);
+            foreach (var category in report.AllocationsByCategory)
+            {
+                convertedAllocations.Add(new AssetAllocationDto
+                {
+                    CategoryName = category.CategoryName,
+                    TotalValue = ConvertValue(
+                        category.CurrentValue,
+                        category.Currency,
+                        request.Currency,
+                        vndUsdRate)
+                });
+            }
         }
 
         // Group by category name (since now everything is in the same currency)
@@ -105,5 +135,18 @@ public class GetAssetAllocationHandler : IRequestHandler<GetAssetAllocationQuery
         }
 
         return result.OrderByDescending(r => r.Percentage).ToList();
+    }
+
+    private static decimal ConvertValue(
+        decimal value,
+        string sourceCurrency,
+        string targetCurrency,
+        decimal vndUsdRate)
+    {
+        if (targetCurrency == "VND" && sourceCurrency == "USD")
+            return value * vndUsdRate;
+        if (targetCurrency == "USD" && sourceCurrency == "VND")
+            return value / vndUsdRate;
+        return value;
     }
 }
