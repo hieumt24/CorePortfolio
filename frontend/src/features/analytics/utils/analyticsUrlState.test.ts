@@ -26,6 +26,17 @@ describe('analytics URL state', () => {
     expect(parseAnalyticsUrlState(toAnalyticsSearchParams(state))).toEqual(state);
   });
 
+  it('keeps the scenario workspace in the URL', () => {
+    const state = {
+      period: '1Y' as const,
+      tab: 'scenario' as const,
+      currency: 'VND' as const,
+      portfolioId: undefined,
+    };
+
+    expect(parseAnalyticsUrlState(toAnalyticsSearchParams(state))).toEqual(state);
+  });
+
   it('resolves YTD without depending on local timezone', () => {
     expect(resolveAnalyticsDateRange('YTD', new Date('2026-07-29T20:00:00Z')))
       .toEqual({ from: '2026-01-01', to: '2026-07-29' });

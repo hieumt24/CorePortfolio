@@ -1,5 +1,5 @@
 export const analyticsPeriods = ['1M', '3M', '6M', 'YTD', '1Y', 'ALL'] as const;
-export const analyticsTabs = ['overview', 'performance', 'allocation', 'cashflow'] as const;
+export const analyticsTabs = ['overview', 'performance', 'allocation', 'cashflow', 'scenario'] as const;
 
 export type AnalyticsPeriod = typeof analyticsPeriods[number];
 export type AnalyticsTab = typeof analyticsTabs[number];

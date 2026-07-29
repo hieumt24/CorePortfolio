@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.Mvc;
 using CorePortfolio.API.Features.Analytics.GetAnalyticsOverview;
 using CorePortfolio.API.Features.Analytics.GetAnalyticsInsights;
+using CorePortfolio.API.Features.Analytics.EvaluateAnalyticsScenario;
 
 namespace CorePortfolio.API.Features.Analytics;
 
@@ -35,6 +36,15 @@ public static class AnalyticsEndpoints
         {
             var result = await mediator.Send(
                 new GetAnalyticsInsightsQuery(portfolioId, from, to, currency));
+            return Results.Ok(result);
+        });
+
+        group.MapPost("/scenarios/evaluate", async (
+            IMediator mediator,
+            [FromBody] EvaluateAnalyticsScenarioRequest request) =>
+        {
+            var result = await mediator.Send(
+                new EvaluateAnalyticsScenarioQuery(request));
             return Results.Ok(result);
         });
 

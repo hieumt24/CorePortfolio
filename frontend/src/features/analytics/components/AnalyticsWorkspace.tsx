@@ -16,6 +16,7 @@ import {
 } from 'recharts';
 import type { AnalyticsOverviewDto } from '../types';
 import { analyticsTabs, type AnalyticsTab } from '../utils/analyticsUrlState';
+import { ScenarioLab } from './ScenarioLab';
 
 interface AnalyticsWorkspaceProps {
   data: AnalyticsOverviewDto;
@@ -29,6 +30,7 @@ const tabLabels: Record<AnalyticsTab, string> = {
   performance: 'Hiệu suất',
   allocation: 'Phân bổ',
   cashflow: 'Dòng tiền & mục tiêu',
+  scenario: 'Mô phỏng',
 };
 
 const compactNumber = (value: number) =>
@@ -341,6 +343,7 @@ export const AnalyticsWorkspace = ({
         )}
         {activeTab === 'allocation' && renderAllocation()}
         {activeTab === 'cashflow' && renderCashflow()}
+        {activeTab === 'scenario' && <ScenarioLab data={data} />}
       </div>
     </section>
   );

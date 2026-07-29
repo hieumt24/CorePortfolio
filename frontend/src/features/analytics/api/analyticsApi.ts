@@ -10,6 +10,8 @@ import type {
   RebalanceAssessmentDto,
   AnalyticsOverviewDto,
   AnalyticsInsightsDto,
+  AnalyticsScenarioDto,
+  EvaluateAnalyticsScenarioRequest,
 } from '../types';
 
 export const analyticsApi = {
@@ -41,6 +43,15 @@ export const analyticsApi = {
     });
     if (filters.portfolioId) params.set('portfolioId', filters.portfolioId);
     return apiClient<AnalyticsInsightsDto>(`/analytics/insights?${params.toString()}`);
+  },
+
+  evaluateScenario: async (
+    request: EvaluateAnalyticsScenarioRequest,
+  ): Promise<AnalyticsScenarioDto> => {
+    return apiClient<AnalyticsScenarioDto>('/analytics/scenarios/evaluate', {
+      method: 'POST',
+      body: JSON.stringify(request),
+    });
   },
 
   getCashflowAnalytics: async (months: number = 6, currency: string = 'VND'): Promise<CashflowMonthlyAnalyticsDto[]> => {

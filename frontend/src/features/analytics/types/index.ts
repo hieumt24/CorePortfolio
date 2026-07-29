@@ -186,6 +186,60 @@ export interface AnalyticsInsightsDto {
   items: AnalyticsInsightDto[];
 }
 
+export interface AnalyticsScenarioShockInput {
+  categoryName: string;
+  changePercentage: number;
+}
+
+export interface EvaluateAnalyticsScenarioRequest {
+  portfolioId?: string;
+  from: string;
+  to: string;
+  currency: string;
+  horizonMonths: number;
+  monthlyIncomeChange: number;
+  monthlyExpenseChange: number;
+  shocks: AnalyticsScenarioShockInput[];
+}
+
+export interface AnalyticsScenarioAllocationDto {
+  categoryName: string;
+  currentValue: number;
+  shockPercentage: number;
+  stressedValue: number;
+  valueChange: number;
+  currentPercentage: number;
+  stressedPercentage: number;
+}
+
+export interface AnalyticsScenarioDto {
+  scope: AnalyticsScopeDto;
+  generatedAt: string;
+  methodologyVersion: string;
+  confidence: 'High' | 'Medium' | 'Low' | string;
+  horizonMonths: number;
+  baseline: {
+    trackedPortfolioValue: number;
+    averageMonthlyNetFlow: number;
+    cashflowSampleMonthCount: number;
+  };
+  outcome: {
+    stressedPortfolioValue: number;
+    portfolioValueChange: number;
+    portfolioValueChangePercentage: number;
+    scenarioMonthlyNetFlow: number;
+    baselineCumulativeNetFlow: number;
+    scenarioCumulativeNetFlow: number;
+    cumulativeNetFlowDifference: number;
+    combinedPlanningDelta: number;
+    breakEvenMonthlyImprovement: number;
+    worstAffectedCategory: string | null;
+  };
+  allocations: AnalyticsScenarioAllocationDto[];
+  assumptions: string[];
+  disclaimer: string;
+}
+
 export interface AnalyticsOverviewDto {
   scope: AnalyticsScopeDto;
   performance: PerformanceSummary;

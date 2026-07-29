@@ -148,9 +148,9 @@ const WorkspaceHarness = () => {
 };
 
 describe('AnalyticsWorkspace', () => {
-  it('exposes four accessible decision tabs', () => {
+  it('exposes five accessible decision tabs', () => {
     const view = render(<MemoryRouter><WorkspaceHarness /></MemoryRouter>);
-    expect(view.getAllByRole('tab')).toHaveLength(4);
+    expect(view.getAllByRole('tab')).toHaveLength(5);
     expect(view.getByRole('tab', { name: 'Tổng quan' }).getAttribute('aria-selected')).toBe('true');
     view.unmount();
   });
