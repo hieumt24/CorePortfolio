@@ -9,6 +9,7 @@ import type {
   TargetAllocationPlanDto,
   RebalanceAssessmentDto,
   AnalyticsOverviewDto,
+  AnalyticsInsightsDto,
 } from '../types';
 
 export const analyticsApi = {
@@ -25,6 +26,21 @@ export const analyticsApi = {
     });
     if (filters.portfolioId) params.set('portfolioId', filters.portfolioId);
     return apiClient<AnalyticsOverviewDto>(`/analytics/overview?${params.toString()}`);
+  },
+
+  getInsights: async (filters: {
+    portfolioId?: string;
+    from: string;
+    to: string;
+    currency: string;
+  }): Promise<AnalyticsInsightsDto> => {
+    const params = new URLSearchParams({
+      from: filters.from,
+      to: filters.to,
+      currency: filters.currency,
+    });
+    if (filters.portfolioId) params.set('portfolioId', filters.portfolioId);
+    return apiClient<AnalyticsInsightsDto>(`/analytics/insights?${params.toString()}`);
   },
 
   getCashflowAnalytics: async (months: number = 6, currency: string = 'VND'): Promise<CashflowMonthlyAnalyticsDto[]> => {

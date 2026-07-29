@@ -7,7 +7,11 @@ using CorePortfolio.API.Features.Performance.GetPerformanceSeries;
 using CorePortfolio.API.Features.Performance.GetPerformanceSummary;
 using CorePortfolio.API.Features.Portfolios.GetPortfolios;
 using CorePortfolio.API.Features.SavingGoals;
+using CorePortfolio.API.Features.Analytics.GetAnalyticsInsights;
+using CorePortfolio.API.Features.Rebalancing;
+using CorePortfolio.Domain.Analytics;
 using MediatR;
+using Microsoft.Extensions.Options;
 
 namespace CorePortfolio.API.Features.Analytics.GetAnalyticsOverview;
 
@@ -47,6 +51,7 @@ public sealed record AnalyticsOverviewDto(
     IReadOnlyList<CashflowMonthlyAnalyticsDto> Cashflow,
     AnalyticsGoalSummaryDto Goals,
     AnalyticsDcaSummaryDto Dca,
+    AnalyticsInsightsDto Insights,
     IReadOnlyList<AnalyticsAttentionDto> Attention);
 
 public sealed record GetAnalyticsOverviewQuery(
@@ -55,7 +60,9 @@ public sealed record GetAnalyticsOverviewQuery(
     DateTime? To,
     string Currency) : IRequest<AnalyticsOverviewDto>;
 
-public sealed class GetAnalyticsOverviewHandler(IMediator mediator)
+public sealed class GetAnalyticsOverviewHandler(
+    IMediator mediator,
+    IOptions<RebalancingOptions> rebalancingOptions)
     : IRequestHandler<GetAnalyticsOverviewQuery, AnalyticsOverviewDto>
 {
     private const int MaximumRangeDays = 3660;
@@ -107,6 +114,9 @@ public sealed class GetAnalyticsOverviewHandler(IMediator mediator)
         var allocation = await mediator.Send(
             new GetAssetAllocationQuery(currency, request.PortfolioId),
             cancellationToken);
+        var targetPlan = await mediator.Send(
+            new GetTargetAllocationsQuery(),
+            cancellationToken);
 
         var months = Math.Clamp(
             (int)Math.Ceiling(((to.Year - from.Year) * 12 + to.Month - from.Month + 1m)),
@@ -144,15 +154,46 @@ public sealed class GetAnalyticsOverviewHandler(IMediator mediator)
                 ? null
                 : activeDcaPlans.Min(plan => plan.NextExecutionDate));
 
-        var attention = BuildAttention(dataQuality, performance, goalSummary, dcaSummary);
+        var scope = new AnalyticsScopeDto(
+            request.PortfolioId,
+            selectedPortfolio?.Name ?? "Tất cả danh mục",
+            from,
+            to,
+            currency,
+            request.PortfolioId.HasValue);
+        var findings = AnalyticsInsightEngine.Evaluate(new AnalyticsInsightInput(
+            dataQuality.QualityStatus,
+            dataQuality.MissingSnapshotDays,
+            dataQuality.StaleAssetCount,
+            dataQuality.UnclassifiedCashFlowCount,
+            performance.TimeWeightedReturnPercentage.Value,
+            performance.MoneyWeightedReturnPercentage.Value,
+            performance.MaximumDrawdownPercentage.Value,
+            targetPlan.Status,
+            rebalancingOptions.Value.TolerancePercentagePoints,
+            allocation.Select(item => new AnalyticsAllocationSignal(
+                item.CategoryName,
+                item.Percentage,
+                item.TargetPercentage)).ToList(),
+            cashflow.Select(item => item.NetFlow).ToList(),
+            financialHealth.BudgetExceededCount,
+            goalSummary.AtRiskCount,
+            dcaSummary.InsufficientCashCount));
+        var insights = AnalyticsInsightPresenter.Create(
+            scope,
+            findings,
+            DateTime.UtcNow);
+        var attention = insights.Items
+            .Take(3)
+            .Select(item => new AnalyticsAttentionDto(
+                item.Code,
+                item.Severity,
+                item.Title,
+                item.Observation,
+                item.Action?.Href))
+            .ToList();
         return new AnalyticsOverviewDto(
-            new AnalyticsScopeDto(
-                request.PortfolioId,
-                selectedPortfolio?.Name ?? "Tất cả danh mục",
-                from,
-                to,
-                currency,
-                request.PortfolioId.HasValue),
+            scope,
             performance,
             series,
             dataQuality,
@@ -161,66 +202,7 @@ public sealed class GetAnalyticsOverviewHandler(IMediator mediator)
             cashflow,
             goalSummary,
             dcaSummary,
+            insights,
             attention);
-    }
-
-    private static IReadOnlyList<AnalyticsAttentionDto> BuildAttention(
-        PerformanceDataQualityDto quality,
-        PerformanceSummaryDto performance,
-        AnalyticsGoalSummaryDto goals,
-        AnalyticsDcaSummaryDto dca)
-    {
-        var result = new List<AnalyticsAttentionDto>();
-        if (quality.QualityStatus != "Complete")
-        {
-            result.Add(new AnalyticsAttentionDto(
-                "DATA_QUALITY",
-                quality.QualityStatus == "Unavailable" ? "Critical" : "Warning",
-                "Kiểm tra độ tin cậy dữ liệu",
-                $"{quality.MissingSnapshotDays} ngày thiếu snapshot, {quality.StaleAssetCount} tài sản có giá cũ.",
-                "/analytics/performance"));
-        }
-
-        if (performance.MaximumDrawdownPercentage.Value is < -10m)
-        {
-            result.Add(new AnalyticsAttentionDto(
-                "DRAWDOWN",
-                "Warning",
-                "Rà soát mức sụt giảm",
-                $"Mức drawdown lớn nhất trong kỳ là {performance.MaximumDrawdownPercentage.Value:0.##}%.",
-                "/analytics/performance"));
-        }
-
-        if (goals.AtRiskCount > 0)
-        {
-            result.Add(new AnalyticsAttentionDto(
-                "GOALS_AT_RISK",
-                "Warning",
-                "Mục tiêu sắp đến hạn",
-                $"{goals.AtRiskCount} mục tiêu còn dưới 80% tiến độ và còn không quá 30 ngày.",
-                "/saving-goals"));
-        }
-
-        if (dca.InsufficientCashCount > 0)
-        {
-            result.Add(new AnalyticsAttentionDto(
-                "DCA_CASH",
-                "Info",
-                "Kiểm tra tiền cho kế hoạch DCA",
-                $"{dca.InsufficientCashCount} kế hoạch đang hoạt động chưa đủ số dư tiền mặt.",
-                "/dca-plans"));
-        }
-
-        if (result.Count == 0)
-        {
-            result.Add(new AnalyticsAttentionDto(
-                "NO_URGENT_SIGNAL",
-                "Positive",
-                "Chưa có tín hiệu cần xử lý ngay",
-                "Dữ liệu hiện tại không phát hiện vấn đề nổi bật theo các quy tắc Sprint 1.",
-                null));
-        }
-
-        return result.Take(3).ToList();
     }
 }

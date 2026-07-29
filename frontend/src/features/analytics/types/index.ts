@@ -142,6 +142,50 @@ export interface AnalyticsAttentionDto {
   deepLink: string | null;
 }
 
+export interface AnalyticsInsightEvidenceDto {
+  key: string;
+  label: string;
+  value: number;
+  unit: string;
+  source: string;
+}
+
+export interface AnalyticsInsightActionDto {
+  label: string;
+  href: string;
+}
+
+export interface AnalyticsInsightDto {
+  code: string;
+  category: 'DataQuality' | 'Risk' | 'Allocation' | 'Cashflow' | 'Goals' | 'Performance' | 'General' | string;
+  severity: 'Critical' | 'Warning' | 'Info' | 'Positive' | string;
+  confidence: 'High' | 'Medium' | 'Low' | string;
+  priority: number;
+  title: string;
+  observation: string;
+  interpretation: string;
+  whyItMatters: string;
+  evidence: AnalyticsInsightEvidenceDto[];
+  limitations: string[];
+  action: AnalyticsInsightActionDto | null;
+}
+
+export interface AnalyticsInsightsDto {
+  scope: AnalyticsScopeDto;
+  generatedAt: string;
+  methodologyVersion: string;
+  methodologyDescription: string;
+  disclaimer: string;
+  summary: {
+    totalCount: number;
+    criticalCount: number;
+    warningCount: number;
+    infoCount: number;
+    positiveCount: number;
+  };
+  items: AnalyticsInsightDto[];
+}
+
 export interface AnalyticsOverviewDto {
   scope: AnalyticsScopeDto;
   performance: PerformanceSummary;
@@ -152,5 +196,6 @@ export interface AnalyticsOverviewDto {
   cashflow: CashflowMonthlyAnalyticsDto[];
   goals: AnalyticsGoalSummaryDto;
   dca: AnalyticsDcaSummaryDto;
+  insights: AnalyticsInsightsDto;
   attention: AnalyticsAttentionDto[];
 }

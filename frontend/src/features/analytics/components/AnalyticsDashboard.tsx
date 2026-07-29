@@ -154,7 +154,7 @@ export const AnalyticsDashboard = () => {
               onTabChange={(tab: AnalyticsTab) => updateUrlState({ tab })}
               onOpenTargets={() => setTargetModalOpen(true)}
             />
-            <InsightRail attention={overview.attention} />
+            <InsightRail insights={overview.insights} />
           </div>
           {loading && <div className="analytics-refresh-indicator" role="status">Đang đổi phạm vi…</div>}
         </>

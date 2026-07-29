@@ -104,6 +104,28 @@ const overview: AnalyticsOverviewDto = {
   cashflow: [{ month: '07/2026', income: 20, expense: 12, netFlow: 8 }],
   goals: { activeCount: 2, completedCount: 1, atRiskCount: 1, totalRemaining: 30 },
   dca: { activeCount: 1, insufficientCashCount: 0, nextExecutionDate: '2026-08-01' },
+  insights: {
+    scope: {
+      portfolioId: null,
+      portfolioName: 'Tất cả danh mục',
+      from: '2026-01-01',
+      to: '2026-07-29',
+      currency: 'VND',
+      financialHealthIsGlobal: false,
+    },
+    generatedAt: '2026-07-29T00:00:00Z',
+    methodologyVersion: 'rules-v1',
+    methodologyDescription: 'Quy tắc xác định.',
+    disclaimer: 'Không phải khuyến nghị đầu tư.',
+    summary: {
+      totalCount: 1,
+      criticalCount: 0,
+      warningCount: 0,
+      infoCount: 0,
+      positiveCount: 1,
+    },
+    items: [],
+  },
   attention: [{
     code: 'NO_URGENT_SIGNAL',
     severity: 'Positive',

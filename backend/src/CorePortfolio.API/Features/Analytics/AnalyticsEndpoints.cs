@@ -4,6 +4,7 @@ using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Routing;
 using Microsoft.AspNetCore.Mvc;
 using CorePortfolio.API.Features.Analytics.GetAnalyticsOverview;
+using CorePortfolio.API.Features.Analytics.GetAnalyticsInsights;
 
 namespace CorePortfolio.API.Features.Analytics;
 
@@ -22,6 +23,18 @@ public static class AnalyticsEndpoints
         {
             var result = await mediator.Send(
                 new GetAnalyticsOverviewQuery(portfolioId, from, to, currency));
+            return Results.Ok(result);
+        });
+
+        group.MapGet("/insights", async (
+            IMediator mediator,
+            [FromQuery] Guid? portfolioId,
+            [FromQuery] DateTime? from,
+            [FromQuery] DateTime? to,
+            [FromQuery] string currency = "VND") =>
+        {
+            var result = await mediator.Send(
+                new GetAnalyticsInsightsQuery(portfolioId, from, to, currency));
             return Results.Ok(result);
         });
 
