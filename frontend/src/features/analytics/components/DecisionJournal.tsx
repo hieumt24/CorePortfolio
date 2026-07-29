@@ -9,6 +9,8 @@ import { analyticsApi } from '../api/analyticsApi';
 import type {
   AnalyticsDecisionDto,
   AnalyticsDecisionOutcome,
+  AnalyticsDecisionReviewContextDto,
+  AnalyticsDecisionReviewMetricDto,
   AnalyticsDecisionStatus,
   AnalyticsDecisionType,
   AnalyticsOverviewDto,
@@ -52,6 +54,11 @@ const createEmptyForm = () => ({
 const metric = (value: number | null, suffix = '%') =>
   value === null ? '—' : `${value.toFixed(2)}${suffix}`;
 
+const signedMetric = (value: number | null, suffix = '%') =>
+  value === null
+    ? '—'
+    : `${value > 0 ? '+' : ''}${value.toFixed(2)}${suffix}`;
+
 export const DecisionJournal = ({ data }: DecisionJournalProps) => {
   const [decisions, setDecisions] = useState<AnalyticsDecisionDto[]>([]);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('All');
@@ -61,6 +68,10 @@ export const DecisionJournal = ({ data }: DecisionJournalProps) => {
   const [reviewOutcome, setReviewOutcome] =
     useState<AnalyticsDecisionOutcome>('OnTrack');
   const [reviewNotes, setReviewNotes] = useState('');
+  const [reviewContext, setReviewContext] =
+    useState<AnalyticsDecisionReviewContextDto | null>(null);
+  const [reviewContextLoading, setReviewContextLoading] = useState(false);
+  const [reviewContextError, setReviewContextError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -103,7 +114,31 @@ export const DecisionJournal = ({ data }: DecisionJournalProps) => {
     setForm(createEmptyForm());
     setShowCreateForm(false);
     setReviewingId(null);
+    setReviewContext(null);
+    setReviewContextError(null);
   }, [scopeKey]);
+
+  const loadReviewContext = async (id: string) => {
+    try {
+      setReviewContextLoading(true);
+      setReviewContextError(null);
+      setReviewContext(null);
+      setReviewContext(await analyticsApi.getDecisionReviewContext(id));
+    } catch (reason) {
+      setReviewContextError(reason instanceof Error && reason.message
+        ? reason.message
+        : 'Không thể tải dữ liệu đối chiếu.');
+    } finally {
+      setReviewContextLoading(false);
+    }
+  };
+
+  const beginReview = (id: string) => {
+    setReviewingId(id);
+    setReviewNotes('');
+    setReviewOutcome('OnTrack');
+    void loadReviewContext(id);
+  };
 
   const createDecision = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
@@ -145,6 +180,8 @@ export const DecisionJournal = ({ data }: DecisionJournalProps) => {
       setReviewingId(null);
       setReviewNotes('');
       setReviewOutcome('OnTrack');
+      setReviewContext(null);
+      setReviewContextError(null);
       setReloadKey((value) => value + 1);
     } catch (reason) {
       setError(reason instanceof Error && reason.message
@@ -423,58 +460,82 @@ export const DecisionJournal = ({ data }: DecisionJournalProps) => {
                     <small>Review {formatVietnamDateTime(decision.reviewedAt)}</small>
                   </div>
                 ) : reviewingId === decision.id ? (
-                  <form
-                    className="journal-review-form"
-                    onSubmit={(event) => void reviewDecision(event, decision.id)}
-                  >
-                    <label>
-                      <span>Kết quả</span>
-                      <select
-                        value={reviewOutcome}
-                        onChange={(event) =>
-                          setReviewOutcome(event.target.value as AnalyticsDecisionOutcome)}
-                      >
-                        {Object.entries(outcomeLabels).map(([value, label]) => (
-                          <option key={value} value={value}>{label}</option>
-                        ))}
-                      </select>
-                    </label>
-                    <label>
-                      <span>Điều gì đã xảy ra so với luận điểm ban đầu?</span>
-                      <textarea
-                        required
-                        minLength={3}
-                        maxLength={2000}
-                        value={reviewNotes}
-                        onChange={(event) => setReviewNotes(event.target.value)}
+                  <div className="journal-review-workspace">
+                    {reviewContextLoading && (
+                      <div className="journal-context-loading" role="status">
+                        Đang dựng đối chiếu cùng kỳ…
+                      </div>
+                    )}
+                    {reviewContextError && (
+                      <div className="journal-context-error" role="alert">
+                        <span>{reviewContextError}</span>
+                        <button
+                          type="button"
+                          onClick={() => void loadReviewContext(decision.id)}
+                        >
+                          Thử lại
+                        </button>
+                      </div>
+                    )}
+                    {reviewContext?.decisionId === decision.id && (
+                      <ReviewContext
+                        context={reviewContext}
+                        currency={decision.snapshot.currency}
                       />
-                    </label>
-                    <div>
-                      <button
-                        type="button"
-                        className="analytics-secondary-button"
-                        onClick={() => setReviewingId(null)}
-                      >
-                        Hủy
-                      </button>
-                      <button
-                        type="submit"
-                        className="analytics-primary-button"
-                        disabled={submitting}
-                      >
-                        {submitting ? 'Đang lưu…' : 'Hoàn tất review'}
-                      </button>
-                    </div>
-                  </form>
+                    )}
+                    <form
+                      className="journal-review-form"
+                      onSubmit={(event) => void reviewDecision(event, decision.id)}
+                    >
+                      <label>
+                        <span>Kết quả</span>
+                        <select
+                          value={reviewOutcome}
+                          onChange={(event) =>
+                            setReviewOutcome(event.target.value as AnalyticsDecisionOutcome)}
+                        >
+                          {Object.entries(outcomeLabels).map(([value, label]) => (
+                            <option key={value} value={value}>{label}</option>
+                          ))}
+                        </select>
+                      </label>
+                      <label>
+                        <span>Điều gì đã xảy ra so với luận điểm ban đầu?</span>
+                        <textarea
+                          required
+                          minLength={3}
+                          maxLength={2000}
+                          value={reviewNotes}
+                          onChange={(event) => setReviewNotes(event.target.value)}
+                        />
+                      </label>
+                      <div>
+                        <button
+                          type="button"
+                          className="analytics-secondary-button"
+                          onClick={() => {
+                            setReviewingId(null);
+                            setReviewContext(null);
+                            setReviewContextError(null);
+                          }}
+                        >
+                          Hủy
+                        </button>
+                        <button
+                          type="submit"
+                          className="analytics-primary-button"
+                          disabled={submitting}
+                        >
+                          {submitting ? 'Đang lưu…' : 'Hoàn tất review'}
+                        </button>
+                      </div>
+                    </form>
+                  </div>
                 ) : (
                   <button
                     type="button"
                     className="journal-review-trigger"
-                    onClick={() => {
-                      setReviewingId(decision.id);
-                      setReviewNotes('');
-                      setReviewOutcome('OnTrack');
-                    }}
+                    onClick={() => beginReview(decision.id)}
                   >
                     Review quyết định
                   </button>
@@ -487,3 +548,124 @@ export const DecisionJournal = ({ data }: DecisionJournalProps) => {
     </section>
   );
 };
+
+const ReviewContext = ({
+  context,
+  currency,
+}: {
+  context: AnalyticsDecisionReviewContextDto;
+  currency: string;
+}) => {
+  const money = new Intl.NumberFormat(currency === 'VND' ? 'vi-VN' : 'en-US', {
+    style: 'currency',
+    currency,
+    maximumFractionDigits: currency === 'VND' ? 0 : 2,
+  });
+  const comparisons: Array<{
+    label: string;
+    value: AnalyticsDecisionReviewMetricDto;
+    formatter: (value: number | null) => string;
+  }> = [
+    {
+      label: 'Giá trị theo dõi',
+      value: context.comparison.trackedPortfolioValue,
+      formatter: (value) => value === null ? '—' : money.format(value),
+    },
+    {
+      label: 'TWR',
+      value: context.comparison.timeWeightedReturnPercentage,
+      formatter: metric,
+    },
+    {
+      label: 'XIRR',
+      value: context.comparison.moneyWeightedReturnPercentage,
+      formatter: metric,
+    },
+    {
+      label: 'Drawdown',
+      value: context.comparison.maximumDrawdownPercentage,
+      formatter: metric,
+    },
+  ];
+
+  return (
+    <section className="journal-review-context" aria-label="Đối chiếu bằng chứng hiện tại">
+      <div className="journal-context-heading">
+        <div>
+          <span className="analytics-eyebrow">Cùng độ dài kỳ gốc</span>
+          <h4>Bằng chứng đã thay đổi thế nào?</h4>
+        </div>
+        <span className={`is-${context.comparison.readiness.toLowerCase()}`}>
+          {context.comparison.readiness === 'Ready'
+            ? 'Sẵn sàng đối chiếu'
+            : context.comparison.readiness === 'Caution'
+              ? 'Cần thận trọng'
+              : 'Chưa khả dụng'}
+        </span>
+      </div>
+
+      {context.reason && <p className="journal-context-reason">{context.reason}</p>}
+      <div className="journal-comparison-grid">
+        {comparisons.map((item) => (
+          <article key={item.label}>
+            <span>{item.label}</span>
+            <div>
+              <small>Ban đầu</small>
+              <strong>{item.formatter(item.value.baseline)}</strong>
+            </div>
+            <i aria-hidden="true">→</i>
+            <div>
+              <small>Hiện tại</small>
+              <strong>{item.formatter(item.value.current)}</strong>
+            </div>
+            <em className={
+              item.value.delta === null
+                ? ''
+                : item.value.delta < 0 ? 'is-negative' : 'is-positive'
+            }>
+              Δ {item.label === 'Giá trị theo dõi'
+                ? item.value.delta === null ? '—' : money.format(item.value.delta)
+                : signedMetric(item.value.delta)}
+            </em>
+          </article>
+        ))}
+      </div>
+
+      <div className="journal-insight-diff">
+        <InsightDiffGroup
+          label="Tín hiệu mới"
+          tone="new"
+          codes={context.comparison.newInsightCodes}
+        />
+        <InsightDiffGroup
+          label="Đã không còn"
+          tone="resolved"
+          codes={context.comparison.resolvedInsightCodes}
+        />
+        <InsightDiffGroup
+          label="Vẫn tồn tại"
+          tone="persistent"
+          codes={context.comparison.persistentInsightCodes}
+        />
+      </div>
+      <p className="journal-context-disclaimer">{context.disclaimer}</p>
+    </section>
+  );
+};
+
+const InsightDiffGroup = ({
+  label,
+  tone,
+  codes,
+}: {
+  label: string;
+  tone: string;
+  codes: string[];
+}) => (
+  <div className={`is-${tone}`}>
+    <span>{label}</span>
+    {codes.length === 0
+      ? <small>Không có</small>
+      : <div>{codes.map((code) => <code key={code}>{code}</code>)}</div>}
+  </div>
+);

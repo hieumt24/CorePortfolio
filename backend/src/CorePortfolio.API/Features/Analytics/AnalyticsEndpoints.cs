@@ -78,6 +78,15 @@ public static class AnalyticsEndpoints
             return Results.Ok(result);
         });
 
+        group.MapGet("/decisions/{id:guid}/review-context", async (
+            Guid id,
+            IMediator mediator) =>
+        {
+            var result = await mediator.Send(
+                new GetAnalyticsDecisionReviewContextQuery(id));
+            return Results.Ok(result);
+        });
+
         group.MapGet("/cashflow", async (IMediator mediator, [FromQuery] int months = 6, [FromQuery] string currency = "VND") =>
         {
             var result = await mediator.Send(new GetCashflowAnalyticsQuery(months, currency));

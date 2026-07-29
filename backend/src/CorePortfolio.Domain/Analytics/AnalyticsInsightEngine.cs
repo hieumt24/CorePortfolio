@@ -45,7 +45,8 @@ public sealed record AnalyticsInsightInput(
     IReadOnlyList<decimal> RecentMonthlyNetFlows,
     int BudgetExceededCount,
     int GoalAtRiskCount,
-    int DcaInsufficientCashCount);
+    int DcaInsufficientCashCount,
+    int DecisionReviewDueCount);
 
 public sealed record AnalyticsInsightEvidence(
     string Key,
@@ -78,6 +79,7 @@ public static class AnalyticsInsightEngine
         AddCashflowFinding(input, findings);
         AddGoalFinding(input, findings);
         AddDcaFinding(input, findings);
+        AddDecisionReviewFinding(input, findings);
         AddReturnGapFinding(input, findings);
 
         if (findings.Count == 0)
@@ -266,6 +268,26 @@ public static class AnalyticsInsightEngine
             56,
             null,
             [new("dcaInsufficientCashCount", input.DcaInsufficientCashCount, "plans")]));
+    }
+
+    private static void AddDecisionReviewFinding(
+        AnalyticsInsightInput input,
+        ICollection<AnalyticsInsightFinding> findings)
+    {
+        if (input.DecisionReviewDueCount <= 0)
+            return;
+
+        var multipleDue = input.DecisionReviewDueCount >= 3;
+        findings.Add(new AnalyticsInsightFinding(
+            "DECISION_REVIEW_DUE",
+            AnalyticsInsightCategories.General,
+            multipleDue
+                ? AnalyticsInsightSeverities.Warning
+                : AnalyticsInsightSeverities.Info,
+            AnalyticsInsightConfidences.High,
+            multipleDue ? 70 : 62,
+            null,
+            [new("decisionReviewDueCount", input.DecisionReviewDueCount, "decisions")]));
     }
 
     private static void AddReturnGapFinding(

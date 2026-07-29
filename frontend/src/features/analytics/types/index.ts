@@ -263,6 +263,7 @@ export interface CreateAnalyticsDecisionRequest {
 export interface AnalyticsDecisionDto {
   id: string;
   portfolioId: string | null;
+  isPortfolioScope: boolean;
   portfolioName: string;
   decisionType: AnalyticsDecisionType | string;
   title: string;
@@ -289,6 +290,34 @@ export interface AnalyticsDecisionDto {
     insightCodes: string[];
     methodologyVersion: string;
   };
+}
+
+export interface AnalyticsDecisionReviewMetricDto {
+  baseline: number | null;
+  current: number | null;
+  delta: number | null;
+}
+
+export interface AnalyticsDecisionReviewContextDto {
+  decisionId: string;
+  generatedAt: string;
+  methodologyVersion: string;
+  reason: string | null;
+  baseline: AnalyticsDecisionDto['snapshot'];
+  current: AnalyticsDecisionDto['snapshot'] | null;
+  comparison: {
+    readiness: 'Ready' | 'Caution' | 'Unavailable' | string;
+    confidence: 'High' | 'Medium' | 'Low' | string;
+    trackedPortfolioValue: AnalyticsDecisionReviewMetricDto;
+    trackedPortfolioValueChangePercentage: number | null;
+    timeWeightedReturnPercentage: AnalyticsDecisionReviewMetricDto;
+    moneyWeightedReturnPercentage: AnalyticsDecisionReviewMetricDto;
+    maximumDrawdownPercentage: AnalyticsDecisionReviewMetricDto;
+    newInsightCodes: string[];
+    resolvedInsightCodes: string[];
+    persistentInsightCodes: string[];
+  };
+  disclaimer: string;
 }
 
 export interface AnalyticsOverviewDto {

@@ -8,6 +8,7 @@ using CorePortfolio.API.Features.Performance.GetPerformanceSummary;
 using CorePortfolio.API.Features.Portfolios.GetPortfolios;
 using CorePortfolio.API.Features.SavingGoals;
 using CorePortfolio.API.Features.Analytics.GetAnalyticsInsights;
+using CorePortfolio.API.Features.Analytics.DecisionJournal;
 using CorePortfolio.API.Features.Rebalancing;
 using CorePortfolio.Domain.Analytics;
 using MediatR;
@@ -127,6 +128,9 @@ public sealed class GetAnalyticsOverviewHandler(
             cancellationToken);
         var goals = await mediator.Send(new GetSavingGoalsQuery(), cancellationToken);
         var dcaPlans = await mediator.Send(new GetDcaPlansQuery(), cancellationToken);
+        var openDecisions = await mediator.Send(
+            new GetAnalyticsDecisionsQuery(request.PortfolioId, "Open"),
+            cancellationToken);
 
         var scopedGoals = goals
             .Where(goal =>
@@ -178,7 +182,8 @@ public sealed class GetAnalyticsOverviewHandler(
             cashflow.Select(item => item.NetFlow).ToList(),
             financialHealth.BudgetExceededCount,
             goalSummary.AtRiskCount,
-            dcaSummary.InsufficientCashCount));
+            dcaSummary.InsufficientCashCount,
+            openDecisions.Count(item => item.IsOverdue)));
         var insights = AnalyticsInsightPresenter.Create(
             scope,
             findings,

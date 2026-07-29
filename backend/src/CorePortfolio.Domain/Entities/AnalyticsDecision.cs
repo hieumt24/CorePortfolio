@@ -7,6 +7,7 @@ public sealed class AnalyticsDecision : IConcurrencyTracked
     public User User { get; set; } = null!;
     public Guid? PortfolioId { get; set; }
     public Portfolio? Portfolio { get; set; }
+    public bool IsPortfolioScope { get; set; }
     public string PortfolioNameSnapshot { get; set; } = string.Empty;
     public AnalyticsDecisionType DecisionType { get; set; }
     public string Title { get; set; } = string.Empty;

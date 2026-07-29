@@ -34,6 +34,7 @@ public sealed record AnalyticsDecisionSnapshotDto(
 public sealed record AnalyticsDecisionDto(
     Guid Id,
     Guid? PortfolioId,
+    bool IsPortfolioScope,
     string PortfolioName,
     string DecisionType,
     string Title,
@@ -62,6 +63,7 @@ internal static class AnalyticsDecisionMapper
         return new AnalyticsDecisionDto(
             decision.Id,
             decision.PortfolioId,
+            decision.IsPortfolioScope,
             decision.PortfolioNameSnapshot,
             decision.DecisionType.ToString(),
             decision.Title,
@@ -92,3 +94,30 @@ internal static class AnalyticsDecisionMapper
                 decision.MethodologyVersion));
     }
 }
+
+public sealed record AnalyticsDecisionMetricComparisonDto(
+    decimal? Baseline,
+    decimal? Current,
+    decimal? Delta);
+
+public sealed record AnalyticsDecisionReviewComparisonDto(
+    string Readiness,
+    string Confidence,
+    AnalyticsDecisionMetricComparisonDto TrackedPortfolioValue,
+    decimal? TrackedPortfolioValueChangePercentage,
+    AnalyticsDecisionMetricComparisonDto TimeWeightedReturnPercentage,
+    AnalyticsDecisionMetricComparisonDto MoneyWeightedReturnPercentage,
+    AnalyticsDecisionMetricComparisonDto MaximumDrawdownPercentage,
+    IReadOnlyList<string> NewInsightCodes,
+    IReadOnlyList<string> ResolvedInsightCodes,
+    IReadOnlyList<string> PersistentInsightCodes);
+
+public sealed record AnalyticsDecisionReviewContextDto(
+    Guid DecisionId,
+    DateTime GeneratedAt,
+    string MethodologyVersion,
+    string? Reason,
+    AnalyticsDecisionSnapshotDto Baseline,
+    AnalyticsDecisionSnapshotDto? Current,
+    AnalyticsDecisionReviewComparisonDto Comparison,
+    string Disclaimer);

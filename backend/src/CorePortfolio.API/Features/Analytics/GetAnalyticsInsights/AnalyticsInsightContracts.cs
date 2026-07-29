@@ -172,6 +172,13 @@ public static class AnalyticsInsightPresenter
                 "Đọc cả hai chỉ số giúp tách hiệu quả danh mục khỏi trải nghiệm lợi suất theo dòng tiền cá nhân.",
                 ["XIRR cần đủ dòng tiền có ngày thực tế; dữ liệu thiếu làm giảm độ tin cậy."],
                 new AnalyticsInsightActionDto("Xem phương pháp tính", "/analytics/performance")),
+            "DECISION_REVIEW_DUE" => new(
+                "Có quyết định đã đến hạn xem lại",
+                $"{Value(evidence, "decisionReviewDueCount"):0} quyết định đang mở đã qua ngày review.",
+                "Luận điểm cũ cần được đối chiếu với dữ liệu hiện tại trước khi tiếp tục, điều chỉnh hoặc đóng.",
+                "Review đúng hạn giúp giảm thiên kiến nhìn lại và ghi nhận điều gì thực sự thay đổi so với giả định ban đầu.",
+                ["Tín hiệu chỉ dựa trên ngày review do người dùng đặt và không tự đánh giá quyết định là đúng hay sai."],
+                new AnalyticsInsightActionDto("Mở nhật ký quyết định", "/analytics?tab=journal")),
             _ => new(
                 "Chưa có tín hiệu cần xử lý ngay",
                 "Không quy tắc ưu tiên nào được kích hoạt trong phạm vi hiện tại.",
@@ -205,6 +212,7 @@ public static class AnalyticsInsightPresenter
             "timeWeightedReturnPercentage" => "TWR",
             "moneyWeightedReturnPercentage" => "XIRR",
             "returnGapPercentagePoints" => "Chênh lệch TWR–XIRR",
+            "decisionReviewDueCount" => "Quyết định đến hạn review",
             _ => key
         };
 

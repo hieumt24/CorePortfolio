@@ -59,6 +59,7 @@ public sealed class CreateAnalyticsDecisionHandler(
             Id = Guid.NewGuid(),
             UserId = userId,
             PortfolioId = overview.Scope.PortfolioId,
+            IsPortfolioScope = overview.Scope.PortfolioId.HasValue,
             PortfolioNameSnapshot = overview.Scope.PortfolioName,
             DecisionType = decisionType,
             Title = request.Title.Trim(),

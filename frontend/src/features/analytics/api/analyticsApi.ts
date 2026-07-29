@@ -16,6 +16,7 @@ import type {
   AnalyticsDecisionOutcome,
   AnalyticsDecisionStatus,
   CreateAnalyticsDecisionRequest,
+  AnalyticsDecisionReviewContextDto,
 } from '../types';
 
 export const analyticsApi = {
@@ -88,6 +89,14 @@ export const analyticsApi = {
       method: 'PUT',
       body: JSON.stringify(request),
     });
+  },
+
+  getDecisionReviewContext: async (
+    id: string,
+  ): Promise<AnalyticsDecisionReviewContextDto> => {
+    return apiClient<AnalyticsDecisionReviewContextDto>(
+      `/analytics/decisions/${id}/review-context`,
+    );
   },
 
   getCashflowAnalytics: async (months: number = 6, currency: string = 'VND'): Promise<CashflowMonthlyAnalyticsDto[]> => {

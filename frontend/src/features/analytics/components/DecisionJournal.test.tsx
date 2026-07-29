@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { analyticsApi } from '../api/analyticsApi';
 import type {
   AnalyticsDecisionDto,
+  AnalyticsDecisionReviewContextDto,
   AnalyticsOverviewDto,
 } from '../types';
 import { DecisionJournal } from './DecisionJournal';
@@ -24,6 +25,7 @@ const overview = {
 const openDecision: AnalyticsDecisionDto = {
   id: 'decision-1',
   portfolioId: 'portfolio-1',
+  isPortfolioScope: true,
   portfolioName: 'Danh mục dài hạn',
   decisionType: 'Allocation',
   title: 'Giữ phân bổ trong biên mục tiêu',
@@ -50,6 +52,40 @@ const openDecision: AnalyticsDecisionDto = {
     insightCodes: ['NO_URGENT_SIGNAL'],
     methodologyVersion: 'decision-journal-v1',
   },
+};
+
+const reviewContext: AnalyticsDecisionReviewContextDto = {
+  decisionId: 'decision-1',
+  generatedAt: '2026-08-29T00:00:00Z',
+  methodologyVersion: 'review-context-v1',
+  reason: null,
+  baseline: openDecision.snapshot,
+  current: {
+    ...openDecision.snapshot,
+    from: '2026-02-01T00:00:00Z',
+    to: '2026-08-29T00:00:00Z',
+    trackedPortfolioValue: 108_000_000,
+    timeWeightedReturnPercentage: 6.5,
+    insightCodes: ['CASHFLOW_PRESSURE'],
+    methodologyVersion: 'review-context-v1',
+  },
+  comparison: {
+    readiness: 'Ready',
+    confidence: 'High',
+    trackedPortfolioValue: {
+      baseline: 100_000_000,
+      current: 108_000_000,
+      delta: 8_000_000,
+    },
+    trackedPortfolioValueChangePercentage: 8,
+    timeWeightedReturnPercentage: { baseline: 5, current: 6.5, delta: 1.5 },
+    moneyWeightedReturnPercentage: { baseline: 4.5, current: 4.5, delta: 0 },
+    maximumDrawdownPercentage: { baseline: -3, current: -4, delta: -1 },
+    newInsightCodes: ['CASHFLOW_PRESSURE'],
+    resolvedInsightCodes: ['NO_URGENT_SIGNAL'],
+    persistentInsightCodes: [],
+  },
+  disclaimer: 'Không phải khuyến nghị đầu tư.',
 };
 
 afterEach(() => {
@@ -87,6 +123,8 @@ describe('DecisionJournal', () => {
 
   it('reviews an open decision with an explicit outcome and notes', async () => {
     vi.spyOn(analyticsApi, 'getDecisions').mockResolvedValue([openDecision]);
+    const getContext = vi.spyOn(analyticsApi, 'getDecisionReviewContext')
+      .mockResolvedValue(reviewContext);
     const review = vi.spyOn(analyticsApi, 'reviewDecision')
       .mockResolvedValue({
         ...openDecision,
@@ -98,6 +136,9 @@ describe('DecisionJournal', () => {
     const view = render(<DecisionJournal data={overview} />);
 
     fireEvent.click(await view.findByRole('button', { name: 'Review quyết định' }));
+    expect(await view.findByText('Bằng chứng đã thay đổi thế nào?')).toBeTruthy();
+    expect(view.getByText('CASHFLOW_PRESSURE')).toBeTruthy();
+    expect(getContext).toHaveBeenCalledWith('decision-1');
     fireEvent.change(view.getByLabelText('Kết quả'), {
       target: { value: 'Adjust' },
     });

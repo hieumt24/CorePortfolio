@@ -85,6 +85,21 @@ public sealed class AnalyticsInsightEngineTests
         Assert.Equal(AnalyticsInsightSeverities.Positive, finding.Severity);
     }
 
+    [Theory]
+    [InlineData(1, "Info")]
+    [InlineData(3, "Warning")]
+    public void Evaluate_DecisionReviewsDue_AreSurfaced(
+        int dueCount,
+        string expectedSeverity)
+    {
+        var input = CreateInput() with { DecisionReviewDueCount = dueCount };
+
+        var finding = Assert.Single(
+            AnalyticsInsightEngine.Evaluate(input),
+            item => item.Code == "DECISION_REVIEW_DUE");
+        Assert.Equal(expectedSeverity, finding.Severity);
+    }
+
     private static AnalyticsInsightInput CreateInput(
         string qualityStatus = "Complete",
         decimal? timeWeightedReturnPercentage = 4m,
@@ -107,6 +122,7 @@ public sealed class AnalyticsInsightEngineTests
             allocation ?? [],
             recentMonthlyNetFlows ?? [10m, 8m, 12m],
             budgetExceededCount,
+            0,
             0,
             0);
 }
