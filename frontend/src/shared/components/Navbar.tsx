@@ -4,6 +4,7 @@ import { settingsApi } from '../../features/admin/api/settingsApi';
 import { notificationsApi } from '../../features/notifications/api/notificationsApi';
 import type { NotificationItem } from '../../features/notifications/types';
 import { useAuth } from '../../context/AuthContext';
+import { useTheme } from '../../context/ThemeContext';
 import './Navbar.css';
 
 const navigationItems = [
@@ -54,6 +55,19 @@ const LogoutIcon = () => (
   </svg>
 );
 
+const SunIcon = () => (
+  <svg viewBox="0 0 24 24" aria-hidden="true">
+    <circle cx="12" cy="12" r="4" />
+    <path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.66 17.66l1.41 1.41M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.66 6.34l1.41-1.41" />
+  </svg>
+);
+
+const MoonIcon = () => (
+  <svg viewBox="0 0 24 24" aria-hidden="true">
+    <path d="M20.5 14.2A8.5 8.5 0 0 1 9.8 3.5 8.5 8.5 0 1 0 20.5 14.2Z" />
+  </svg>
+);
+
 const getInitials = (name: string) =>
   name
     .trim()
@@ -66,6 +80,7 @@ export const Navbar: React.FC = () => {
   const navigate = useNavigate();
   const navbarRef = useRef<HTMLElement>(null);
   const { isAuthenticated, isAdmin, user, logout } = useAuth();
+  const { theme, toggleTheme } = useTheme();
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [openPanel, setOpenPanel] = useState<OpenPanel>(null);
   const [notifications, setNotifications] = useState<NotificationItem[]>([]);
@@ -225,6 +240,17 @@ export const Navbar: React.FC = () => {
           )}
 
           <div className="navbar-utilities">
+            <button
+              type="button"
+              className="navbar-icon-button theme-toggle"
+              onClick={toggleTheme}
+              aria-label={theme === 'dark' ? 'Chuyển sang giao diện sáng' : 'Chuyển sang giao diện tối'}
+              title={theme === 'dark' ? 'Giao diện sáng' : 'Giao diện tối'}
+            >
+              <span className="theme-toggle-icon" aria-hidden="true">
+                {theme === 'dark' ? <SunIcon /> : <MoonIcon />}
+              </span>
+            </button>
             {isAuthenticated ? (
               <>
                 <div className="navbar-popover-anchor">

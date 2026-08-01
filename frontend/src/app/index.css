@@ -2,11 +2,18 @@
 
 :root {
   --font-family: 'Outfit', system-ui, -apple-system, sans-serif;
+  color-scheme: dark;
   
   /* Deep Premium Dark Theme */
   --bg-base: #06080F;
   --bg-surface: #0B0E17;
   --bg-surface-hover: #121624;
+  --bg-input: rgba(11, 14, 23, 0.6);
+  --bg-input-hover: rgba(15, 23, 42, 0.7);
+  --bg-input-focus: rgba(15, 23, 42, 0.8);
+  --surface-subtle: rgba(255, 255, 255, 0.04);
+  --surface-hover: rgba(255, 255, 255, 0.08);
+  --border-strong: rgba(255, 255, 255, 0.15);
   
   --text-primary: #ffffff;
   --text-secondary: #94A3B8;
@@ -28,11 +35,46 @@
   --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
   --glass-glow: 0 4px 20px rgba(99, 102, 241, 0.2);
   --glass-glow-strong: 0 8px 30px rgba(99, 102, 241, 0.35);
+  --page-glow-primary: rgba(99, 102, 241, 0.12);
+  --page-glow-secondary: rgba(139, 92, 246, 0.12);
+  --heading-start: #ffffff;
+  --heading-end: #a5b4fc;
   
   /* Radii */
   --radius-lg: 20px;
   --radius-md: 12px;
   --radius-sm: 8px;
+}
+
+:root[data-theme='light'] {
+  color-scheme: light;
+  --bg-base: #f4f7ff;
+  --bg-surface: #ffffff;
+  --bg-surface-hover: #eef2ff;
+  --bg-input: rgba(255, 255, 255, 0.82);
+  --bg-input-hover: rgba(255, 255, 255, 0.96);
+  --bg-input-focus: #ffffff;
+  --surface-subtle: rgba(30, 41, 59, 0.045);
+  --surface-hover: rgba(79, 70, 229, 0.08);
+  --border-strong: rgba(79, 70, 229, 0.22);
+
+  --text-primary: #172033;
+  --text-secondary: #475569;
+  --text-muted: #64748b;
+  --focus-color: #4f46e5;
+  --success-color: #047857;
+  --danger-color: #dc2626;
+  --warning-color: #b45309;
+
+  --glass-bg: rgba(255, 255, 255, 0.72);
+  --glass-border: rgba(79, 70, 229, 0.13);
+  --glass-shadow: 0 12px 36px rgba(71, 85, 105, 0.14);
+  --glass-glow: 0 5px 24px rgba(99, 102, 241, 0.14);
+  --glass-glow-strong: 0 10px 34px rgba(99, 102, 241, 0.24);
+  --page-glow-primary: rgba(99, 102, 241, 0.16);
+  --page-glow-secondary: rgba(6, 182, 212, 0.12);
+  --heading-start: #172033;
+  --heading-end: #4f46e5;
 }
 
 * {
@@ -51,9 +93,10 @@ html, body {
   overflow-x: clip;
   /* Premium Mesh/Radial Background */
   background-image: 
-    radial-gradient(circle at top right, rgba(99, 102, 241, 0.12), transparent 40%),
-    radial-gradient(circle at bottom left, rgba(139, 92, 246, 0.12), transparent 40%);
+    radial-gradient(circle at top right, var(--page-glow-primary), transparent 40%),
+    radial-gradient(circle at bottom left, var(--page-glow-secondary), transparent 40%);
   background-attachment: fixed;
+  transition: background-color 240ms ease, color 240ms ease;
 }
 
 #root {
@@ -94,7 +137,7 @@ html, body {
 
 .glass-panel:hover {
   box-shadow: var(--glass-shadow), var(--glass-glow);
-  border-color: rgba(255, 255, 255, 0.15);
+  border-color: var(--border-strong);
 }
 
 /* Typography Base */
@@ -106,7 +149,7 @@ h1, h2, h3, h4, h5, h6 {
 h1 {
   font-size: 2.5rem;
   margin-bottom: 1.5rem;
-  background: linear-gradient(135deg, #ffffff 0%, #a5b4fc 100%);
+  background: linear-gradient(135deg, var(--heading-start) 0%, var(--heading-end) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   line-height: 1.2;
@@ -166,15 +209,15 @@ h2 {
 }
 
 .btn-outline {
-  background: rgba(255, 255, 255, 0.03);
+  background: var(--surface-subtle);
   border: 1px solid var(--glass-border);
   color: var(--text-primary);
   backdrop-filter: blur(4px);
 }
 
 .btn-outline:hover:not(:disabled) {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.2);
+  background: var(--surface-hover);
+  border-color: var(--border-strong);
   transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
@@ -184,14 +227,14 @@ h2 {
 }
 
 .btn-secondary {
-  background: rgba(15, 23, 42, 0.6);
+  background: var(--glass-bg);
   border: 1px solid var(--glass-border);
   color: var(--text-primary);
 }
 
 .btn-secondary:hover:not(:disabled) {
-  background: rgba(30, 41, 59, 0.8);
-  border-color: rgba(255, 255, 255, 0.15);
+  background: var(--bg-surface-hover);
+  border-color: var(--border-strong);
 }
 
 /* Inputs & Forms */
@@ -211,7 +254,7 @@ h2 {
 input, select, textarea {
   width: 100%;
   padding: 0.75rem 1rem;
-  background: rgba(11, 14, 23, 0.6);
+  background: var(--bg-input);
   border: 1px solid var(--glass-border);
   border-radius: var(--radius-md);
   color: var(--text-primary);
@@ -222,14 +265,14 @@ input, select, textarea {
 }
 
 input:hover, select:hover, textarea:hover {
-  border-color: rgba(255, 255, 255, 0.15);
-  background: rgba(15, 23, 42, 0.7);
+  border-color: var(--border-strong);
+  background: var(--bg-input-hover);
 }
 
 input:focus, select:focus, textarea:focus {
   border-color: var(--primary-color);
   box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
-  background: rgba(15, 23, 42, 0.8);
+  background: var(--bg-input-focus);
 }
 
 input::placeholder {
@@ -244,8 +287,8 @@ input::placeholder {
   border-radius: 99px;
   font-size: 0.8rem;
   font-weight: 600;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.05);
+  background: var(--surface-subtle);
+  border: 1px solid var(--glass-border);
   backdrop-filter: blur(4px);
 }
 
@@ -276,11 +319,44 @@ input::placeholder {
   background: var(--bg-base);
 }
 ::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.1);
+  background: color-mix(in srgb, var(--text-primary) 14%, transparent);
   border-radius: 4px;
 }
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.2);
+  background: color-mix(in srgb, var(--text-primary) 24%, transparent);
+}
+
+:root[data-theme='light'] .analytics-decision-page {
+  --analytics-panel: rgba(255, 255, 255, 0.76);
+  --analytics-panel-strong: rgba(255, 255, 255, 0.94);
+  --analytics-line: rgba(79, 70, 229, 0.14);
+}
+
+:root[data-theme='light'] .details-layout {
+  --portfolio-surface: rgba(255, 255, 255, 0.74);
+  --portfolio-surface-raised: rgba(255, 255, 255, 0.9);
+  --portfolio-rule: rgba(79, 70, 229, 0.13);
+}
+
+:root[data-theme='light'] .profile-page {
+  --profile-surface: rgba(255, 255, 255, 0.76);
+  --profile-surface-raised: rgba(255, 255, 255, 0.92);
+  --profile-border: rgba(79, 70, 229, 0.14);
+  --profile-border-strong: rgba(79, 70, 229, 0.34);
+  --profile-success: #047857;
+  --profile-danger-text: #dc2626;
+}
+
+:root[data-theme='light'] .watchlist-page {
+  --watchlist-surface: rgba(255, 255, 255, 0.76);
+  --watchlist-surface-raised: rgba(255, 255, 255, 0.92);
+  --watchlist-border: rgba(79, 70, 229, 0.13);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html, body {
+    transition: none;
+  }
 }
 
 @media (max-width: 768px) {

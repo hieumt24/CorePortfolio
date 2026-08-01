@@ -28,6 +28,19 @@
   -webkit-backdrop-filter: blur(18px) saturate(145%);
 }
 
+:root[data-theme='light'] .app-navbar {
+  --navbar-surface: rgba(255, 255, 255, 0.82);
+  --navbar-surface-raised: rgba(255, 255, 255, 0.98);
+  --navbar-surface-hover: rgba(79, 70, 229, 0.08);
+  --navbar-border: rgba(79, 70, 229, 0.13);
+  --navbar-border-active: rgba(79, 70, 229, 0.32);
+  --navbar-focus: #4f46e5;
+  --navbar-danger: #dc2626;
+  --navbar-accent-soft: rgba(79, 70, 229, 0.1);
+  --navbar-shadow: 0 1.25rem 3rem rgba(71, 85, 105, 0.18);
+  --navbar-scrim: rgba(30, 41, 59, 0.28);
+}
+
 .navbar-shell {
   width: min(100%, 96rem);
   min-height: var(--navbar-height);
@@ -167,6 +180,20 @@
   stroke-width: 1.8;
   stroke-linecap: round;
   stroke-linejoin: round;
+}
+
+.theme-toggle {
+  overflow: hidden;
+}
+
+.theme-toggle-icon {
+  display: grid;
+  place-items: center;
+  transition: transform 240ms cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.theme-toggle:hover .theme-toggle-icon {
+  transform: rotate(14deg) scale(1.08);
 }
 
 .notification-badge {
