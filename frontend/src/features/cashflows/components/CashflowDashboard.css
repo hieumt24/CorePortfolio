@@ -789,27 +789,28 @@
 }
 
 /* Utilities */
-.glass-panel {
-  background: rgba(15, 23, 42, 0.4);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+.cashflow-dashboard .glass-panel {
+  background: var(--glass-bg);
+  border: 1px solid var(--glass-border);
   border-radius: 20px;
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
-  box-shadow: 0 20px 40px -10px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  box-shadow: var(--glass-shadow);
 }
 
-.mt-4 { margin-top: 1.5rem; }
+.cashflow-dashboard .mt-4 { margin-top: 1.5rem; }
 
-.loading-state, .empty-state {
+.cashflow-dashboard .loading-state,
+.cashflow-dashboard .empty-state {
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   padding: 4rem;
-  color: #94a3b8;
+  color: var(--text-secondary);
 }
-.empty-icon { font-size: 3rem; margin-bottom: 1rem; opacity: 0.5; }
-.spinner {
+.cashflow-dashboard .empty-icon { font-size: 3rem; margin-bottom: 1rem; opacity: 0.5; }
+.cashflow-dashboard .spinner {
   width: 36px; height: 36px; border: 3px solid rgba(255,255,255,0.1); border-top-color: #6366f1; border-radius: 50%; animation: spin 1s linear infinite; margin-bottom: 1rem;
 }
 @keyframes spin { to { transform: rotate(360deg); } }

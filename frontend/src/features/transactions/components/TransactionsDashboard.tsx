@@ -329,7 +329,7 @@ export const TransactionsDashboard: React.FC = () => {
   });
 
   return (
-    <div className="container dashboard-layout">
+    <div className="container dashboard-layout transactions-dashboard">
       {/* Decorative blurred blobs */}
       <div className="mesh-blob blob-1"></div>
       <div className="mesh-blob blob-2" style={{ left: '60%', top: '40%' }}></div>

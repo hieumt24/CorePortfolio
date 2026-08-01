@@ -48,7 +48,7 @@
 }
 
 .gradient-text {
-  background: linear-gradient(135deg, #fff 0%, #a5b4fc 100%);
+  background: linear-gradient(135deg, var(--heading-start) 0%, var(--heading-end) 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   margin-bottom: 0.25rem;
@@ -154,7 +154,7 @@
 .spinner {
   width: 40px;
   height: 40px;
-  border: 3px solid rgba(255,255,255,0.1);
+  border: 3px solid color-mix(in srgb, var(--text-primary) 12%, transparent);
   border-left-color: var(--primary-color);
   border-radius: 50%;
   animation: spin 1s linear infinite;
