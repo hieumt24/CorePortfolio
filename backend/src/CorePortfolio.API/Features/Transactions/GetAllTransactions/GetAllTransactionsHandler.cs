@@ -139,8 +139,52 @@ public sealed class GetAllTransactionsHandler(
                 transaction.Price,
                 transaction.Fee,
                 transaction.Notes,
-                transaction.Date))
+                transaction.Date,
+                null,
+                null,
+                null))
             .ToListAsync(cancellationToken);
+
+        if (items.Count > 0)
+        {
+            var assetIds = items.Select(item => item.AssetId).Distinct().ToArray();
+            var assetInputs = await dbContext.Assets
+                .AsNoTracking()
+                .Where(asset => assetIds.Contains(asset.Id))
+                .Select(asset => new
+                {
+                    asset.Id,
+                    CurrentPrice = asset.MarketAsset != null ? asset.MarketAsset.CurrentPrice : 0,
+                    CategoryName = asset.MarketAsset != null && asset.MarketAsset.Category != null
+                        ? asset.MarketAsset.Category.Name
+                        : string.Empty
+                })
+                .ToListAsync(cancellationToken);
+            var accountingTransactions = await dbContext.Transactions
+                .AsNoTracking()
+                .Where(transaction => assetIds.Contains(transaction.AssetId) &&
+                    transaction.Portfolio != null &&
+                    transaction.Portfolio.UserId == currentUserService.UserId)
+                .ToListAsync(cancellationToken);
+
+            var acquisitionByTransactionId = assetInputs
+                .SelectMany(asset => PortfolioAccountingCalculator.CalculateBreakdown(
+                        accountingTransactions.Where(transaction => transaction.AssetId == asset.Id),
+                        asset.CurrentPrice,
+                        AssetCategoryClassifier.IsCrypto(asset.CategoryName))
+                    .Acquisitions)
+                .ToDictionary(acquisition => acquisition.TransactionId);
+
+            items = items.Select(item => acquisitionByTransactionId.TryGetValue(item.Id, out var acquisition)
+                    ? item with
+                    {
+                        RemainingQuantity = acquisition.RemainingQuantity,
+                        UnrealizedPnl = acquisition.UnrealizedPnl,
+                        IsClosed = acquisition.IsClosed
+                    }
+                    : item)
+                .ToList();
+        }
 
         return new TransactionPageDto(items, totalCount, page, pageSize, facets);
     }

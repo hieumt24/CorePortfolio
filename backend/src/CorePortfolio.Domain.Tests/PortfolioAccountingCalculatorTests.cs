@@ -124,6 +124,45 @@ public class PortfolioAccountingCalculatorTests
         Assert.Equal(120, result.RealizedPnl);
     }
 
+    [Fact]
+    public void AttributesRemainingWeightedAveragePoolAcrossOpenAcquisitions()
+    {
+        var firstBuy = Tx(TransactionType.Buy, 10, 100, 10, new DateTime(2026, 1, 1));
+        var secondBuy = Tx(TransactionType.Buy, 10, 200, 20, new DateTime(2026, 1, 2));
+        var result = PortfolioAccountingCalculator.CalculateBreakdown(new[]
+        {
+            firstBuy,
+            secondBuy,
+            Tx(TransactionType.Sell, 5, 250, 5, new DateTime(2026, 1, 3))
+        }, 220);
+
+        var first = Assert.Single(result.Acquisitions, item => item.TransactionId == firstBuy.Id);
+        var second = Assert.Single(result.Acquisitions, item => item.TransactionId == secondBuy.Id);
+        Assert.Equal(7.5m, first.RemainingQuantity);
+        Assert.Equal(757.5m, first.RemainingCostBasis);
+        Assert.Equal(892.5m, first.UnrealizedPnl);
+        Assert.Equal(7.5m, second.RemainingQuantity);
+        Assert.Equal(1515m, second.RemainingCostBasis);
+        Assert.Equal(135m, second.UnrealizedPnl);
+        Assert.Equal(result.Summary.UnrealizedPnl, first.UnrealizedPnl + second.UnrealizedPnl);
+    }
+
+    [Fact]
+    public void MarksAcquisitionClosedWhenTheWeightedAveragePoolIsFullySold()
+    {
+        var buy = Tx(TransactionType.Buy, 2, 100, 0, new DateTime(2026, 1, 1));
+        var result = PortfolioAccountingCalculator.CalculateBreakdown(new[]
+        {
+            buy,
+            Tx(TransactionType.Sell, 2, 120, 0, new DateTime(2026, 1, 2))
+        }, 130);
+
+        var acquisition = Assert.Single(result.Acquisitions);
+        Assert.True(acquisition.IsClosed);
+        Assert.Equal(0, acquisition.RemainingQuantity);
+        Assert.Equal(0, acquisition.UnrealizedPnl);
+    }
+
     private static Transaction Tx(TransactionType type, decimal quantity, decimal price, decimal fee, DateTime date) =>
         new() { Id = Guid.NewGuid(), Type = type, Quantity = quantity, Price = price, Fee = fee, Date = date };
 }

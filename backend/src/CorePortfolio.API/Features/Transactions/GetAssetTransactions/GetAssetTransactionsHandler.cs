@@ -2,6 +2,7 @@ using CorePortfolio.Infrastructure.Data;
 using MediatR;
 using Microsoft.EntityFrameworkCore;
 using CorePortfolio.API.Services;
+using CorePortfolio.Domain.Accounting;
 
 namespace CorePortfolio.API.Features.Transactions.GetAssetTransactions;
 
@@ -18,20 +19,49 @@ public class GetAssetTransactionsHandler : IRequestHandler<GetAssetTransactionsQ
 
     public async Task<List<TransactionDto>> Handle(GetAssetTransactionsQuery request, CancellationToken cancellationToken)
     {
+        var asset = await _context.Assets
+            .AsNoTracking()
+            .Where(item => item.Id == request.AssetId &&
+                item.Portfolio != null &&
+                item.Portfolio.UserId == _currentUserService.UserId)
+            .Select(item => new
+            {
+                CurrentPrice = item.MarketAsset != null ? item.MarketAsset.CurrentPrice : 0,
+                CategoryName = item.MarketAsset != null && item.MarketAsset.Category != null
+                    ? item.MarketAsset.Category.Name
+                    : string.Empty
+            })
+            .SingleOrDefaultAsync(cancellationToken);
+        if (asset == null)
+            return [];
+
         var transactions = await _context.Transactions
+            .AsNoTracking()
             .Where(t => t.AssetId == request.AssetId && t.Portfolio != null && t.Portfolio.UserId == _currentUserService.UserId)
             .OrderByDescending(t => t.Date)
-            .Select(t => new TransactionDto(
-                t.Id,
-                (int)t.Type,
-                t.Quantity,
-                t.Price,
-                t.Fee,
-                t.Notes,
-                t.Date
-            ))
             .ToListAsync(cancellationToken);
 
-        return transactions;
+        var acquisitionByTransactionId = PortfolioAccountingCalculator.CalculateBreakdown(
+                transactions,
+                asset.CurrentPrice,
+                AssetCategoryClassifier.IsCrypto(asset.CategoryName))
+            .Acquisitions
+            .ToDictionary(acquisition => acquisition.TransactionId);
+
+        return transactions.Select(transaction =>
+        {
+            acquisitionByTransactionId.TryGetValue(transaction.Id, out var acquisition);
+            return new TransactionDto(
+                transaction.Id,
+                (int)transaction.Type,
+                transaction.Quantity,
+                transaction.Price,
+                transaction.Fee,
+                transaction.Notes,
+                transaction.Date,
+                acquisition?.RemainingQuantity,
+                acquisition?.UnrealizedPnl,
+                acquisition?.IsClosed);
+        }).ToList();
     }
 }

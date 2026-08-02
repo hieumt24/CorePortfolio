@@ -25,6 +25,7 @@ import {
   transactionsToSpreadsheetXml,
 } from '../utils/transactionFileTransfer';
 import type { TransactionImportRow } from '../utils/transactionFileTransfer';
+import { TransactionPnlCell } from './TransactionPnlCell';
 import { formatVietnamDateTime } from '../../../shared/utils/dateTime';
 import './TransactionsDashboard.css';
 
@@ -581,6 +582,7 @@ export const TransactionsDashboard: React.FC = () => {
                   <th className="num-col">Quantity</th>
                   <th className="num-col">Price</th>
                   <th className="num-col">Total</th>
+                  <th className="num-col">PnL chưa chốt</th>
                   <th className="action-col">Actions</th>
                 </tr>
               </thead>
@@ -601,6 +603,15 @@ export const TransactionsDashboard: React.FC = () => {
                     <td className="num-col">{t.quantity.toLocaleString(undefined, { maximumFractionDigits: 8 })}</td>
                     <td className="num-col">{formatCurrency(t.price, t.currency)}</td>
                     <td className="num-col strong">{formatCurrency(t.quantity * t.price, t.currency)}</td>
+                    <td className="num-col">
+                      <TransactionPnlCell
+                        remainingQuantity={t.remainingQuantity}
+                        unrealizedPnl={t.unrealizedPnl}
+                        isClosed={t.isClosed}
+                        currency={t.currency}
+                        formatCurrency={formatCurrency}
+                      />
+                    </td>
                     <td className="action-col">
                       <button className="btn-icon edit-action" onClick={() => setEditingTransaction(t)} aria-label={`Edit ${t.symbol} transaction`} title="Edit transaction">
                         <span aria-hidden="true">✎</span>

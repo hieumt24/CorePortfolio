@@ -18,6 +18,9 @@ export interface TransactionDto {
   fee: number;
   notes: string;
   timestamp: string;
+  remainingQuantity?: number | null;
+  unrealizedPnl?: number | null;
+  isClosed?: boolean | null;
 }
 
 export interface CreateTransactionRequest {
@@ -58,6 +61,9 @@ export interface GlobalTransactionDto {
   fee: number;
   notes: string;
   date: string;
+  remainingQuantity?: number | null;
+  unrealizedPnl?: number | null;
+  isClosed?: boolean | null;
 }
 
 export interface PaginatedResult<T> {

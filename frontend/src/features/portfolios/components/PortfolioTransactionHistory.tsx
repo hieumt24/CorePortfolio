@@ -4,6 +4,7 @@ import type { GlobalTransactionDto, PaginatedResult } from '../../transactions/t
 import { TransactionType } from '../../transactions/types';
 import { useNotification } from '../../../context/NotificationContext';
 import { formatVietnamDateTime } from '../../../shared/utils/dateTime';
+import { TransactionPnlCell } from '../../transactions/components/TransactionPnlCell';
 import './PortfolioTransactionHistory.css';
 
 interface Props {
@@ -122,6 +123,7 @@ export const PortfolioTransactionHistory: React.FC<Props> = ({ portfolioId }) =>
                   <th className="num-col">Quantity</th>
                   <th className="num-col">Price</th>
                   <th className="num-col">Total</th>
+                  <th className="num-col">PnL chưa chốt</th>
                   <th className="action-col"></th>
                 </tr>
               </thead>
@@ -141,6 +143,15 @@ export const PortfolioTransactionHistory: React.FC<Props> = ({ portfolioId }) =>
                     <td className="num-col">{t.quantity.toLocaleString(undefined, { maximumFractionDigits: 8 })}</td>
                     <td className="num-col">{formatCurrency(t.price, t.currency)}</td>
                     <td className="num-col strong">{formatCurrency(t.quantity * t.price, t.currency)}</td>
+                    <td className="num-col">
+                      <TransactionPnlCell
+                        remainingQuantity={t.remainingQuantity}
+                        unrealizedPnl={t.unrealizedPnl}
+                        isClosed={t.isClosed}
+                        currency={t.currency}
+                        formatCurrency={formatCurrency}
+                      />
+                    </td>
                     <td className="action-col">
                       <button className="btn-icon" onClick={() => handleDelete(t.id)} aria-label="Delete transaction">
                         <span aria-hidden="true">×</span>

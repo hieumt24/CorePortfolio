@@ -179,6 +179,39 @@ export const PortfolioDetails: React.FC = () => {
             </div>
           </section>
 
+          <section className="portfolio-pnl-report glass-panel" aria-labelledby="pnl-report-heading">
+            <div className="pnl-report-heading">
+              <div>
+                <p className="portfolio-eyebrow">Báo cáo lãi / lỗ</p>
+                <h2 id="pnl-report-heading">Hiệu quả đầu tư</h2>
+              </div>
+              <small>Đã bao gồm phí giao dịch · Quy đổi về VND</small>
+            </div>
+            <div className="pnl-report-grid">
+              <div>
+                <span>Đã chốt</span>
+                <strong className={summary.realizedPnl >= 0 ? 'text-success' : 'text-danger'}>
+                  {summary.realizedPnl > 0 ? '+' : ''}{formatCurrency(summary.realizedPnl, 'VND')}
+                </strong>
+                <small>Lãi/lỗ từ bán tài sản và cổ tức</small>
+              </div>
+              <div>
+                <span>Chưa chốt</span>
+                <strong className={summary.unrealizedPnl >= 0 ? 'text-success' : 'text-danger'}>
+                  {summary.unrealizedPnl > 0 ? '+' : ''}{formatCurrency(summary.unrealizedPnl, 'VND')}
+                </strong>
+                <small>Giá trị thị trường trừ giá vốn còn lại</small>
+              </div>
+              <div>
+                <span>Tổng PnL</span>
+                <strong className={totalPnl >= 0 ? 'text-success' : 'text-danger'}>
+                  {totalPnl > 0 ? '+' : ''}{formatCurrency(totalPnl, 'VND')}
+                </strong>
+                <small>{totalPnlPercentage === null ? 'Chưa có giá vốn' : `${totalPnlPercentage > 0 ? '+' : ''}${totalPnlPercentage.toFixed(2)}% trên giá vốn còn lại`}</small>
+              </div>
+            </div>
+          </section>
+
           {portfolioInsights.largestHolding && (
             <section className="allocation-insight glass-panel" aria-labelledby="allocation-heading">
               <div className="allocation-copy">

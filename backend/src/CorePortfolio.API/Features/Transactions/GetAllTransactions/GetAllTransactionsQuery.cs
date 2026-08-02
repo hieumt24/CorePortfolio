@@ -18,7 +18,10 @@ public record GlobalTransactionDto(
     decimal Price,
     decimal Fee,
     string Notes,
-    DateTime Date
+    DateTime Date,
+    decimal? RemainingQuantity,
+    decimal? UnrealizedPnl,
+    bool? IsClosed
 );
 
 public sealed record TransactionFacetCounts(

@@ -11,5 +11,8 @@ public record TransactionDto(
     decimal Price,
     decimal Fee,
     string Notes,
-    DateTime Timestamp
+    DateTime Timestamp,
+    decimal? RemainingQuantity,
+    decimal? UnrealizedPnl,
+    bool? IsClosed
 );

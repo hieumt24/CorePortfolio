@@ -12,6 +12,7 @@ import { useNotification } from '../../../context/NotificationContext';
 import { useAuth } from '../../../context/AuthContext';
 import { formatVietnamDateTime } from '../../../shared/utils/dateTime';
 import './AssetDetailsModal.css';
+import { TransactionPnlCell } from '../../transactions/components/TransactionPnlCell';
 
 interface AssetDetailsModalProps {
   asset: AssetSummaryDto;
@@ -138,6 +139,7 @@ export const AssetDetailsModal: React.FC<AssetDetailsModalProps> = ({ asset, por
                     <th className="num-col">Quantity</th>
                     <th className="num-col">Price</th>
                     <th className="num-col">Total</th>
+                    <th className="num-col">PnL chưa chốt</th>
                     <th className="action-col">Actions</th>
                   </tr>
                 </thead>
@@ -165,6 +167,15 @@ export const AssetDetailsModal: React.FC<AssetDetailsModalProps> = ({ asset, por
                       <td className="num-col">{tx.quantity.toLocaleString(undefined, { maximumFractionDigits: 8 })}</td>
                       <td className="num-col">{formatCurrency(tx.price, asset.currency)}</td>
                       <td className="num-col strong">{formatCurrency(tx.quantity * tx.price, asset.currency)}</td>
+                      <td className="num-col">
+                        <TransactionPnlCell
+                          remainingQuantity={tx.remainingQuantity}
+                          unrealizedPnl={tx.unrealizedPnl}
+                          isClosed={tx.isClosed}
+                          currency={asset.currency}
+                          formatCurrency={(value, currency) => formatCurrency(value, currency)}
+                        />
+                      </td>
                       <td className="action-col">
                         <div className="row-actions">
                           <button className="btn-text" onClick={() => setEditingTx(tx)}>Edit</button>
