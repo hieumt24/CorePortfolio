@@ -1,0 +1,13 @@
+{
+  "date": "2026-08-02",
+  "framework": "React 19 + Vite 8",
+  "font_stack": "Outfit via frontend/src/app/index.css",
+  "palette": "CorePortfolio indigo/violet/cyan dark-light tokens",
+  "motion": "CSS only; no animation library",
+  "spacing": "Dashboard-local named 4pt scale",
+  "sources": [
+    "frontend/package.json",
+    "frontend/src/app/index.css",
+    ".hallmark/log.json"
+  ]
+}

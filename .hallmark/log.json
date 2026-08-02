@@ -1,5 +1,15 @@
 [
   {
+    "date": "2026-08-02",
+    "scope": "overview-dashboard",
+    "macrostructure": "Index-First",
+    "theme": "CorePortfolio premium",
+    "genre": "modern-minimal fintech",
+    "enrichment": "none",
+    "nav": "existing application navbar",
+    "brief": "Decision-first financial briefing for net worth, monthly pulse, attention queue, portfolios, goals and DCA"
+  },
+  {
     "date": "2026-07-29",
     "scope": "analytics-decision-workspace",
     "macrostructure": "Workbench",
